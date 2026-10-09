@@ -1,0 +1,26 @@
+# DuiaOS — pacotes comuns a todas as arquiteturas.
+# Um pacote por linha. Linhas com # são comentários.
+
+# Sistema básico
+sudo
+locales
+console-setup
+keyboard-configuration
+tzdata
+bash-completion
+nano
+less
+
+# Rede
+network-manager
+iw
+wireless-regdb
+ca-certificates
+curl
+
+# Diagnóstico de hardware (ex.: lspci -nn)
+pciutils
+usbutils
+
+# Firmware livre
+firmware-linux-free

@@ -1,0 +1,6 @@
+# DuiaOS — pacotes só para ARM64.
+# Por enquanto a ISO arm64 é genérica e é testada em máquina virtual
+# (UTM no Mac). Firmwares de aparelhos ARM físicos entram na Fase 11.
+
+# Firmwares diversos usados por placas ARM comuns
+firmware-misc-nonfree

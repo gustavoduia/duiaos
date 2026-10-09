@@ -1,0 +1,17 @@
+# DuiaOS — pacotes só para x86_64 (amd64).
+# Máquina de referência: Dell Latitude 3420 (Intel Core i5 11ª geração).
+
+# Microcódigo dos processadores
+intel-microcode
+amd64-microcode
+
+# Vídeo Intel (i915) e outros firmwares Intel
+firmware-intel-graphics
+firmware-intel-misc
+
+# Wi-Fi e Bluetooth (Intel ou Realtek, conforme o modelo)
+firmware-iwlwifi
+firmware-realtek
+
+# Áudio Intel (Sound Open Firmware)
+firmware-sof-signed

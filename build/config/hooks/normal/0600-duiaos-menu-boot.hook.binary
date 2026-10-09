@@ -1,0 +1,24 @@
+#!/bin/sh
+# DuiaOS — textos do menu de boot (GRUB) em português e com o nome DuiaOS.
+# Roda depois que o live-build monta o menu, antes de gerar a ISO.
+set -e
+
+if [ -d boot/grub ]; then
+  GRUB_DIR=boot/grub
+elif [ -d binary/boot/grub ]; then
+  GRUB_DIR=binary/boot/grub
+else
+  echo "Pasta do GRUB não encontrada; menu não traduzido." >&2
+  exit 0
+fi
+
+sed -i \
+  -e 's/Live system (autodetect)/DuiaOS — modo live/g' \
+  -e 's/Live system, kernel/DuiaOS — modo live, kernel/g' \
+  -e 's/Live system (\([a-z0-9]*\) fail-safe mode)/DuiaOS — modo de segurança (\1)/g' \
+  -e 's/Live system (\([a-z0-9]*\))/DuiaOS — modo live (\1)/g' \
+  -e 's/(fail-safe mode)/(modo de segurança)/g' \
+  -e "s/'Utilities\.\.\.'/'Utilitários...'/g" \
+  -e 's/"UEFI Firmware Settings"/"Configurações do firmware UEFI"/g' \
+  -e 's/"Verify integrity of the boot medium"/"Verificar a integridade da mídia"/g' \
+  "${GRUB_DIR}"/*.cfg

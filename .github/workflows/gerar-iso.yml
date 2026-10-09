@@ -1,0 +1,102 @@
+# DuiaOS — gera as ISOs x86_64 e ARM64.
+#
+# - Envio para a branch main: gera ISOs de teste (aba Actions > Artifacts).
+# - Tag v*, ex.: v0.0.1: gera as ISOs e publica um Release com elas.
+# - Também pode ser disparado à mão na aba Actions (Run workflow).
+name: Gerar ISO
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "branding/**"
+  pull_request:
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "branding/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  iso:
+    name: ISO ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Definir a versão
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="dev-$(git rev-parse --short HEAD)"
+          fi
+          echo "DUIAOS_VERSION=${VERSION}" >> "${GITHUB_ENV}"
+          echo "Versão: ${VERSION}"
+
+      - name: Gerar a ISO dentro do Debian 13
+        run: |
+          docker run --rm --privileged \
+            -v "${PWD}:/work" -w /work \
+            -e ARCH="${{ matrix.arch }}" \
+            -e DUIAOS_VERSION="${DUIAOS_VERSION}" \
+            debian:trixie \
+            bash build/build.sh
+
+      - name: Guardar a ISO
+        uses: actions/upload-artifact@v4
+        with:
+          name: duiaos-${{ env.DUIAOS_VERSION }}-${{ matrix.arch }}
+          path: out/*
+          compression-level: 0
+          retention-days: 14
+          if-no-files-found: error
+
+  release:
+    name: Publicar release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: iso
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Baixar as ISOs geradas
+        uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+
+      - name: Criar o release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls -lh out
+          # Versões 0.x e com hífen (ex.: 1.0.0-beta) saem como pré-release.
+          EXTRA=""
+          if [[ "${GITHUB_REF_NAME}" == v0.* || "${GITHUB_REF_NAME}" == *-* ]]; then
+            EXTRA="--prerelease"
+          fi
+          gh release create "${GITHUB_REF_NAME}" out/* \
+            --repo "${GITHUB_REPOSITORY}" \
+            --title "DuiaOS ${GITHUB_REF_NAME#v}" \
+            --generate-notes ${EXTRA}

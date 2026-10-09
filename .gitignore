@@ -1,0 +1,21 @@
+# ISOs e saídas do build
+out/
+*.iso
+*.iso.sha256
+
+# Pastas de trabalho do live-build (se rodado dentro do repositório)
+build/work/
+.build/
+chroot/
+binary/
+cache/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Sistema e editores
+.DS_Store
+.vscode/
+*.swp

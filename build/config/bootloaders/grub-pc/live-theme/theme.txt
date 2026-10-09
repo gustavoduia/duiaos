@@ -1,0 +1,52 @@
+# DuiaOS — tema provisório do menu de boot (GRUB) do modo live.
+# O tema definitivo é feito na Fase 3.
+desktop-image: "../splash.png"
+title-text: ""
+message-font: "Unifont Regular 16"
+message-color: "#1F2933"
+terminal-font: "Unifont Regular 16"
+
+# Barra de ajuda no rodapé
++ label {
+        top = 100%-50
+        left = 0
+        width = 100%
+        height = 20
+        text = "Enter: iniciar   e: editar opções   c: linha de comando"
+        align = "center"
+        color = "#5B6675"
+        font = "Unifont Regular 16"
+}
+
+# Menu
++ boot_menu {
+        left = 25%
+        width = 50%
+        top = 50%
+        height = 50%-110
+        item_color = "#5B6675"
+        item_font = "Unifont Regular 16"
+        selected_item_color = "#1A3A73"
+        selected_item_font = "Unifont Regular 16"
+        item_height = 20
+        item_padding = 0
+        item_spacing = 6
+        icon_width = 0
+        icon_height = 0
+        item_icon_space = 0
+}
+
+# Contagem regressiva
++ progress_bar {
+        id = "__timeout__"
+        left = 20%
+        top = 100%-90
+        height = 16
+        width = 60%
+        font = "Unifont Regular 16"
+        text_color = "#1F2933"
+        fg_color = "#2E6BE6"
+        bg_color = "#DDE3EC"
+        border_color = "#DDE3EC"
+        text = "@TIMEOUT_NOTIFICATION_LONG@"
+}

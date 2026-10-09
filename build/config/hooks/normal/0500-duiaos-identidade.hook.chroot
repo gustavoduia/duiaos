@@ -1,0 +1,48 @@
+#!/bin/sh
+# DuiaOS — identidade do sistema.
+# Substitui os arquivos de identificação do Debian pelos do DuiaOS.
+# O dpkg-divert guarda o original com o sufixo .debian, assim uma
+# atualização do pacote base-files não apaga a identidade do DuiaOS.
+set -e
+
+VERSION="@DUIAOS_VERSION@"
+CODENAME="@DUIAOS_CODENAME@"
+URL="https://github.com/gustavoduia/duiaos"
+
+for f in /usr/lib/os-release /etc/issue /etc/issue.net /etc/motd; do
+  if [ "$(dpkg-divert --truename "${f}")" = "${f}" ]; then
+    [ -e "${f}" ] && cp -a "${f}" "${f}.debian"
+    dpkg-divert --quiet --local --no-rename --divert "${f}.debian" --add "${f}"
+  fi
+done
+
+cat > /usr/lib/os-release <<EOF
+PRETTY_NAME="DuiaOS ${VERSION} (Zoinho)"
+NAME="DuiaOS"
+VERSION_ID="${VERSION}"
+VERSION="${VERSION} (Zoinho)"
+VERSION_CODENAME=${CODENAME}
+ID=duiaos
+ID_LIKE=debian
+DEBIAN_CODENAME=trixie
+HOME_URL="${URL}"
+SUPPORT_URL="${URL}/issues"
+BUG_REPORT_URL="${URL}/issues"
+EOF
+ln -sf ../usr/lib/os-release /etc/os-release
+
+# Tela de login em modo texto. "\n" e "\l" são códigos do agetty
+# (nome da máquina e terminal), por isso o printf com aspas simples.
+printf 'DuiaOS %s (Zoinho) \\n \\l\n\n' "${VERSION}" > /etc/issue
+printf 'DuiaOS %s (Zoinho)\n' "${VERSION}" > /etc/issue.net
+
+# Mensagem exibida depois do login.
+cat > /etc/motd <<EOF
+
+Bem-vindo ao DuiaOS ${VERSION} (Zoinho).
+
+Os programas incluídos no DuiaOS são software livre; os termos de
+distribuição de cada um estão em /usr/share/doc/*/copyright.
+
+O DuiaOS é fornecido SEM NENHUMA GARANTIA, na medida permitida pela lei.
+EOF
