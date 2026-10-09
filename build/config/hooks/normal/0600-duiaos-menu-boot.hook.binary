@@ -22,3 +22,20 @@ sed -i \
   -e 's/"UEFI Firmware Settings"/"Configurações do firmware UEFI"/g' \
   -e 's/"Verify integrity of the boot medium"/"Verificar a integridade da mídia"/g' \
   "${GRUB_DIR}"/*.cfg
+
+# Segunda entrada do modo live com teclado americano (US), útil em
+# máquinas virtuais no Mac e em teclados importados. É uma cópia da
+# primeira entrada "modo live", logo abaixo dela, trocando o layout.
+awk '
+  !feito && /^menuentry "DuiaOS — modo live \(/ { copiando = 1 }
+  { print }
+  copiando {
+    linha = $0
+    sub(/modo live \(/, "modo live, teclado US (", linha)
+    sub(/ --hotkey=l/, "", linha)
+    gsub(/keyboard-layouts=br/, "keyboard-layouts=us", linha)
+    bloco = bloco linha "\n"
+    if ($0 ~ /^}/) { printf "\n%s", bloco; copiando = 0; feito = 1 }
+  }
+' "${GRUB_DIR}/grub.cfg" > "${GRUB_DIR}/grub.cfg.novo"
+mv "${GRUB_DIR}/grub.cfg.novo" "${GRUB_DIR}/grub.cfg"
