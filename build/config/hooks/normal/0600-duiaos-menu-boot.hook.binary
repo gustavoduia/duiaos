@@ -21,6 +21,18 @@ sed -i \
   -e "s/'Utilities\.\.\.'/'Utilitários...'/g" \
   -e 's/"UEFI Firmware Settings"/"Configurações do firmware UEFI"/g' \
   -e 's/"Verify integrity of the boot medium"/"Verificar a integridade da mídia"/g' \
+  -e "s/'Start installer with speech synthesis'/'Instalar o DuiaOS com síntese de voz'/g" \
+  -e "s/'Start installer'/'Instalar o DuiaOS'/g" \
+  -e "s/'Advanced install options \.\.\.'/'Opções avançadas de instalação...'/g" \
+  -e "s/'Graphical installer with dark theme \.\.\.'/'Instalador gráfico com tema escuro...'/g" \
+  -e "s/'Text installer with dark theme \.\.\.'/'Instalador em texto com tema escuro...'/g" \
+  -e "s/'Graphical installer \.\.\.'/'Instalador gráfico...'/g" \
+  -e "s/'Text installer \.\.\.'/'Instalador em texto...'/g" \
+  -e "s/'Installer with speech synthesis \.\.\.'/'Instalador com síntese de voz...'/g" \
+  -e "s/'Install'/'Instalar'/g" \
+  -e "s/'Expert install'/'Instalação avançada'/g" \
+  -e "s/'Automated install'/'Instalação automática'/g" \
+  -e "s/'Rescue mode'/'Modo de recuperação'/g" \
   "${GRUB_DIR}"/*.cfg
 
 # Segunda entrada do modo live com teclado americano (US), útil em

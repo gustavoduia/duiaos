@@ -10,13 +10,29 @@ tzdata
 bash-completion
 nano
 less
+man-db
 
-# Rede
+# Rede (nmtui: configuração de Wi-Fi e cabo no terminal)
 network-manager
 iw
 wireless-regdb
 ca-certificates
 curl
+wget
+
+# Bluetooth
+bluez
+
+# Áudio: PipeWire (servidor de som) e ferramentas de teste
+pipewire-audio
+alsa-utils
+
+# Memória: swap comprimida na RAM (zram)
+zram-tools
+
+# Sistemas de arquivos usados na instalação (EFI, btrfs)
+dosfstools
+btrfs-progs
 
 # Diagnóstico de hardware (ex.: lspci -nn)
 pciutils

@@ -50,6 +50,8 @@ cd "${WORK}"
 VOLUME="DuiaOS ${VERSION}"
 VOLUME="${VOLUME:0:32}"
 
+# Instalador: debian-installer em modo "live" (copia o sistema da ISO
+# para o disco). Respostas pré-definidas em config/includes.installer/.
 # Firmwares: o live-build não instala todos automaticamente
 # (--firmware-chroot false). Entram só os listados em package-lists/.
 log "Configurando o live-build"
@@ -59,7 +61,8 @@ lb config \
   --architecture "${ARCH}" \
   --archive-areas "main contrib non-free non-free-firmware" \
   --binary-images iso-hybrid \
-  --debian-installer none \
+  --debian-installer live \
+  --debian-installer-distribution trixie \
   --firmware-chroot false \
   --firmware-binary false \
   --image-name duiaos \
