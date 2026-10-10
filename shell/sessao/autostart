@@ -5,8 +5,8 @@ DUIAOS="$HOME/Projetos/duiaos"
 # Fundo da tela (Azul névoa; o papel de parede próprio vem depois)
 swaybg -c '#E8F0FE' >/dev/null 2>&1 &
 
-# Painel superior do DuiaOS
-python3 "$DUIAOS/shell/painel/main.py" >/tmp/duiaos-painel.log 2>&1 &
+# Barra de Recursos do DuiaOS
+python3 "$DUIAOS/shell/barra-de-recursos/main.py" >/tmp/duiaos-barra-de-recursos.log 2>&1 &
 
 # Terminal para desenvolvimento
 foot >/dev/null 2>&1 &
