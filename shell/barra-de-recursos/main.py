@@ -10,6 +10,7 @@ Uso:
                               (a barra em execução se move na hora)
 """
 import configparser
+import fcntl
 import glob
 import os
 import subprocess
@@ -46,6 +47,15 @@ if len(sys.argv) == 3 and sys.argv[1] == "--posicao":
         sys.exit("Posição inválida. Use: " + ", ".join(POSICOES))
     gravar_posicao(sys.argv[2])
     print("Barra de Recursos: posição alterada para", sys.argv[2])
+    sys.exit(0)
+
+# Uma instância só: se a barra já estiver aberta, não abre outra.
+_PASTA_EXECUCAO = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
+_trava = open(os.path.join(_PASTA_EXECUCAO, "duiaos-barra-de-recursos.lock"), "w")
+try:
+    fcntl.flock(_trava, fcntl.LOCK_EX | fcntl.LOCK_NB)
+except OSError:
+    print("A Barra de Recursos já está aberta. Para reiniciar: reiniciar.sh")
     sys.exit(0)
 
 # A barra é uma "camada" do Wayland presa à borda da tela (layer-shell).
