@@ -19,6 +19,7 @@ wireless-regdb
 ca-certificates
 curl
 wget
+systemd-timesyncd
 
 # Acesso remoto (SSH) e nome na rede local (duiaos.local)
 openssh-server
