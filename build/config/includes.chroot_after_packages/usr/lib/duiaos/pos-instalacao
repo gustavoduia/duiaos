@@ -1,0 +1,41 @@
+#!/bin/sh
+# =============================================================================
+# DuiaOS — ajustes no sistema instalado.
+# Executado pelo instalador no fim da instalação (preseed/late_command),
+# dentro do sistema recém-instalado. Funciona sem internet.
+# =============================================================================
+set -e
+
+# 1. Repositórios do Debian 13 (com firmwares e atualizações de segurança).
+#    O arquivo antigo, criado pelo instalador, é guardado com outro nome.
+cat > /etc/apt/sources.list.d/debian.sources <<EOF
+Types: deb
+URIs: http://deb.debian.org/debian
+Suites: trixie trixie-updates
+Components: main contrib non-free non-free-firmware
+Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+
+Types: deb
+URIs: http://security.debian.org/debian-security
+Suites: trixie-security
+Components: main contrib non-free non-free-firmware
+Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+EOF
+if [ -f /etc/apt/sources.list ]; then
+  mv /etc/apt/sources.list /etc/apt/sources.list.instalador
+fi
+
+# 2. Idioma: português do Brasil (o locale já vem gerado na ISO).
+update-locale LANG=pt_BR.UTF-8 LANGUAGE=pt_BR:pt
+
+# 3. Teclado ABNT2, gravado e compilado para o boot.
+/usr/lib/duiaos/configurar-teclado
+setupcon --force --save-only || true
+
+# 4. SSH: chaves exclusivas deste computador e serviço ligado.
+#    (Na ISO o SSH fica desligado, por segurança.)
+ssh-keygen -A
+systemctl enable ssh.service
+
+# 5. Atualiza a imagem de inicialização com o teclado e o idioma novos.
+update-initramfs -u

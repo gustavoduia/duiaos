@@ -1,0 +1,24 @@
+#!/bin/sh
+# DuiaOS — padrões do sistema: idioma, fuso, teclado e SSH.
+# Roda na geração da ISO; o sistema instalado herda estes padrões.
+set -e
+
+# Idioma: gera o português do Brasil e o define como padrão.
+sed -i 's/^# *\(pt_BR.UTF-8 UTF-8\)/\1/' /etc/locale.gen
+grep -q '^pt_BR.UTF-8 UTF-8' /etc/locale.gen || echo 'pt_BR.UTF-8 UTF-8' >> /etc/locale.gen
+locale-gen
+update-locale LANG=pt_BR.UTF-8 LANGUAGE=pt_BR:pt
+
+# Fuso horário
+ln -sf /usr/share/zoneinfo/America/Sao_Paulo /etc/localtime
+echo "America/Sao_Paulo" > /etc/timezone
+
+# Teclado ABNT2 e serviço que o aplica em todo boot
+chmod +x /usr/lib/duiaos/*
+/usr/lib/duiaos/configurar-teclado
+systemctl enable duiaos-teclado.service
+
+# SSH: desligado na ISO (no modo live a senha é pública). As chaves são
+# apagadas aqui e geradas de novo em cada instalação (pos-instalacao).
+systemctl disable ssh.service || true
+rm -f /etc/ssh/ssh_host_*

@@ -1,0 +1,18 @@
+#!/bin/sh
+# DuiaOS — aplica ao console (telas de texto) o teclado de /etc/default/keyboard.
+# Executado em todo boot pelo serviço duiaos-teclado.service e também pode
+# ser usado à mão: sudo /usr/lib/duiaos/aplicar-teclado
+set -e
+# shellcheck source=/dev/null
+. /etc/default/keyboard
+
+set -- -model "${XKBMODEL:-pc105}"
+if [ -n "${XKBOPTIONS}" ]; then
+  set -- "$@" -option "${XKBOPTIONS}"
+fi
+set -- "$@" "${XKBLAYOUT:-br}"
+if [ -n "${XKBVARIANT}" ]; then
+  set -- "$@" "${XKBVARIANT}"
+fi
+
+ckbcomp "$@" | loadkeys -q

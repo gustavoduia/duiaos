@@ -1,0 +1,12 @@
+[Unit]
+Description=DuiaOS: aplica o layout do teclado no console
+After=keyboard-setup.service console-setup.service systemd-vconsole-setup.service
+Before=getty.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/duiaos/aplicar-teclado
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

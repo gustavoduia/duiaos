@@ -1,0 +1,12 @@
+#!/bin/sh
+# DuiaOS — grava o teclado padrão do sistema: ABNT2 (layout br).
+set -e
+cat > /etc/default/keyboard <<EOF
+# Teclado do DuiaOS. Para aplicar uma mudança: sudo /usr/lib/duiaos/aplicar-teclado
+XKBMODEL="abnt2"
+XKBLAYOUT="br"
+XKBVARIANT=""
+XKBOPTIONS=""
+
+BACKSPACE="guess"
+EOF

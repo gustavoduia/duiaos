@@ -20,6 +20,14 @@ ca-certificates
 curl
 wget
 
+# Acesso remoto (SSH) e nome na rede local (duiaos.local)
+openssh-server
+avahi-daemon
+libnss-mdns
+
+# Desenvolvimento
+git
+
 # Bluetooth
 bluez
 
