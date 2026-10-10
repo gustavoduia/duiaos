@@ -1,0 +1,32 @@
+# DuiaOS — pacotes da interface gráfica (sessão, Barra de Recursos, Ilha de Aplicativos).
+# Instalação: sudo apt install -y $(grep -v '^#' shell/pacotes.list)
+# Depois de estabilizada, esta lista entra na ISO.
+
+# Compositor, terminal, fundo e telas
+labwc
+foot
+swaybg
+wlr-randr
+
+# Janelas abertas e foco (usado pela Ilha de Aplicativos)
+wlrctl
+
+# Qt6 / QML no Wayland e o módulo de painéis (layer-shell)
+qt6-wayland
+qt6-svg-plugins
+qml6-module-org-kde-layershell
+qml6-module-qtquick
+qml6-module-qtquick-controls
+qml6-module-qtquick-layouts
+qml6-module-qtquick-window
+
+# Python para a lógica da interface
+python3-pyside6.qtquick
+python3-pyside6.qtqml
+python3-pyside6.qtgui
+
+# Ícones e fontes
+hicolor-icon-theme
+fonts-inter
+fonts-manrope
+fonts-jetbrains-mono

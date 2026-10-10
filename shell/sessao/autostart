@@ -8,5 +8,8 @@ swaybg -c '#E8F0FE' >/dev/null 2>&1 &
 # Barra de Recursos do DuiaOS
 python3 "$DUIAOS/shell/barra-de-recursos/main.py" >/tmp/duiaos-barra-de-recursos.log 2>&1 &
 
+# Ilha de Aplicativos do DuiaOS
+python3 "$DUIAOS/shell/ilha-de-aplicativos/main.py" >/tmp/duiaos-ilha-de-aplicativos.log 2>&1 &
+
 # Terminal para desenvolvimento
 foot >/dev/null 2>&1 &
