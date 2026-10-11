@@ -1,22 +1,26 @@
-# DuiaOS — gera as ISOs x86_64 e ARM64 (ADR 020).
+# DuiaOS — gera as ISOs x86_64 (amd64) e ARM64 (ADR 020).
 #
-# Onde roda (variável do repositório DUIAOS_EXECUTOR, padrão "proprios"):
-#   proprios  Dell (rótulo duiaos-amd64) e Mac M4 (rótulo duiaos-arm64), sem custo
-#             de minutos. Se a máquina estiver desligada, o job espera ela ligar.
-#   github    runners do GitHub (consomem os minutos do plano). Use se uma
-#             máquina ficar indisponível: gh variable set DUIAOS_EXECUTOR --body github
+# Você escolhe, para cada arquitetura, ONDE gerar:
+#   mac     Mac M4 (runner com rótulo duiaos-mac)
+#   dell    Dell Latitude (runner com rótulo duiaos-dell)
+#   github  runners do GitHub (consomem os minutos do plano; a ISO de teste não é guardada)
+#   nao     não gerar esta arquitetura
 #
-# Quando roda:
-#   - Envio para a main: só a ISO amd64.
-#   - Disparo manual (Actions > Gerar ISO > Run workflow): escolha arquiteturas e executor.
-#   - Tag v*, ex.: v0.1.0: as duas ISOs + Release no repositório público.
+# Qualquer máquina gera qualquer arquitetura. A arquitetura "da casa" é a mais
+# rápida (Mac = arm64, Dell = amd64); a outra roda emulada: no Mac pelo
+# Rosetta (razoável), no Dell pelo QEMU (lento, 1–2 h).
 #
-# Onde fica a ISO:
-#   - Testes em runner próprio: na própria máquina, em ~/duiaos-isos (últimas 3 por arquitetura).
-#   - Testes em runner do GitHub: não é guardada (só valida o build; a cota de
-#     armazenamento de repositório privado é pequena demais para ISOs).
-#   - Tags: Release em DUIAOS_REPO_PUBLICO (padrão gustavoduia/duiaos-fontes-abertas),
+# Forma prática de disparar (no Mac):  bash ferramentas/gerar-iso.sh amd64=mac arm64=mac
+#
+# Quando roda sozinho:
+#   - Envio para a main: só amd64, na máquina padrão.
+#   - Tag v*, ex.: v0.1.0: as duas, nas máquinas padrão, e publica o Release no
+#     repositório público (DUIAOS_REPO_PUBLICO, padrão gustavoduia/duiaos-fontes-abertas)
 #     com o segredo DUIAOS_TOKEN_PUBLICO.
+# Máquinas padrão: variáveis DUIAOS_AMD64_EM (padrão dell) e DUIAOS_ARM64_EM (padrão mac).
+#
+# ISO de teste em runner próprio: fica na máquina, em ~/Projetos/duiaos-isos
+# (últimas 3 por arquitetura).
 name: Gerar ISO
 
 on:
@@ -31,15 +35,15 @@ on:
       - "ferramentas/**"
   workflow_dispatch:
     inputs:
-      arquiteturas:
-        description: "Arquiteturas"
+      amd64:
+        description: "ISO amd64 (x86_64): onde gerar"
         type: choice
-        options: [ambas, amd64, arm64]
-        default: ambas
-      executor:
-        description: "Onde gerar"
+        options: [padrao, dell, mac, github, nao]
+        default: padrao
+      arm64:
+        description: "ISO arm64: onde gerar"
         type: choice
-        options: [padrao, proprios, github]
+        options: [padrao, mac, dell, github, nao]
         default: padrao
 
 permissions:
@@ -64,42 +68,49 @@ jobs:
     steps:
       - id: plano
         env:
-          ENTRADA_ARQ: ${{ inputs.arquiteturas }}
-          ENTRADA_EXEC: ${{ inputs.executor }}
-          EXEC_PADRAO: ${{ vars.DUIAOS_EXECUTOR || 'proprios' }}
+          ENTRADA_AMD64: ${{ inputs.amd64 }}
+          ENTRADA_ARM64: ${{ inputs.arm64 }}
+          PADRAO_AMD64: ${{ vars.DUIAOS_AMD64_EM || 'dell' }}
+          PADRAO_ARM64: ${{ vars.DUIAOS_ARM64_EM || 'mac' }}
         run: |
-          EXEC="${ENTRADA_EXEC:-padrao}"
-          [ "${EXEC}" = "padrao" ] && EXEC="${EXEC_PADRAO}"
-
           if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
-            ARQS="amd64 arm64"; RELEASE=true; VERSAO="${GITHUB_REF_NAME#v}"
-          else
+            ONDE_AMD64="${PADRAO_AMD64}"; ONDE_ARM64="${PADRAO_ARM64}"
+            RELEASE=true; VERSAO="${GITHUB_REF_NAME#v}"
+          elif [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            ONDE_AMD64="${ENTRADA_AMD64:-padrao}"; ONDE_ARM64="${ENTRADA_ARM64:-padrao}"
+            [ "${ONDE_AMD64}" = "padrao" ] && ONDE_AMD64="${PADRAO_AMD64}"
+            [ "${ONDE_ARM64}" = "padrao" ] && ONDE_ARM64="${PADRAO_ARM64}"
             RELEASE=false; VERSAO="dev-${GITHUB_SHA::7}"
-            case "${ENTRADA_ARQ:-amd64}" in
-              ambas) ARQS="amd64 arm64" ;;
-              *)     ARQS="${ENTRADA_ARQ:-amd64}" ;;
-            esac
+          else
+            ONDE_AMD64="${PADRAO_AMD64}"; ONDE_ARM64="nao"
+            RELEASE=false; VERSAO="dev-${GITHUB_SHA::7}"
           fi
 
-          ITENS=""
-          for A in ${ARQS}; do
-            if [ "${EXEC}" = "github" ]; then
-              [ "${A}" = "amd64" ] && R='"ubuntu-24.04"' || R='"ubuntu-24.04-arm"'
-              PROPRIO=false
-            else
-              R="[\"self-hosted\",\"duiaos-${A}\"]"
-              PROPRIO=true
-            fi
-            ITENS="${ITENS:+${ITENS},}{\"arch\":\"${A}\",\"runner\":${R},\"proprio\":${PROPRIO}}"
-          done
+          if [ "${RELEASE}" = "true" ] && { [ "${ONDE_AMD64}" = "nao" ] || [ "${ONDE_ARM64}" = "nao" ]; }; then
+            echo "Release precisa das duas arquiteturas." >&2; exit 1
+          fi
+
+          item() {  # item ARQ ONDE
+            case "$2" in
+              mac|dell) echo "{\"arch\":\"$1\",\"onde\":\"$2\",\"runner\":[\"self-hosted\",\"duiaos-$2\"],\"proprio\":true}" ;;
+              github)
+                if [ "$1" = "amd64" ]; then R="ubuntu-24.04"; else R="ubuntu-24.04-arm"; fi
+                echo "{\"arch\":\"$1\",\"onde\":\"github\",\"runner\":\"${R}\",\"proprio\":false}" ;;
+              nao) ;;
+              *) echo "Opção inválida para $1: $2 (use mac, dell, github ou nao)" >&2; return 1 ;;
+            esac
+          }
+          A="$(item amd64 "${ONDE_AMD64}")"
+          B="$(item arm64 "${ONDE_ARM64}")"
+          ITENS="$(printf '%s\n%s\n' "${A}" "${B}" | sed '/^$/d' | paste -sd, -)"
+          [ -n "${ITENS}" ] || { echo "Nenhuma arquitetura escolhida." >&2; exit 1; }
           MATRIZ="{\"include\":[${ITENS}]}"
           {
             echo "matriz=${MATRIZ}"
             echo "versao=${VERSAO}"
             echo "release=${RELEASE}"
           } >> "${GITHUB_OUTPUT}"
-          echo "Executor: ${EXEC} | Versão: ${VERSAO} | Release: ${RELEASE}"
-          echo "Matriz: ${MATRIZ}"
+          echo "amd64: ${ONDE_AMD64} | arm64: ${ONDE_ARM64} | versão: ${VERSAO} | release: ${RELEASE}"
 
   preparar-release:
     name: Preparar release (rascunho)
@@ -140,28 +151,63 @@ jobs:
             --title "DuiaOS ${VERSAO}" --notes-file notas.md ${EXTRA}
 
   iso:
-    name: ISO ${{ matrix.arch }}
+    name: ISO ${{ matrix.arch }} (${{ matrix.onde }})
     needs: [plano, preparar-release]
     if: ${{ !cancelled() && needs.plano.result == 'success' && needs.preparar-release.result != 'failure' }}
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 150
+    timeout-minutes: 240
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.plano.outputs.matriz) }}
     env:
       DUIAOS_VERSION: ${{ needs.plano.outputs.versao }}
+      ARCH: ${{ matrix.arch }}
+      # Nome fixo do container: permite pará-lo se o job for cancelado.
+      CONTAINER: duiaos-build-${{ github.run_id }}-${{ matrix.arch }}
     steps:
+      - name: Parar builds antigos que ficaram rodando nesta máquina
+        if: matrix.proprio
+        run: |
+          ANTIGOS="$(docker ps -aq --filter 'name=^duiaos-build-')"
+          if [ -n "${ANTIGOS}" ]; then
+            echo "Parando containers de builds anteriores: ${ANTIGOS}"
+            # shellcheck disable=SC2086
+            docker rm -f ${ANTIGOS}
+          fi
+
       - name: Baixar o código
         uses: actions/checkout@v4
 
+      - name: Preparar emulação (se a arquitetura não for a desta máquina)
+        run: |
+          case "$(uname -m)" in
+            x86_64|amd64) NATIVA=amd64 ;;
+            arm64|aarch64) NATIVA=arm64 ;;
+            *) NATIVA=desconhecida ;;
+          esac
+          echo "Máquina: $(uname -s) ${NATIVA} | ISO: ${ARCH}"
+          if [ "${NATIVA}" = "${ARCH}" ]; then echo "Nativa, sem emulação."; exit 0; fi
+          if docker run --rm --platform "linux/${ARCH}" debian:trixie true 2>/dev/null; then
+            echo "Emulação de ${ARCH} já disponível (Rosetta ou QEMU)."
+          else
+            echo "Instalando a emulação QEMU para ${ARCH} (vale até a máquina reiniciar)."
+            docker run --rm --privileged tonistiigi/binfmt --install "${ARCH}"
+            docker run --rm --platform "linux/${ARCH}" debian:trixie true
+          fi
+
       - name: Gerar a ISO dentro do Debian 13
         run: |
-          docker run --rm --privileged \
+          docker run --rm --privileged --name "${CONTAINER}" \
+            --platform "linux/${ARCH}" \
             -v "${PWD}:/work" -w /work \
-            -e ARCH="${{ matrix.arch }}" \
+            -e ARCH="${ARCH}" \
             -e DUIAOS_VERSION="${DUIAOS_VERSION}" \
             debian:trixie \
             bash build/build.sh
+
+      - name: Parar o container se o job foi cancelado
+        if: always()
+        run: docker rm -f "${CONTAINER}" >/dev/null 2>&1 || true
 
       - name: Devolver a pasta out/ ao usuário do runner
         if: always()
@@ -179,13 +225,15 @@ jobs:
       - name: Guardar a ISO nesta máquina
         if: needs.plano.outputs.release != 'true' && matrix.proprio
         run: |
-          DESTINO="${HOME}/duiaos-isos"
+          DESTINO="${HOME}/Projetos/duiaos-isos"
           mkdir -p "${DESTINO}"
           cp out/* "${DESTINO}/"
           # Mantém só as 3 ISOs de teste mais recentes desta arquitetura.
-          ls -t "${DESTINO}"/duiaos-dev-*-${{ matrix.arch }}.iso 2>/dev/null | tail -n +4 | while read -r ANTIGA; do
-            rm -f "${ANTIGA}" "${ANTIGA}.sha256" "${ANTIGA%.iso}.packages"
-          done
+          # (nomes de ISO não têm espaços)
+          # shellcheck disable=SC2012
+          ls -t "${DESTINO}"/duiaos-dev-*-"${ARCH}".iso 2>/dev/null | tail -n +4 | while read -r ISO; do
+            rm -f "${ISO}" "${ISO}.sha256" "${ISO%.iso}.packages"
+          done || true
           echo "ISO guardada em ${DESTINO}:"
           ls -lh "${DESTINO}"
 

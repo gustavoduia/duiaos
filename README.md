@@ -107,11 +107,17 @@ shasum -a 256 -c duiaos-VERSAO-amd64.iso.sha256 # macOS
 
 ## Gerar a ISO
 
-O GitHub Actions gera as ISOs nos runners próprios (Dell para amd64, Mac M4
-para arm64): a amd64 a cada envio para a `main`, as duas quando disparado à mão
-e, a cada tag `v*`, as duas com release no repositório público. ISOs de teste
-ficam na própria máquina, em `~/duiaos-isos`. Configuração e scripts:
-[ferramentas/README.md](ferramentas/README.md) (ADR 020). Localmente, numa máquina Linux com Docker:
+O GitHub Actions coordena e as ISOs são geradas nas nossas máquinas (Mac M4 e
+Dell), escolhendo a máquina de cada arquitetura a cada build:
+
+```bash
+bash ferramentas/gerar-iso.sh amd64=dell arm64=mac
+```
+
+Um envio para a `main` gera a amd64; cada tag `v*` gera as duas e publica o
+release no repositório público. ISOs de teste ficam em `~/Projetos/duiaos-isos`
+da máquina que gerou. Guia completo: [ferramentas/README.md](ferramentas/README.md)
+(ADRs 020 e 024). Localmente, numa máquina Linux com Docker:
 
 ```bash
 sudo docker run --rm --privileged -v "$PWD:/work" -w /work \

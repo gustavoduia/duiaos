@@ -10,12 +10,12 @@
 # do ~/Projetos/duiaos do Dell para usá-la. Depois disso, git pull no Dell
 # funciona com o repositório privado. Pode rodar de novo sem problema.
 #
-# Variável opcional: DELL=usuario@endereco (padrão duia@duiaos).
+# Variável opcional: DELL=usuario@endereco (padrão gustavo@duiaos).
 # =============================================================================
 set -euo pipefail
 
 REPO="gustavoduia/duiaos"
-DELL="${DELL:-duia@duiaos}"
+DELL="${DELL:-gustavo@duiaos}"
 # Impressão digital oficial da chave ed25519 do github.com (docs.github.com).
 GITHUB_FP="SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU"
 
