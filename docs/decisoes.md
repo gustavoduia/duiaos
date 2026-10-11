@@ -9,8 +9,8 @@ Cada decisão: contexto, decisão, consequência e data. Status: **aceita**
 | 002 | Shell próprio sobre labwc na 1.0; compositor próprio na 2.0 | Aceita | 09/10/2026 | Interface original sem reescrever o servidor gráfico no início |
 | 003 | Interface em Qt6/QML + Python (PySide6) | Aceita | 09/10/2026 | Visual livre, roda igual em x86_64 e ARM64; C++ só onde houver necessidade de desempenho |
 | 004 | x86_64 e ARM64 desde o início | Aceita | 09/10/2026 | GitHub Actions gera as duas ISOs; ARM64 testado em VM no Mac |
-| 005 | Licença GPLv3 + marca protegida + CLA | Aceita | 09/10/2026 | Mantém aberta a opção de edição corporativa |
-| 006 | Repositório público no GitHub; ISOs nos Releases | Aceita | 09/10/2026 | Actions gratuito; ISO abaixo de 2 GiB |
+| 005 | Licença GPLv3 + marca protegida + CLA | Substituída (017, 021) | 09/10/2026 | Mantém aberta a opção de edição corporativa |
+| 006 | Repositório público no GitHub; ISOs nos Releases | Substituída (018) | 09/10/2026 | Actions gratuito; ISO abaixo de 2 GiB |
 | 007 | Instalador provisório (debian-installer live) até o Calamares | Aceita | 09/10/2026 | Pós-instalação grava repositórios, idioma, teclado e SSH |
 | 008 | Secure Boot ligado (shim e GRUB assinados) | Aceita | 11/10/2026 | Evita desligar o Secure Boot, o que dispara BitLocker e invalida o PIN do Windows |
 | 009 | Dual boot: Windows no menu (os-prober) e "Reiniciar no Windows" via firmware | Aceita | 11/10/2026 | Ir ao Windows pelo firmware evita pedidos da chave do BitLocker |
@@ -21,3 +21,10 @@ Cada decisão: contexto, decisão, consequência e data. Status: **aceita**
 | 014 | Gateway multi-modelo (OpenAI, Anthropic, Gemini, Ollama local) | Proposta | 11/10/2026 | Evita dependência de um fornecedor; modelo local como opção de privacidade |
 | 015 | Armazenamento local em SQLite; segredos no cofre do sistema (Secret Service) | Proposta | 11/10/2026 | Transacional, simples de migrar; nenhuma chave em texto puro |
 | 016 | Voz local: palavra de ativação, fala↔texto e TTS no próprio computador | Proposta | 11/10/2026 | Nada de áudio vai à nuvem antes da ativação |
+| 017 | Código próprio proprietário (todos os direitos reservados); usuários finais pelo EULA | Aceita | 11/10/2026 | Protege o Wise e a interface; até o commit d6526e4 (v0.0.1) o código continua GPLv3 para quem o obteve |
+| 018 | Repositório principal privado; repositório público `duiaos-fontes-abertas` com ISOs, EULA, licenças de terceiros e modificações em código livre | Aceita | 11/10/2026 | Cumpre as licenças livres sem expor o código próprio; a pasta `publico/` é a fonte da verdade do repositório público |
+| 019 | Dependências do código próprio só com licença permissiva (MIT, BSD, Apache-2.0, LGPL dinâmica); GPL só como processo separado | Aceita | 11/10/2026 | Evita obrigação de abrir o código próprio; vale também para modelos e dados de IA |
+| 020 | CI com runners próprios: Dell (amd64) e Mac M4 (arm64); runners do GitHub como reserva (variável `DUIAOS_EXECUTOR`); push na `main` gera só amd64; tag gera as duas e publica no repositório público | Aceita | 11/10/2026 | Sem custo de minutos (a taxa de runner próprio anunciada pelo GitHub foi adiada); ISOs de teste ficam na máquina, porque a cota de armazenamento de repositório privado não comporta ISOs |
+| 021 | Colaboradores só com contrato de cessão de direitos + NDA (substitui o CLA) | Aceita | 11/10/2026 | Sem contribuições externas; titularidade do código fica com o DuiaOS |
+| 022 | Fluxo de trabalho: Claude envia branch `claude/...` + pull request; Gustavo revisa e faz o merge; ninguém além do Gustavo envia para a `main` | Aceita | 11/10/2026 | Elimina baixar e aplicar patches; toda mudança fica revisável |
+| 023 | Código próprio empacotado em `.deb` num repositório APT próprio e assinado, logo após a P3 (antes previsto na P6) | Aceita | 11/10/2026 | Atualizações pelo apt sem reinstalar; licença declarada por pacote; build de pacote em segundos em vez de ISO |

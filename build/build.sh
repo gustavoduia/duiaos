@@ -10,7 +10,7 @@
 #   DUIAOS_VERSION  versão que aparece no sistema (padrão: 0.0.0-dev)
 #   WORK_DIR        pasta de trabalho do live-build (padrão: /tmp/duiaos-build-ARCH)
 #
-# Resultado: out/duiaos-VERSÃO-ARCH.iso e o arquivo .sha256 ao lado.
+# Resultado: out/duiaos-VERSÃO-ARCH.iso, o .sha256 e a lista de pacotes (.packages).
 # =============================================================================
 set -euo pipefail
 
@@ -71,7 +71,7 @@ lb config \
   --firmware-binary false \
   --image-name duiaos \
   --iso-application "DuiaOS" \
-  --iso-publisher "DuiaOS; https://github.com/gustavoduia/duiaos" \
+  --iso-publisher "DuiaOS; https://github.com/gustavoduia/duiaos-fontes-abertas" \
   --iso-volume "${VOLUME}" \
   --memtest none \
   --bootappend-live "boot=live components hostname=duiaos username=duia locales=pt_BR.UTF-8 keyboard-layouts=br timezone=America/Sao_Paulo"
@@ -81,6 +81,12 @@ cp -a "${ROOT}/build/config/." config/
 if [ -d "${ROOT}/build/arch/${ARCH}" ]; then
   cp -a "${ROOT}/build/arch/${ARCH}/." config/
 fi
+
+# Licença e avisos de terceiros dentro do sistema (fonte: pasta publico/).
+LICENCA_DIR="config/includes.chroot_after_packages/usr/share/duiaos/licenca"
+install -d "${LICENCA_DIR}"
+install -m 0644 "${ROOT}/publico/EULA.md" "${ROOT}/publico/LICENCAS-DE-TERCEIROS.md" \
+  "${ROOT}/publico/TRADEMARKS.md" "${LICENCA_DIR}/"
 
 # Coloca a versão nos hooks (ex.: /etc/os-release).
 find config/hooks -name '*.hook.*' -type f -exec \
@@ -98,6 +104,15 @@ fi
 
 ISO_NAME="duiaos-${VERSION}-${ARCH}.iso"
 mv "${ISO_SRC}" "${OUT}/${ISO_NAME}"
+
+# Lista de pacotes com versões exatas: publicada com a ISO para que qualquer
+# pessoa localize o código-fonte de cada componente livre (snapshot.debian.org).
+PACKAGES_SRC="$(find . -maxdepth 1 -name '*.packages' -print -quit)"
+if [ -n "${PACKAGES_SRC}" ]; then
+  cp "${PACKAGES_SRC}" "${OUT}/duiaos-${VERSION}-${ARCH}.packages"
+else
+  echo "AVISO: o live-build não gerou a lista de pacotes (*.packages)." >&2
+fi
 cd "${OUT}"
 sha256sum "${ISO_NAME}" > "${ISO_NAME}.sha256"
 

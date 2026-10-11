@@ -1,0 +1,13 @@
+Este repositório reúne materiais de origens diferentes, cada um com a sua
+licença:
+
+- modificacoes/: alterações em software livre de terceiros. Cada pasta segue
+  a licença do componente original, indicada no README.md da pasta.
+
+- EULA.md, LICENCAS-DE-TERCEIROS.md, TRADEMARKS.md, README.md e logo/:
+  Copyright (c) 2026 Gustavo Duia. Todos os direitos reservados. Podem ser
+  lidos e redistribuídos sem modificações.
+
+- ISOs nos Releases: contêm software livre de terceiros (cada componente sob
+  a própria licença, ver LICENCAS-DE-TERCEIROS.md) e software proprietário do
+  DuiaOS, cujo uso é regido pelo EULA.md.

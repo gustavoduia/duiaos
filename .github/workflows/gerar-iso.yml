@@ -1,8 +1,22 @@
-# DuiaOS — gera as ISOs x86_64 e ARM64.
+# DuiaOS — gera as ISOs x86_64 e ARM64 (ADR 020).
 #
-# - Envio para a branch main: gera ISOs de teste (aba Actions > Artifacts).
-# - Tag v*, ex.: v0.0.1: gera as ISOs e publica um Release com elas.
-# - Também pode ser disparado à mão na aba Actions (Run workflow).
+# Onde roda (variável do repositório DUIAOS_EXECUTOR, padrão "proprios"):
+#   proprios  Dell (rótulo duiaos-amd64) e Mac M4 (rótulo duiaos-arm64), sem custo
+#             de minutos. Se a máquina estiver desligada, o job espera ela ligar.
+#   github    runners do GitHub (consomem os minutos do plano). Use se uma
+#             máquina ficar indisponível: gh variable set DUIAOS_EXECUTOR --body github
+#
+# Quando roda:
+#   - Envio para a main: só a ISO amd64.
+#   - Disparo manual (Actions > Gerar ISO > Run workflow): escolha arquiteturas e executor.
+#   - Tag v*, ex.: v0.1.0: as duas ISOs + Release no repositório público.
+#
+# Onde fica a ISO:
+#   - Testes em runner próprio: na própria máquina, em ~/duiaos-isos (últimas 3 por arquitetura).
+#   - Testes em runner do GitHub: não é guardada (só valida o build; a cota de
+#     armazenamento de repositório privado é pequena demais para ISOs).
+#   - Tags: Release em DUIAOS_REPO_PUBLICO (padrão gustavoduia/duiaos-fontes-abertas),
+#     com o segredo DUIAOS_TOKEN_PUBLICO.
 name: Gerar ISO
 
 on:
@@ -13,12 +27,20 @@ on:
       - "**.md"
       - "docs/**"
       - "branding/**"
-  pull_request:
-    paths-ignore:
-      - "**.md"
-      - "docs/**"
-      - "branding/**"
+      - "publico/**"
+      - "ferramentas/**"
   workflow_dispatch:
+    inputs:
+      arquiteturas:
+        description: "Arquiteturas"
+        type: choice
+        options: [ambas, amd64, arm64]
+        default: ambas
+      executor:
+        description: "Onde gerar"
+        type: choice
+        options: [padrao, proprios, github]
+        default: padrao
 
 permissions:
   contents: read
@@ -27,32 +49,110 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  REPO_PUBLICO: ${{ vars.DUIAOS_REPO_PUBLICO || 'gustavoduia/duiaos-fontes-abertas' }}
+
 jobs:
+  plano:
+    name: Planejar
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      matriz: ${{ steps.plano.outputs.matriz }}
+      versao: ${{ steps.plano.outputs.versao }}
+      release: ${{ steps.plano.outputs.release }}
+    steps:
+      - id: plano
+        env:
+          ENTRADA_ARQ: ${{ inputs.arquiteturas }}
+          ENTRADA_EXEC: ${{ inputs.executor }}
+          EXEC_PADRAO: ${{ vars.DUIAOS_EXECUTOR || 'proprios' }}
+        run: |
+          EXEC="${ENTRADA_EXEC:-padrao}"
+          [ "${EXEC}" = "padrao" ] && EXEC="${EXEC_PADRAO}"
+
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            ARQS="amd64 arm64"; RELEASE=true; VERSAO="${GITHUB_REF_NAME#v}"
+          else
+            RELEASE=false; VERSAO="dev-${GITHUB_SHA::7}"
+            case "${ENTRADA_ARQ:-amd64}" in
+              ambas) ARQS="amd64 arm64" ;;
+              *)     ARQS="${ENTRADA_ARQ:-amd64}" ;;
+            esac
+          fi
+
+          ITENS=""
+          for A in ${ARQS}; do
+            if [ "${EXEC}" = "github" ]; then
+              [ "${A}" = "amd64" ] && R='"ubuntu-24.04"' || R='"ubuntu-24.04-arm"'
+              PROPRIO=false
+            else
+              R="[\"self-hosted\",\"duiaos-${A}\"]"
+              PROPRIO=true
+            fi
+            ITENS="${ITENS:+${ITENS},}{\"arch\":\"${A}\",\"runner\":${R},\"proprio\":${PROPRIO}}"
+          done
+          MATRIZ="{\"include\":[${ITENS}]}"
+          {
+            echo "matriz=${MATRIZ}"
+            echo "versao=${VERSAO}"
+            echo "release=${RELEASE}"
+          } >> "${GITHUB_OUTPUT}"
+          echo "Executor: ${EXEC} | Versão: ${VERSAO} | Release: ${RELEASE}"
+          echo "Matriz: ${MATRIZ}"
+
+  preparar-release:
+    name: Preparar release (rascunho)
+    needs: plano
+    if: needs.plano.outputs.release == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ secrets.DUIAOS_TOKEN_PUBLICO }}
+      VERSAO: ${{ needs.plano.outputs.versao }}
+    steps:
+      - name: Criar o rascunho no repositório público
+        run: |
+          if [ -z "${GH_TOKEN}" ]; then
+            echo "Falta o segredo DUIAOS_TOKEN_PUBLICO (veja ferramentas/README.md)." >&2
+            exit 1
+          fi
+          if gh release view "${GITHUB_REF_NAME}" --repo "${REPO_PUBLICO}" >/dev/null 2>&1; then
+            echo "O release ${GITHUB_REF_NAME} já existe; os arquivos serão substituídos."
+            exit 0
+          fi
+          cat > notas.md <<EOF
+          DuiaOS ${VERSAO} (Zoinho), baseado no Debian 13 (trixie).
+
+          - \`duiaos-${VERSAO}-amd64.iso\`: computadores comuns (Intel/AMD, x86_64).
+          - \`duiaos-${VERSAO}-arm64.iso\`: computadores ARM64.
+          - \`.sha256\`: conferência do download. \`.packages\`: lista de pacotes e versões.
+
+          Uso regido pelo [EULA](https://github.com/${REPO_PUBLICO}/blob/main/EULA.md).
+          Licenças de terceiros e código-fonte: [LICENCAS-DE-TERCEIROS.md](https://github.com/${REPO_PUBLICO}/blob/main/LICENCAS-DE-TERCEIROS.md).
+          EOF
+          # Versões 0.x e com hífen (ex.: 1.0.0-beta) saem como pré-release.
+          EXTRA=""
+          if [[ "${GITHUB_REF_NAME}" == v0.* || "${GITHUB_REF_NAME}" == *-* ]]; then
+            EXTRA="--prerelease"
+          fi
+          gh release create "${GITHUB_REF_NAME}" --repo "${REPO_PUBLICO}" --draft \
+            --title "DuiaOS ${VERSAO}" --notes-file notas.md ${EXTRA}
+
   iso:
     name: ISO ${{ matrix.arch }}
+    needs: [plano, preparar-release]
+    if: ${{ !cancelled() && needs.plano.result == 'success' && needs.preparar-release.result != 'failure' }}
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 120
+    timeout-minutes: 150
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - arch: amd64
-            runner: ubuntu-24.04
-          - arch: arm64
-            runner: ubuntu-24.04-arm
+      matrix: ${{ fromJSON(needs.plano.outputs.matriz) }}
+    env:
+      DUIAOS_VERSION: ${{ needs.plano.outputs.versao }}
     steps:
       - name: Baixar o código
         uses: actions/checkout@v4
-
-      - name: Definir a versão
-        run: |
-          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
-            VERSION="${GITHUB_REF_NAME#v}"
-          else
-            VERSION="dev-$(git rev-parse --short HEAD)"
-          fi
-          echo "DUIAOS_VERSION=${VERSION}" >> "${GITHUB_ENV}"
-          echo "Versão: ${VERSION}"
 
       - name: Gerar a ISO dentro do Debian 13
         run: |
@@ -63,40 +163,46 @@ jobs:
             debian:trixie \
             bash build/build.sh
 
-      - name: Guardar a ISO
-        uses: actions/upload-artifact@v4
-        with:
-          name: duiaos-${{ env.DUIAOS_VERSION }}-${{ matrix.arch }}
-          path: out/*
-          compression-level: 0
-          retention-days: 14
-          if-no-files-found: error
-
-  release:
-    name: Publicar release
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: iso
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: write
-    steps:
-      - name: Baixar as ISOs geradas
-        uses: actions/download-artifact@v4
-        with:
-          path: out
-          merge-multiple: true
-
-      - name: Criar o release
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Devolver a pasta out/ ao usuário do runner
+        if: always()
         run: |
-          ls -lh out
-          # Versões 0.x e com hífen (ex.: 1.0.0-beta) saem como pré-release.
-          EXTRA=""
-          if [[ "${GITHUB_REF_NAME}" == v0.* || "${GITHUB_REF_NAME}" == *-* ]]; then
-            EXTRA="--prerelease"
+          if [ -d out ]; then
+            docker run --rm -v "${PWD}:/work" debian:trixie chown -R "$(id -u):$(id -g)" /work/out
           fi
-          gh release create "${GITHUB_REF_NAME}" out/* \
-            --repo "${GITHUB_REPOSITORY}" \
-            --title "DuiaOS ${GITHUB_REF_NAME#v}" \
-            --generate-notes ${EXTRA}
+
+      - name: Publicar no release
+        if: needs.plano.outputs.release == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.DUIAOS_TOKEN_PUBLICO }}
+        run: gh release upload "${GITHUB_REF_NAME}" out/* --repo "${REPO_PUBLICO}" --clobber
+
+      - name: Guardar a ISO nesta máquina
+        if: needs.plano.outputs.release != 'true' && matrix.proprio
+        run: |
+          DESTINO="${HOME}/duiaos-isos"
+          mkdir -p "${DESTINO}"
+          cp out/* "${DESTINO}/"
+          # Mantém só as 3 ISOs de teste mais recentes desta arquitetura.
+          ls -t "${DESTINO}"/duiaos-dev-*-${{ matrix.arch }}.iso 2>/dev/null | tail -n +4 | while read -r ANTIGA; do
+            rm -f "${ANTIGA}" "${ANTIGA}.sha256" "${ANTIGA%.iso}.packages"
+          done
+          echo "ISO guardada em ${DESTINO}:"
+          ls -lh "${DESTINO}"
+
+      - name: Limpar
+        if: always()
+        run: rm -rf out
+
+  publicar-release:
+    name: Publicar release
+    needs: [plano, iso]
+    if: needs.plano.outputs.release == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ secrets.DUIAOS_TOKEN_PUBLICO }}
+    steps:
+      - name: Tirar do rascunho
+        run: |
+          gh release edit "${GITHUB_REF_NAME}" --repo "${REPO_PUBLICO}" --draft=false
+          gh release view "${GITHUB_REF_NAME}" --repo "${REPO_PUBLICO}"

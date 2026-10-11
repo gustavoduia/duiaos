@@ -1,0 +1,165 @@
+#!/bin/bash
+# =============================================================================
+# DuiaOS — verifica a instalação de uma vez e imprime OK / AVISO / FALHA.
+#
+# Uso:    sudo /usr/lib/duiaos/verificar-instalacao
+# Do Mac: ssh -t duia@duiaos 'sudo /usr/lib/duiaos/verificar-instalacao'
+#
+# Não altera nada no sistema. Sai com código 1 se houver alguma FALHA.
+# Copie a saída inteira e cole na conversa com o Claude.
+# =============================================================================
+set -u
+export LC_ALL=C.UTF-8
+
+OK=0; AVISO=0; FALHA=0
+ok()    { printf '  [OK]    %s\n' "$*"; OK=$((OK + 1)); }
+aviso() { printf '  [AVISO] %s\n' "$*"; AVISO=$((AVISO + 1)); }
+falha() { printf '  [FALHA] %s\n' "$*"; FALHA=$((FALHA + 1)); }
+secao() { printf '\n%s\n' "$*"; }
+tem()   { command -v "$1" >/dev/null 2>&1; }
+
+if [ "$(id -u)" -ne 0 ]; then
+  echo "Use com sudo: sudo $0" >&2
+  exit 2
+fi
+
+# Usuário dono da sessão gráfica (quem chamou o sudo).
+USUARIO="${SUDO_USER:-duia}"
+
+echo "DuiaOS — verificação da instalação ($(date '+%d/%m/%Y %H:%M'))"
+
+secao "Sistema"
+if [ -r /etc/os-release ]; then
+  . /etc/os-release
+  [ "${ID:-}" = "duiaos" ] && ok "${PRETTY_NAME}" || falha "Não é o DuiaOS: ${PRETTY_NAME:-desconhecido}"
+else
+  falha "/etc/os-release não existe"
+fi
+ok "Kernel $(uname -r), arquitetura $(dpkg --print-architecture)"
+ok "Computador: $(cat /sys/class/dmi/id/sys_vendor 2>/dev/null) $(cat /sys/class/dmi/id/product_name 2>/dev/null)"
+if grep -q 'boot=live' /proc/cmdline; then
+  aviso "Rodando no modo live (pendrive), não no sistema instalado"
+fi
+
+secao "Boot e Secure Boot"
+if [ -d /sys/firmware/efi ]; then
+  ok "Iniciado em modo UEFI"
+else
+  falha "Iniciado em modo BIOS/legado (o DuiaOS espera UEFI)"
+fi
+SB_VAR="$(ls /sys/firmware/efi/efivars/SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c 2>/dev/null)"
+if [ -n "${SB_VAR}" ]; then
+  SB="$(od -An -t u1 -j 4 -N 1 "${SB_VAR}" | tr -d ' ')"
+  [ "${SB}" = "1" ] && ok "Secure Boot ligado" || aviso "Secure Boot desligado (o DuiaOS funciona com ele ligado; ligue na BIOS)"
+else
+  aviso "Não foi possível ler o estado do Secure Boot"
+fi
+if tem efibootmgr; then
+  if efibootmgr 2>/dev/null | grep -q 'Windows Boot Manager'; then
+    ok "Windows Boot Manager presente no firmware"
+  else
+    aviso "Windows não encontrado no firmware (normal se não houver dual boot)"
+  fi
+  efibootmgr 2>/dev/null | grep -qi 'debian\|duiaos' && ok "Entrada do DuiaOS presente no firmware" \
+    || falha "Nenhuma entrada do DuiaOS/Debian no firmware"
+else
+  falha "efibootmgr não está instalado"
+fi
+if [ -r /boot/grub/grub.cfg ]; then
+  grep -qi 'windows' /boot/grub/grub.cfg && ok "Windows no menu de boot (GRUB)" \
+    || aviso "Windows não aparece no menu de boot (GRUB)"
+fi
+if [ -x /usr/lib/duiaos/reiniciar-no-windows ]; then
+  ok "Comando reiniciar-no-windows instalado (teste à mão: sudo /usr/lib/duiaos/reiniciar-no-windows)"
+else
+  falha "/usr/lib/duiaos/reiniciar-no-windows não existe"
+fi
+
+secao "Segurança"
+if systemctl list-unit-files ssh.service >/dev/null 2>&1 && systemctl cat ssh.service >/dev/null 2>&1; then
+  if systemctl is-enabled ssh.service >/dev/null 2>&1; then
+    aviso "SSH ligado (padrão do DuiaOS é desligado; normal neste Dell de testes se você ligou à mão)"
+  else
+    ok "SSH desligado por padrão"
+  fi
+  if ls /etc/ssh/ssh_host_*_key >/dev/null 2>&1; then
+    ok "Chaves do SSH desta instalação existem"
+  fi
+else
+  ok "Servidor SSH não instalado"
+fi
+
+secao "Idioma, teclado e horário"
+LANG_SIS="$(sed -n 's/^LANG=//p' /etc/default/locale 2>/dev/null | tr -d '"')"
+[ "${LANG_SIS}" = "pt_BR.UTF-8" ] && ok "Idioma pt_BR.UTF-8" || falha "Idioma do sistema: ${LANG_SIS:-não definido}"
+LAYOUT="$(sed -n 's/^XKBLAYOUT=//p' /etc/default/keyboard 2>/dev/null | tr -d '"')"
+[ "${LAYOUT}" = "br" ] && ok "Teclado ABNT2 (br)" || falha "Teclado: ${LAYOUT:-não definido}"
+FUSO="$(readlink /etc/localtime 2>/dev/null | sed 's|.*/zoneinfo/||')"
+[ "${FUSO}" = "America/Sao_Paulo" ] && ok "Fuso America/Sao_Paulo" || aviso "Fuso: ${FUSO:-não definido}"
+if timedatectl show -p NTPSynchronized --value 2>/dev/null | grep -q yes; then
+  ok "Relógio sincronizado (NTP)"
+else
+  aviso "Relógio ainda não sincronizado pela internet"
+fi
+
+secao "Rede"
+WIFI="$(for n in /sys/class/net/*; do [ -d "$n/wireless" ] && basename "$n"; done | head -n 1)"
+[ -n "${WIFI}" ] && ok "Wi-Fi detectado (${WIFI})" || aviso "Nenhuma placa Wi-Fi detectada"
+if getent hosts deb.debian.org >/dev/null 2>&1; then
+  ok "Internet e DNS funcionando"
+else
+  falha "Sem internet ou DNS (não resolve deb.debian.org)"
+fi
+
+secao "Áudio"
+if [ -r /proc/asound/cards ] && ! grep -q 'no soundcards' /proc/asound/cards; then
+  ok "Placa de som: $(sed -n 's/^ *[0-9]* \[[^]]*\]: //p' /proc/asound/cards | head -n 1)"
+else
+  falha "Nenhuma placa de som detectada"
+fi
+if sudo -u "${USUARIO}" XDG_RUNTIME_DIR="/run/user/$(id -u "${USUARIO}" 2>/dev/null)" wpctl status >/dev/null 2>&1; then
+  ok "PipeWire ativo na sessão de ${USUARIO}"
+else
+  aviso "PipeWire não respondeu (normal se ${USUARIO} não estiver com sessão aberta)"
+fi
+
+secao "Pacotes"
+if grep -rqs 'trixie' /etc/apt/sources.list /etc/apt/sources.list.d/; then
+  ok "Repositórios do Debian 13 (trixie) configurados"
+else
+  falha "Repositórios do Debian 13 não configurados"
+fi
+QUEBRADOS="$(dpkg --audit 2>/dev/null | wc -l)"
+[ "${QUEBRADOS}" -eq 0 ] && ok "Nenhum pacote com instalação incompleta" || falha "dpkg --audit encontrou problemas"
+FALTAM=""
+for P in labwc foot swaybg wlrctl qml6-module-org-kde-layershell python3-pyside6.qtquick; do
+  dpkg -s "${P}" >/dev/null 2>&1 || FALTAM="${FALTAM} ${P}"
+done
+[ -z "${FALTAM}" ] && ok "Pacotes da interface instalados" || aviso "Pacotes da interface faltando:${FALTAM}"
+if [ -r /usr/share/duiaos/licenca/EULA.md ]; then
+  ok "EULA presente em /usr/share/duiaos/licenca"
+else
+  aviso "EULA ausente (normal em instalações anteriores ao patch de licença)"
+fi
+
+secao "Disco"
+LIVRE_GB="$(df -BG --output=avail / | tail -n 1 | tr -dc '0-9')"
+if [ "${LIVRE_GB}" -ge 25 ]; then
+  ok "Espaço livre em /: ${LIVRE_GB} GB"
+elif [ "${LIVRE_GB}" -ge 15 ]; then
+  aviso "Espaço livre em /: ${LIVRE_GB} GB (o runner precisa de ~15 GB por build)"
+else
+  falha "Espaço livre em /: ${LIVRE_GB} GB (pouco para atualizar e gerar ISOs)"
+fi
+
+secao "Runner do GitHub (só no Dell de build)"
+RUNNER_SVC="$(systemctl list-units --type=service --all --no-legend 'actions.runner.*' 2>/dev/null | awk '{print $1}' | head -n 1)"
+if [ -n "${RUNNER_SVC}" ]; then
+  systemctl is-active "${RUNNER_SVC}" >/dev/null 2>&1 && ok "Runner ativo (${RUNNER_SVC})" || falha "Runner instalado mas parado (${RUNNER_SVC})"
+  tem docker && docker info >/dev/null 2>&1 && ok "Docker funcionando" || falha "Docker não está funcionando"
+else
+  aviso "Runner não instalado nesta máquina"
+fi
+
+printf '\nResumo: %d OK, %d AVISO, %d FALHA\n' "${OK}" "${AVISO}" "${FALHA}"
+[ "${FALHA}" -eq 0 ]

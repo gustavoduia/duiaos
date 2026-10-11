@@ -53,9 +53,10 @@ incremental · Identidade própria e coerente (visual claro, azul, minimalista).
 
 ### 1.4 Público
 
-Usuário não técnico, profissional de escritório, estudante, desenvolvedor,
-administrador do próprio computador, quem quer controlar custos — e empresas
-que adotam software livre.
+**Usuários finais**: pessoa sem conhecimento técnico, profissional de
+escritório, estudante, família, quem quer controlar custos — e, no futuro,
+empresas. O DuiaOS é um produto, não um projeto de comunidade de
+desenvolvedores.
 
 ---
 
@@ -165,9 +166,10 @@ documento de visão vira a **Trilha Wise**. As duas avançam intercaladas.
 | P1 Ambiente e automação | Repositório, GitHub Actions, ISOs x86_64/ARM64 | Concluída (v0.0.1) |
 | P2 Base instalável | Instalador provisório, Wi-Fi, áudio, dual boot, pt-BR | Concluída (v0.1.0 a publicar) |
 | P3 Sessão gráfica | Barra de Recursos, Ilha, Central ✔ · login, animação de boot, papel de parede, menu de energia | Em andamento |
+| P3b Pacotes e repositório APT | Código próprio em `.deb` (`duiaos-shell`, `duiaos-identidade`, metapacote `duiaos-desktop`), repositório APT assinado, ISO montada a partir dele (ADR 023) | Planejada |
 | P4 Instalador próprio | Calamares com identidade DuiaOS, detecção de BitLocker | Planejada |
 | P5 Central de Configurações | Rede, tela, som, aparência, usuários — e abriga o Painel de Tecnologias | Planejada |
-| P6 Atualizações e loja | Repositório APT próprio, assinatura, rollback, loja | Planejada |
+| P6 Atualizações e loja | Atualizações automáticas sobre o repositório APT da P3b, rollback, loja | Planejada |
 | P7 Gravador de pendrive | App próprio para Linux, macOS e Windows | Planejada |
 
 ### 4.2 Trilha Wise (W)
@@ -210,13 +212,13 @@ alterações automáticas.
 | --- | --- |
 | Stack do release atual | Debian 13, live-build, GitHub Actions; sessão labwc (Wayland); interface Qt6/QML + Python (PySide6) |
 | Ambiente gráfico | Shell próprio sobre o labwc na 1.0; compositor próprio na 2.0 |
-| Uso pessoal ou público | Ambos: desenvolvimento aberto (GPLv3), releases públicos |
+| Uso pessoal ou público | Produto para usuários finais: código próprio fechado (repositório privado), ISOs públicas no repositório `duiaos-fontes-abertas` |
 | Arquiteturas | x86_64 e ARM64 desde o início; referência: Dell Latitude 3420 |
 | Hardware mínimo | A definir na estabilização (proposta: 4 GB de RAM, 30 GB de disco, UEFI) |
 | Dados locais × nuvem | Local por padrão; envio a provedores só com consentimento e indicação visível |
 | Política de atualizações e ações destrutivas | Níveis N0–N4; atualização e remoção exigem aprovação (N2) |
 | Integrações prioritárias | 1 provedor de IA + modelo local; depois GitHub e agenda |
-| Distribuição de pacotes | Repositório APT próprio assinado (P6), ISOs no GitHub Releases |
+| Distribuição de pacotes | Repositório APT próprio assinado (P3b), ISOs nos Releases do repositório público |
 | Modelos locais | Via Ollama, conforme o hardware; obrigatórios como opção de privacidade |
 | Idiomas e acessibilidade | Português do Brasil na 1.0; inglês depois; teclado, contraste e leitor de tela desde a interface |
 
@@ -224,9 +226,16 @@ alterações automáticas.
 
 ## 6. Modelo de produto e negócio
 
-- Núcleo aberto sob **GPLv3**, desenvolvido em público.
-- Marca **DuiaOS** e logotipo protegidos (TRADEMARKS.md; registro no INPI).
-- Contribuições externas somente com **CLA**.
+- Código próprio (interface, Wise, aplicativos) **proprietário**, em
+  repositório privado; usuários finais usam o sistema pelo **EULA**
+  (`publico/EULA.md`). Wise e aplicativos distribuídos compilados (Nuitka);
+  a parte mais valiosa do Wise roda no servidor.
+- Componentes livres de terceiros mantêm as licenças deles; o que a lei exige
+  publicar fica no repositório público `duiaos-fontes-abertas` (ADRs 017–019).
+- Marcas **DuiaOS**, **Zoinho**, **Wise** e logotipo protegidas
+  (`publico/TRADEMARKS.md`; registro no INPI — avaliar o risco do nome Wise
+  diante da fintech Wise).
+- Colaboradores somente com contrato de cessão de direitos + NDA (ADR 021).
 - Edição corporativa futura: serviços, suporte, gestão de frotas e conectores
   corporativos em componentes separados.
 - Custos de IA transparentes: o usuário usa os provedores que já paga, os

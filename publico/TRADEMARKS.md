@@ -1,8 +1,9 @@
 # Marca DuiaOS
 
-O código do DuiaOS é livre (GPLv3), mas o nome **DuiaOS**, o codinome
-**Zoinho** e o logotipo são marcas do projeto. A licença do código não dá
-direito de uso da marca.
+O nome **DuiaOS**, o codinome **Zoinho**, o nome do assistente **Wise** e o
+logotipo são marcas do titular do DuiaOS. Nenhuma licença de software — nem as
+dos componentes livres incluídos no sistema, nem o
+[Contrato de Licença de Usuário Final](EULA.md) — dá direito de uso da marca.
 
 **Pode, sem pedir permissão:**
 
@@ -20,4 +21,4 @@ Quem distribuir uma versão modificada deve remover o nome e o logotipo do
 DuiaOS dela e dar outro nome ao sistema.
 
 Pedidos de autorização: abra uma issue em
-https://github.com/gustavoduia/duiaos/issues.
+https://github.com/gustavoduia/duiaos-fontes-abertas/issues.

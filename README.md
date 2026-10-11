@@ -19,6 +19,12 @@
 
 ---
 
+> **Repositório interno e confidencial.** Código proprietário do DuiaOS
+> ([LICENSE](LICENSE)); não copie nem compartilhe sem autorização. O que é
+> público (ISOs, EULA, licenças de terceiros, marca) fica na pasta
+> [`publico/`](publico/), espelhada no repositório
+> [duiaos-fontes-abertas](https://github.com/gustavoduia/duiaos-fontes-abertas).
+
 > **Em desenvolvimento.** A versão 1.0 tem o codinome **Zoinho**.
 > Já funcionam: instalação (inclusive ao lado do Windows), interface gráfica
 > própria com Barra de Recursos, Ilha de Aplicativos e Central de Aplicativos.
@@ -67,9 +73,10 @@ tudo o que foi feito.
 
 ## Para quem
 
-Usuários sem conhecimento técnico, profissionais, estudantes, desenvolvedores
-e quem administra o próprio computador — e empresas que usam software livre e
-querem um sistema bonito, leve, seguro e simples de operar.
+**Usuários finais**: pessoas sem conhecimento técnico, profissionais,
+estudantes e famílias que querem um computador bonito, leve, seguro e simples
+de usar — e, no futuro, empresas que precisem do mesmo em escala. O DuiaOS não
+é um projeto de comunidade de desenvolvedores.
 
 ## Arquiteturas
 
@@ -77,8 +84,9 @@ x86_64 (amd64) e ARM64, com uma ISO para cada em todo release.
 
 ## Baixar e instalar
 
-As ISOs ficam em [Releases](https://github.com/gustavoduia/duiaos/releases),
-cada uma com um arquivo `.sha256` para conferência:
+As ISOs públicas ficam nos [Releases do repositório público](https://github.com/gustavoduia/duiaos-fontes-abertas/releases),
+cada uma com um arquivo `.sha256` para conferência e a lista de pacotes
+(`.packages`):
 
 ```bash
 sha256sum -c duiaos-VERSAO-amd64.iso.sha256     # Linux
@@ -99,8 +107,11 @@ shasum -a 256 -c duiaos-VERSAO-amd64.iso.sha256 # macOS
 
 ## Gerar a ISO
 
-O GitHub Actions gera as ISOs a cada envio para a `main` (aba **Actions**) e
-publica um release a cada tag `v*`. Localmente, numa máquina Linux com Docker:
+O GitHub Actions gera as ISOs nos runners próprios (Dell para amd64, Mac M4
+para arm64): a amd64 a cada envio para a `main`, as duas quando disparado à mão
+e, a cada tag `v*`, as duas com release no repositório público. ISOs de teste
+ficam na própria máquina, em `~/duiaos-isos`. Configuração e scripts:
+[ferramentas/README.md](ferramentas/README.md) (ADR 020). Localmente, numa máquina Linux com Docker:
 
 ```bash
 sudo docker run --rm --privileged -v "$PWD:/work" -w /work \
@@ -119,11 +130,21 @@ sudo docker run --rm --privileged -v "$PWD:/work" -w /work \
 | `usb-writer/` | Gravador de pendrive |
 | `branding/` | Identidade visual |
 | `docs/` | Documentação |
+| `ferramentas/` | Scripts do dia a dia: runners, repositório público, lançar versão |
+| `publico/` | Conteúdo do repositório público: EULA, licenças de terceiros, marca, modificações em código livre |
 
 ## Licença
 
-O código do DuiaOS é distribuído sob a [GNU GPL v3](LICENSE). Componentes de
-terceiros incluídos na ISO mantêm suas licenças originais.
+O código próprio do DuiaOS é **proprietário, com todos os direitos
+reservados** ([LICENSE](LICENSE)). Usuários finais usam o sistema nos termos
+do [EULA](publico/EULA.md). Componentes de terceiros mantêm as suas licenças
+([publico/LICENCAS-DE-TERCEIROS.md](publico/LICENCAS-DE-TERCEIROS.md)).
 
-O nome **DuiaOS** e o logotipo são marcas do projeto e não são cobertos pela
-licença do código. Veja [TRADEMARKS.md](TRADEMARKS.md).
+As versões publicadas até o commit `d6526e4` (release v0.0.1) foram
+distribuídas sob a GPLv3 e continuam assim para quem as obteve.
+
+Regra para dependências novas do código próprio: só licenças permissivas
+(MIT, BSD, Apache-2.0, ou LGPL usada de forma dinâmica). Código GPL só como
+programa separado. Veja o ADR 019.
+
+Marcas: [publico/TRADEMARKS.md](publico/TRADEMARKS.md).

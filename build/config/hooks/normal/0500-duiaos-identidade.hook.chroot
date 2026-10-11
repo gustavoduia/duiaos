@@ -7,7 +7,7 @@ set -e
 
 VERSION="@DUIAOS_VERSION@"
 CODENAME="@DUIAOS_CODENAME@"
-URL="https://github.com/gustavoduia/duiaos"
+URL="https://github.com/gustavoduia/duiaos-fontes-abertas"
 
 for f in /usr/lib/os-release /etc/issue /etc/issue.net /etc/motd; do
   if [ "$(dpkg-divert --truename "${f}")" = "${f}" ]; then
@@ -41,8 +41,8 @@ cat > /etc/motd <<EOF
 
 Bem-vindo ao DuiaOS ${VERSION} (Zoinho).
 
-Os programas incluídos no DuiaOS são software livre; os termos de
-distribuição de cada um estão em /usr/share/doc/*/copyright.
-
-O DuiaOS é fornecido SEM NENHUMA GARANTIA, na medida permitida pela lei.
+O uso do DuiaOS é regido pelo Contrato de Licença de Usuário Final,
+em /usr/share/duiaos/licenca/EULA.md. Os componentes de software livre
+incluídos mantêm as suas licenças (/usr/share/doc/*/copyright e
+/usr/share/duiaos/licenca/LICENCAS-DE-TERCEIROS.md).
 EOF

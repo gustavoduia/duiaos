@@ -1,0 +1,56 @@
+# DuiaOS — espelha a pasta publico/ no repositório público (ADR 018).
+#
+# A pasta publico/ deste repositório é a fonte da verdade. A cada envio para a
+# main que mude publico/, o conteúdo do repositório público é substituído por
+# ela. Não edite o repositório público direto: a próxima sincronização desfaz.
+#
+# Precisa do segredo DUIAOS_TOKEN_PUBLICO (veja ferramentas/README.md).
+# A mensagem do commit no público é genérica de propósito: não expõe o
+# histórico interno.
+name: Sincronizar repositório público
+
+on:
+  push:
+    branches: [main]
+    paths: ["publico/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sincronizar-publico
+  cancel-in-progress: false
+
+jobs:
+  sincronizar:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ secrets.DUIAOS_TOKEN_PUBLICO }}
+      REPO_PUBLICO: ${{ vars.DUIAOS_REPO_PUBLICO || 'gustavoduia/duiaos-fontes-abertas' }}
+    steps:
+      - name: Baixar o código interno
+        uses: actions/checkout@v4
+
+      - name: Copiar publico/ para o repositório público
+        run: |
+          if [ -z "${GH_TOKEN}" ]; then
+            echo "Falta o segredo DUIAOS_TOKEN_PUBLICO (veja ferramentas/README.md)." >&2
+            exit 1
+          fi
+          git clone "https://x-access-token:${GH_TOKEN}@github.com/${REPO_PUBLICO}.git" destino
+          cd destino
+          # Repositório recém-criado e vazio: começa na branch main.
+          git rev-parse --verify HEAD >/dev/null 2>&1 || git checkout -b main
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -a ../publico/. .
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Nada mudou no conteúdo público."
+            exit 0
+          fi
+          git -c user.name="DuiaOS" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -q -m "Atualiza o conteúdo público do DuiaOS"
+          git push origin HEAD:main
+          echo "Repositório público atualizado: https://github.com/${REPO_PUBLICO}"
