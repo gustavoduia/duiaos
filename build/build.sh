@@ -50,6 +50,9 @@ cd "${WORK}"
 VOLUME="DuiaOS ${VERSION}"
 VOLUME="${VOLUME:0:32}"
 
+# Secure Boot: a ISO e o sistema instalado iniciam com o Secure Boot ligado
+# (shim e GRUB assinados). Assim o usuário não precisa desligá-lo na BIOS,
+# o que evita pedidos de chave do BitLocker em computadores com Windows.
 # Instalador: debian-installer em modo "live" (copia o sistema da ISO
 # para o disco). Respostas pré-definidas em config/includes.installer/.
 # Firmwares: o live-build não instala todos automaticamente
@@ -62,6 +65,7 @@ lb config \
   --archive-areas "main contrib non-free non-free-firmware" \
   --binary-images iso-hybrid \
   --debian-installer live \
+  --uefi-secure-boot enable \
   --debian-installer-distribution trixie \
   --firmware-chroot false \
   --firmware-binary false \

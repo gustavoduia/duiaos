@@ -1,0 +1,27 @@
+#!/bin/sh
+# =============================================================================
+# DuiaOS — reinicia o computador direto no Windows (dual boot).
+#
+# Pede ao firmware (UEFI) que inicie o "Windows Boot Manager" uma única vez,
+# sem passar pelo menu do DuiaOS. Iniciar o Windows pelo próprio firmware é
+# o caminho que o BitLocker reconhece como seguro: assim ele não pede a chave
+# de recuperação. No boot seguinte, o computador volta a abrir o DuiaOS.
+#
+# Uso: sudo /usr/lib/duiaos/reiniciar-no-windows
+# =============================================================================
+set -e
+
+if [ "$(id -u)" -ne 0 ]; then
+  echo "Use com sudo: sudo $0" >&2
+  exit 1
+fi
+
+ENTRADA="$(efibootmgr | sed -n 's/^Boot\([0-9A-Fa-f]\{4\}\)\*\{0,1\} \{1,\}Windows Boot Manager.*/\1/p' | head -n 1)"
+if [ -z "${ENTRADA}" ]; then
+  echo "Não encontrei o Windows Boot Manager no firmware deste computador." >&2
+  exit 1
+fi
+
+efibootmgr --bootnext "${ENTRADA}" >/dev/null
+echo "Reiniciando no Windows..."
+systemctl reboot

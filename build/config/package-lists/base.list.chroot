@@ -43,6 +43,7 @@ zram-tools
 # outros sistemas para dual boot (os-prober)
 dosfstools
 os-prober
+efibootmgr
 btrfs-progs
 
 # Diagnóstico de hardware (ex.: lspci -nn)
