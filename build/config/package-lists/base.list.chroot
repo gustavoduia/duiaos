@@ -39,8 +39,10 @@ alsa-utils
 # Memória: swap comprimida na RAM (zram)
 zram-tools
 
-# Sistemas de arquivos usados na instalação (EFI, btrfs)
+# Sistemas de arquivos usados na instalação (EFI, btrfs) e detecção de
+# outros sistemas para dual boot (os-prober)
 dosfstools
+os-prober
 btrfs-progs
 
 # Diagnóstico de hardware (ex.: lspci -nn)
