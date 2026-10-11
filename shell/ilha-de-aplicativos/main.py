@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
-"""DuiaOS — Ilha de Aplicativos (barra inferior de aplicativos).
+"""DuiaOS — Ilha de Aplicativos e Central de Aplicativos.
 
-Mostra os aplicativos fixados e os abertos. Um clique abre o aplicativo ou,
-se ele já estiver aberto, traz a janela para a frente.
+Ilha de Aplicativos: barra inferior com os aplicativos fixados e os abertos.
+Um clique abre o aplicativo ou, se ele já estiver aberto, traz a janela
+para a frente.
+
+Central de Aplicativos: tela com todos os aplicativos instalados e busca.
+Abre pelo botão no início da Ilha ou pelo atalho Super+Espaço (que envia
+o sinal SIGUSR1 a este programa).
+
 A interface fica em IlhaDeAplicativos.qml.
-
 Aplicativos fixados: ~/.config/duiaos/ilha-de-aplicativos.conf
 Janelas abertas: comando wlrctl (protocolo wlr-foreign-toplevel do labwc).
 """
@@ -12,8 +17,10 @@ import configparser
 import fcntl
 import os
 import shlex
+import signal
 import subprocess
 import sys
+import unicodedata
 from pathlib import Path
 
 PASTA_CONFIG = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "duiaos"
@@ -33,7 +40,11 @@ except OSError:
     print("A Ilha de Aplicativos já está aberta. Para reiniciar: reiniciar.sh")
     sys.exit(0)
 
-# A Ilha é uma "camada" do Wayland presa à borda de baixo (layer-shell).
+# Número do processo, usado pelo atalho Super+Espaço (alternar-central.sh)
+ARQUIVO_PID = Path(os.environ.get("XDG_RUNTIME_DIR", "/tmp")) / "duiaos-ilha-de-aplicativos.pid"
+ARQUIVO_PID.write_text(str(os.getpid()))
+
+# A Ilha e a Central são "camadas" do Wayland (layer-shell).
 os.environ.setdefault("QT_QPA_PLATFORM", "wayland")
 os.environ["QT_WAYLAND_SHELL_INTEGRATION"] = "layer-shell"
 
@@ -42,6 +53,8 @@ from PySide6.QtGui import QGuiApplication, QIcon, QPixmap  # noqa: E402
 from PySide6.QtQml import QQmlApplicationEngine  # noqa: E402
 from PySide6.QtQuick import QQuickImageProvider  # noqa: E402
 
+
+# ---------------------------------------------------------------- configuração
 
 def ler_fixados():
     config = configparser.ConfigParser()
@@ -58,39 +71,84 @@ def gravar_fixados(fixados):
         arquivo.write("[ilha]\nfixados = " + ";".join(fixados) + "\n")
 
 
+# ------------------------------------------------------------ aplicativos (.desktop)
+
+def normalizar(texto):
+    """Minúsculas e sem acentos, para a busca."""
+    decomposto = unicodedata.normalize("NFD", texto)
+    return "".join(c for c in decomposto if not unicodedata.combining(c)).casefold()
+
+
+def ler_entrada(caminho):
+    """Lê um arquivo .desktop. Devolve None se não for um aplicativo visível."""
+    dados, na_secao = {}, False
+    try:
+        linhas = caminho.read_text(encoding="utf-8", errors="ignore").splitlines()
+    except OSError:
+        return None
+    for linha in linhas:
+        linha = linha.strip()
+        if linha.startswith("["):
+            na_secao = linha == "[Desktop Entry]"
+            continue
+        if na_secao and "=" in linha:
+            chave, valor = linha.split("=", 1)
+            dados.setdefault(chave.strip(), valor.strip())
+    if dados.get("Type", "Application") != "Application":
+        return None
+    if dados.get("NoDisplay", "").lower() == "true" or dados.get("Hidden", "").lower() == "true":
+        return None
+
+    def local(chave):
+        return dados.get(chave + "[pt_BR]") or dados.get(chave + "[pt]") or dados.get(chave, "")
+
+    nome = local("Name") or caminho.stem
+    descricao = local("GenericName") or local("Comment")
+    return {
+        "id": caminho.name,
+        "nome": nome,
+        "descricao": descricao,
+        "icone": dados.get("Icon", ""),
+        "exec": dados.get("Exec", ""),
+        "terminal": dados.get("Terminal", "").lower() == "true",
+        "classe": dados.get("StartupWMClass", "").lower(),
+        "busca": normalizar(" ".join([nome, descricao, local("Keywords"), caminho.stem])),
+    }
+
+
 def ler_desktop(id_desktop):
-    """Lê um arquivo .desktop e devolve um dicionário com nome, ícone e comando."""
+    """Procura o .desktop pelo nome do arquivo nas pastas de aplicativos."""
     for pasta in PASTAS_APLICATIVOS:
         caminho = pasta / id_desktop
-        if not caminho.is_file():
-            continue
-        dados, na_secao = {}, False
-        for linha in caminho.read_text(encoding="utf-8", errors="ignore").splitlines():
-            linha = linha.strip()
-            if linha.startswith("["):
-                na_secao = linha == "[Desktop Entry]"
-                continue
-            if na_secao and "=" in linha:
-                chave, valor = linha.split("=", 1)
-                dados.setdefault(chave.strip(), valor.strip())
-        nome = dados.get("Name[pt_BR]") or dados.get("Name[pt]") or dados.get("Name", id_desktop)
-        return {
-            "id": id_desktop,
-            "nome": nome,
-            "icone": dados.get("Icon", ""),
-            "exec": dados.get("Exec", ""),
-            "classe": dados.get("StartupWMClass", "").lower(),
-        }
+        if caminho.is_file():
+            return ler_entrada(caminho)
     return None
 
 
-def comando_de_exec(exec_desktop):
+def listar_aplicativos():
+    """Todos os aplicativos visíveis, em ordem alfabética."""
+    encontrados = {}
+    for pasta in PASTAS_APLICATIVOS:
+        if not pasta.is_dir():
+            continue
+        for caminho in pasta.glob("*.desktop"):
+            if caminho.name not in encontrados:   # a pasta do usuário tem prioridade
+                encontrados[caminho.name] = ler_entrada(caminho)
+    aplicativos = [a for a in encontrados.values() if a]
+    aplicativos.sort(key=lambda a: normalizar(a["nome"]))
+    return aplicativos
+
+
+def comando_de_exec(app):
     """Converte a linha Exec= em lista de argumentos, sem os códigos %f, %U etc."""
     try:
-        partes = shlex.split(exec_desktop)
+        partes = shlex.split(app["exec"])
     except ValueError:
         return []
-    return [p for p in partes if not (len(p) == 2 and p.startswith("%"))]
+    comando = [p for p in partes if not (len(p) == 2 and p.startswith("%"))]
+    if comando and app.get("terminal"):
+        comando = ["foot", "--"] + comando
+    return comando
 
 
 def janelas_abertas():
@@ -108,6 +166,14 @@ def janelas_abertas():
     return abertos
 
 
+def iniciar(comando):
+    if comando:
+        subprocess.Popen(comando, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                         start_new_session=True)
+
+
+# ------------------------------------------------------------------- ícones
+
 class Icones(QQuickImageProvider):
     """Entrega ao QML os ícones do tema (image://icone/nome)."""
 
@@ -116,39 +182,55 @@ class Icones(QQuickImageProvider):
 
     def requestPixmap(self, nome, tamanho, tamanho_pedido):
         lado = max(tamanho_pedido.width(), 48)
-        if nome.startswith("/"):
-            icone = QIcon(nome)
-        else:
-            icone = QIcon.fromTheme(nome)
+        icone = QIcon(nome) if nome.startswith("/") else QIcon.fromTheme(nome)
         if icone.isNull():
             return QPixmap()
         return icone.pixmap(QSize(lado, lado))
 
 
+# ------------------------------------------------------- estado para o QML
+
 class Ilha(QObject):
     mudou = Signal()
+    centralMudou = Signal()
 
     def __init__(self):
         super().__init__()
         if not ARQUIVO_CONFIG.exists():
             gravar_fixados(FIXADOS_PADRAO)
+        self._ids_fixados = []
         self._fixados = []
         self._abertos = []
         self._itens = []
+        self._todos = []
+        self._resultados = []
+        self._consulta = ""
+        self._central_visivel = False
+        self._pedido_alternar = False
+
         self._vigia = QFileSystemWatcher([str(PASTA_CONFIG), str(ARQUIVO_CONFIG)], self)
-        self.recarregar_fixados()
         self._vigia.directoryChanged.connect(self.recarregar_fixados)
         self._vigia.fileChanged.connect(self.recarregar_fixados)
+        self.recarregar_fixados()
+
         self._timer = QTimer(self, interval=1500, timeout=self.atualizar_abertos)
         self._timer.start()
         self.atualizar_abertos()
 
+        # Atalho Super+Espaço: o labwc envia SIGUSR1; o timer deixa o Python tratá-lo.
+        signal.signal(signal.SIGUSR1, self._sinal_alternar)
+        self._timer_sinal = QTimer(self, interval=150, timeout=self._verificar_sinal)
+        self._timer_sinal.start()
+
+    # ----- Ilha
     def recarregar_fixados(self, _caminho=None):
         # Editores recriam o arquivo: volta a vigiá-lo
         if ARQUIVO_CONFIG.exists() and str(ARQUIVO_CONFIG) not in self._vigia.files():
             self._vigia.addPath(str(ARQUIVO_CONFIG))
-        self._fixados = [d for d in (ler_desktop(i) for i in ler_fixados()) if d]
+        self._ids_fixados = ler_fixados()
+        self._fixados = [d for d in (ler_desktop(i) for i in self._ids_fixados) if d]
         self.montar()
+        self.buscar(self._consulta)
 
     def atualizar_abertos(self):
         abertos = janelas_abertas()
@@ -174,7 +256,8 @@ class Ilha(QObject):
             if app_id in usados:
                 continue
             app = ler_desktop(app_id + ".desktop") or {
-                "id": "", "nome": app_id, "icone": app_id, "exec": "", "classe": ""}
+                "id": "", "nome": app_id, "icone": app_id, "exec": "", "classe": "",
+                "terminal": False, "descricao": "", "busca": ""}
             itens.append({**app, "fixado": False, "aberto": True, "appId": app_id})
         self._itens = itens
         self.mudou.emit()
@@ -185,20 +268,69 @@ class Ilha(QObject):
             return
         item = self._itens[indice]
         if item["aberto"] and item["appId"]:
-            subprocess.Popen(["wlrctl", "toplevel", "focus", "app_id:" + item["appId"]],
-                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            return
-        comando = comando_de_exec(item["exec"])
-        if comando:
-            subprocess.Popen(comando, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                             start_new_session=True)
+            iniciar(["wlrctl", "toplevel", "focus", "app_id:" + item["appId"]])
+        else:
+            iniciar(comando_de_exec(item))
+
+    # ----- Central de Aplicativos
+    def _sinal_alternar(self, _numero, _quadro):
+        self._pedido_alternar = True
+
+    def _verificar_sinal(self):
+        if self._pedido_alternar:
+            self._pedido_alternar = False
+            self.alternarCentral()
+
+    @Slot()
+    def alternarCentral(self):
+        if self._central_visivel:
+            self.fecharCentral()
+        else:
+            self._todos = listar_aplicativos()   # inclui aplicativos instalados agora
+            self.buscar("")
+            self._central_visivel = True
+            self.centralMudou.emit()
+
+    @Slot()
+    def fecharCentral(self):
+        if self._central_visivel:
+            self._central_visivel = False
+            self.centralMudou.emit()
+
+    @Slot(str)
+    def buscar(self, texto):
+        self._consulta = texto
+        palavras = normalizar(texto).split()
+        resultados = [a for a in self._todos if all(p in a["busca"] for p in palavras)]
+        self._resultados = [{**a, "fixado": a["id"] in self._ids_fixados} for a in resultados]
+        self.mudou.emit()
+
+    @Slot(str)
+    def abrirAplicativo(self, id_desktop):
+        app = next((a for a in self._todos if a["id"] == id_desktop), None)
+        if app:
+            iniciar(comando_de_exec(app))
+        self.fecharCentral()
+
+    @Slot(str)
+    def alternarFixado(self, id_desktop):
+        fixados = list(self._ids_fixados)
+        if id_desktop in fixados:
+            fixados.remove(id_desktop)
+        else:
+            fixados.append(id_desktop)
+        gravar_fixados(fixados)
+        self.recarregar_fixados()
 
     itens = Property("QVariantList", lambda self: self._itens, notify=mudou)
+    resultados = Property("QVariantList", lambda self: self._resultados, notify=mudou)
+    centralVisivel = Property(bool, lambda self: self._central_visivel, notify=centralMudou)
 
 
 def main():
     app = QGuiApplication(sys.argv)
     app.setApplicationName("duiaos-ilha-de-aplicativos")
+
     # Sem ambiente de desktop completo, o Qt não conhece as pastas de ícones
     # do sistema: informa as pastas padrão (XDG) e o tema base "hicolor".
     pastas_dados = os.environ.get("XDG_DATA_DIRS", "/usr/local/share:/usr/share").split(":")

@@ -44,6 +44,40 @@ Window {
             anchors.centerIn: parent
             spacing: 6
 
+            // Botão da Central de Aplicativos: grade de 3 x 3 pontos
+            Item {
+                width: janela.tamanhoIcone + 8
+                height: janela.tamanhoIcone + 14
+                Rectangle {
+                    id: realceCentral
+                    anchors { horizontalCenter: parent.horizontalCenter; top: parent.top }
+                    width: janela.tamanhoIcone + 8; height: width
+                    radius: 12
+                    color: (areaCentral.containsMouse || ilha.centralVisivel) ? janela.corDestaque : "transparent"
+                }
+                Grid {
+                    anchors.centerIn: realceCentral
+                    columns: 3; spacing: 5
+                    scale: areaCentral.pressed ? 0.92 : 1.0
+                    Repeater {
+                        model: 9
+                        Rectangle { width: 7; height: 7; radius: 2; color: janela.corAzulNoite }
+                    }
+                }
+                MouseArea {
+                    id: areaCentral
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    onClicked: ilha.alternarCentral()
+                }
+            }
+            Rectangle {
+                visible: ilha.itens.length > 0
+                width: 1; height: janela.tamanhoIcone - 8
+                anchors.verticalCenter: parent.verticalCenter
+                color: janela.corBorda
+            }
+
             Repeater {
                 model: ilha.itens
 
@@ -118,4 +152,7 @@ Window {
             }
         }
     }
+
+    // Central de Aplicativos (janela própria, aparece por cima de tudo)
+    CentralDeAplicativos {}
 }

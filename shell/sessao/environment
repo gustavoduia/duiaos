@@ -1,0 +1,6 @@
+# DuiaOS — variáveis da sessão gráfica (labwc).
+# Instalação para teste: cp shell/sessao/environment ~/.config/labwc/environment
+
+# Teclado ABNT2 na sessão gráfica
+XKB_DEFAULT_MODEL=abnt2
+XKB_DEFAULT_LAYOUT=br
