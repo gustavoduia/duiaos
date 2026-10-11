@@ -1,26 +1,31 @@
-# DuiaOS — gera as ISOs x86_64 (amd64) e ARM64 (ADR 020).
+# DuiaOS — gera as ISOs x86_64 (amd64) e ARM64 (ADRs 020 e 025).
 #
-# Você escolhe, para cada arquitetura, ONDE gerar:
-#   mac     Mac M4 (runner com rótulo duiaos-mac)
-#   dell    Dell Latitude (runner com rótulo duiaos-dell)
-#   github  runners do GitHub (consomem os minutos do plano; a ISO de teste não é guardada)
+# Para cada arquitetura, escolha ONDE gerar:
+#   github  servidores do GitHub (rápido; ISO de teste fica 7 dias em Actions > Artifacts)
+#   dell    Dell Latitude (runner próprio, rótulo duiaos-dell)
+#   mac     Mac M4 (runner próprio, rótulo duiaos-mac) — só arm64
 #   nao     não gerar esta arquitetura
 #
-# Qualquer máquina gera qualquer arquitetura. A arquitetura "da casa" é a mais
-# rápida (Mac = arm64, Dell = amd64); a outra roda emulada: no Mac pelo
-# Rosetta (razoável), no Dell pelo QEMU (lento, 1–2 h).
+# Máquina padrão:
+#   - Repositório PÚBLICO (fase atual): github para as duas. Runners próprios
+#     ficam desligados e o workflow recusa mac/dell (segurança: em repositório
+#     público, um pull request de terceiros poderia rodar código nas máquinas).
+#   - Repositório PRIVADO (fase final): amd64 no Dell e arm64 no Mac.
+#   - As variáveis DUIAOS_AMD64_EM / DUIAOS_ARM64_EM, se existirem, mandam.
 #
-# Forma prática de disparar (no Mac):  bash ferramentas/gerar-iso.sh amd64=mac arm64=mac
+# Por que não amd64 no Mac: o Rosetta da Apple não executa programas dentro do
+# chroot do debootstrap sem /proc ("rosetta error: Unable to open /proc/self/exe").
+# arm64 no Dell funciona via QEMU, mas é lento (1–2 h).
+#
+# Forma prática de disparar (no Mac):  bash ferramentas/gerar-iso.sh
 #
 # Quando roda sozinho:
 #   - Envio para a main: só amd64, na máquina padrão.
 #   - Tag v*, ex.: v0.1.0: as duas, nas máquinas padrão, e publica o Release no
 #     repositório público (DUIAOS_REPO_PUBLICO, padrão gustavoduia/duiaos-fontes-abertas)
 #     com o segredo DUIAOS_TOKEN_PUBLICO.
-# Máquinas padrão: variáveis DUIAOS_AMD64_EM (padrão dell) e DUIAOS_ARM64_EM (padrão mac).
 #
-# ISO de teste em runner próprio: fica na máquina, em ~/Projetos/duiaos-isos
-# (últimas 3 por arquitetura).
+# ISO de teste em runner próprio: fica na máquina, em ~/Projetos/duiaos-isos.
 name: Gerar ISO
 
 on:
@@ -38,12 +43,12 @@ on:
       amd64:
         description: "ISO amd64 (x86_64): onde gerar"
         type: choice
-        options: [padrao, dell, mac, github, nao]
+        options: [padrao, github, dell, nao]
         default: padrao
       arm64:
         description: "ISO arm64: onde gerar"
         type: choice
-        options: [padrao, mac, dell, github, nao]
+        options: [padrao, github, mac, dell, nao]
         default: padrao
 
 permissions:
@@ -70,9 +75,16 @@ jobs:
         env:
           ENTRADA_AMD64: ${{ inputs.amd64 }}
           ENTRADA_ARM64: ${{ inputs.arm64 }}
-          PADRAO_AMD64: ${{ vars.DUIAOS_AMD64_EM || 'dell' }}
-          PADRAO_ARM64: ${{ vars.DUIAOS_ARM64_EM || 'mac' }}
+          VAR_AMD64: ${{ vars.DUIAOS_AMD64_EM }}
+          VAR_ARM64: ${{ vars.DUIAOS_ARM64_EM }}
+          PRIVADO: ${{ github.event.repository.private }}
         run: |
+          if [ "${PRIVADO}" = "true" ]; then
+            PADRAO_AMD64="${VAR_AMD64:-dell}"; PADRAO_ARM64="${VAR_ARM64:-mac}"
+          else
+            PADRAO_AMD64="${VAR_AMD64:-github}"; PADRAO_ARM64="${VAR_ARM64:-github}"
+          fi
+
           if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
             ONDE_AMD64="${PADRAO_AMD64}"; ONDE_ARM64="${PADRAO_ARM64}"
             RELEASE=true; VERSAO="${GITHUB_REF_NAME#v}"
@@ -89,6 +101,17 @@ jobs:
           if [ "${RELEASE}" = "true" ] && { [ "${ONDE_AMD64}" = "nao" ] || [ "${ONDE_ARM64}" = "nao" ]; }; then
             echo "Release precisa das duas arquiteturas." >&2; exit 1
           fi
+
+          for ESCOLHA in "amd64:${ONDE_AMD64}" "arm64:${ONDE_ARM64}"; do
+            case "${ESCOLHA}" in
+              amd64:mac)
+                echo "amd64 no Mac não é suportado (Rosetta + debootstrap). Use dell ou github." >&2; exit 1 ;;
+              *:mac|*:dell)
+                if [ "${PRIVADO}" != "true" ]; then
+                  echo "Repositório público: runners próprios desativados por segurança. Use github." >&2; exit 1
+                fi ;;
+            esac
+          done
 
           item() {  # item ARQ ONDE
             case "$2" in
@@ -221,6 +244,16 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.DUIAOS_TOKEN_PUBLICO }}
         run: gh release upload "${GITHUB_REF_NAME}" out/* --repo "${REPO_PUBLICO}" --clobber
+
+      - name: Guardar a ISO de teste no GitHub (7 dias)
+        if: needs.plano.outputs.release != 'true' && !matrix.proprio
+        uses: actions/upload-artifact@v4
+        with:
+          name: duiaos-${{ env.DUIAOS_VERSION }}-${{ matrix.arch }}
+          path: out/*
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
 
       - name: Guardar a ISO nesta máquina
         if: needs.plano.outputs.release != 'true' && matrix.proprio

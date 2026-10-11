@@ -19,8 +19,10 @@
 
 ---
 
-> **Repositório interno e confidencial.** Código proprietário do DuiaOS
-> ([LICENSE](LICENSE)); não copie nem compartilhe sem autorização. O que é
+> **Código proprietário, todos os direitos reservados** ([LICENSE](LICENSE)).
+> O repositório está visível publicamente durante o desenvolvimento, mas isso
+> não concede nenhuma licença: é proibido copiar, modificar ou redistribuir
+> sem autorização por escrito. O que é
 > público (ISOs, EULA, licenças de terceiros, marca) fica na pasta
 > [`publico/`](publico/), espelhada no repositório
 > [duiaos-fontes-abertas](https://github.com/gustavoduia/duiaos-fontes-abertas).
@@ -107,22 +109,17 @@ shasum -a 256 -c duiaos-VERSAO-amd64.iso.sha256 # macOS
 
 ## Gerar a ISO
 
-O GitHub Actions coordena e as ISOs são geradas nas nossas máquinas (Mac M4 e
-Dell), escolhendo a máquina de cada arquitetura a cada build:
+Nesta fase (repositório público) as ISOs são geradas nos servidores do GitHub:
 
 ```bash
-bash ferramentas/gerar-iso.sh amd64=dell arm64=mac
+bash ferramentas/gerar-iso.sh          # gera amd64 e arm64
+bash ferramentas/baixar-isos.sh dell   # baixa para o Mac e envia ao Dell
 ```
 
 Um envio para a `main` gera a amd64; cada tag `v*` gera as duas e publica o
-release no repositório público. ISOs de teste ficam em `~/Projetos/duiaos-isos`
-da máquina que gerou. Guia completo: [ferramentas/README.md](ferramentas/README.md)
-(ADRs 020 e 024). Localmente, numa máquina Linux com Docker:
-
-```bash
-sudo docker run --rm --privileged -v "$PWD:/work" -w /work \
-  -e ARCH=amd64 debian:trixie bash build/build.sh
-```
+release no repositório público. Os runners próprios (Dell para amd64, Mac para
+arm64) ficam prontos, em espera, para a fase final com o repositório privado.
+Guia completo: [ferramentas/README.md](ferramentas/README.md) (ADRs 020, 024 e 025).
 
 ## Estrutura do repositório
 

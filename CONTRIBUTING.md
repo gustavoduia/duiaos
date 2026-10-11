@@ -1,7 +1,8 @@
 # Como trabalhar neste repositório
 
-Este repositório é **interno e confidencial**: contém o código proprietário
-do DuiaOS. Só acessa quem foi autorizado pelo titular.
+Este repositório contém o código **proprietário** do DuiaOS. Ele está visível
+publicamente durante o desenvolvimento (ADR 025), mas só contribui quem foi
+autorizado pelo titular. Pull requests de terceiros não são aceitos.
 
 ## Quem pode contribuir
 
