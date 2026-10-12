@@ -146,7 +146,10 @@ class Servico:
                 "org.freedesktop.PolicyKit1", "/org/freedesktop/PolicyKit1/Authority",
                 "org.freedesktop.PolicyKit1.Authority", "CheckAuthorization", parametros,
                 GLib.VariantType("((bba{ss}))"), Gio.DBusCallFlags.NONE, 30000, None)
-        except GLib.Error:
+        except GLib.Error as erro:
+            # Ex.: o polkit recusa a consulta se a ação não declarar este serviço
+            # como dono (org.freedesktop.policykit.owner). Fica no journal.
+            print(f"duiaos-ia: polkit não respondeu a autorização: {erro.message}", file=sys.stderr, flush=True)
             return False
         return bool(resultado.unpack()[0][0])
 
@@ -296,7 +299,9 @@ class Servico:
                 self._atualizar_instalados()
                 invocacao.return_value(GLib.Variant("(s)", (json.dumps(self.estado_completo()),)))
                 return
-            if not self.autorizado(remetente):
+            # GarantirPadrao só aplica a regra do sistema (o modelo padrão quando
+            # não há nenhum ativo): não escolhe nada, por isso não pede autorização.
+            if metodo != "GarantirPadrao" and not self.autorizado(remetente):
                 raise Recusa("NaoAutorizado", "Sem autorização para mudar a IA do sistema "
                                               "(use a sessão no computador ou sudo).")
             argumentos = parametros.unpack()

@@ -15,6 +15,7 @@ quem está sentado no computador).
 """
 import json
 import os
+import re
 import sys
 
 import gi
@@ -38,9 +39,8 @@ def chamar(conexao, metodo, *argumentos, tempo=30000):
 
 
 def mensagem_de_erro(erro):
-    if Gio.DBusError.is_remote_error(erro):
-        Gio.DBusError.strip_remote_error(erro)     # tira o "GDBus.Error:org.duiaos...: "
-    return erro.message
+    # Tira o "GDBus.Error:org.duiaos.IA1.Erro.X: " do começo
+    return re.sub(r"^GDBus\.Error:[\w.]+:\s*", "", erro.message)
 
 
 def gb(numero):

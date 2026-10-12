@@ -3,7 +3,10 @@
  "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
 <!-- DuiaOS — quem pode mudar a IA do sistema. A pessoa sentada no computador
      (sessão local ativa) pode, sem senha: a sessão do DuiaOS não tem um agente
-     de senha do polkit. De fora (SSH), só com sudo. -->
+     de senha do polkit. De fora (SSH), só com sudo.
+     O serviço roda como o usuário duiaos-ia e consulta o polkit em nome de
+     quem chamou: para isso o polkit exige que a ação diga quem é o dono dela
+     (org.freedesktop.policykit.owner); sem isso, toda consulta é recusada. -->
 <policyconfig>
   <vendor>DuiaOS</vendor>
   <action id="org.duiaos.ia.gerenciar">
@@ -14,5 +17,6 @@
       <allow_inactive>auth_admin</allow_inactive>
       <allow_active>yes</allow_active>
     </defaults>
+    <annotate key="org.freedesktop.policykit.owner">unix-user:duiaos-ia</annotate>
   </action>
 </policyconfig>
