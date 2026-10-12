@@ -21,6 +21,20 @@ código-fonte de cada um.
 | Qt 6 e LayerShellQt | LGPL-3.0 | Bibliotecas usadas de forma dinâmica |
 | PySide6 | LGPL-3.0 | Biblioteca usada de forma dinâmica |
 | Inter, Manrope, JetBrains Mono | SIL Open Font License 1.1 | Fontes tipográficas |
+| Ollama (pacote `duiaos-ollama`) | MIT | Binários oficiais, sem modificações e sem as bibliotecas CUDA; executado como serviço separado |
+| llama.cpp / ggml, cpp-httplib, fmt, MLX | MIT | Trazidos pelo release do Ollama (`/usr/lib/ollama/*LICENSE`) |
+| XGrammar, DLPack | Apache-2.0 | Trazidos pelo release do Ollama |
+| Go (biblioteca padrão), PicoJSON | BSD | Trazidos pelo release do Ollama |
+| libgomp / libomp | GPL-3.0 com exceção de runtime do GCC / Apache-2.0 com exceção LLVM | Bibliotecas de execução paralela usadas de forma dinâmica pelo Ollama |
+
+### Modelos de IA
+
+Nenhum modelo de IA vem dentro da ISO. Os modelos são baixados da biblioteca
+do Ollama quando a pessoa usa o DuiaOS (o padrão, Qwen3.5 4B, no primeiro
+login), e cada um tem a sua própria licença, mostrada antes do download.
+Qwen e Gemma usam Apache-2.0 e Phi usa MIT. Os modelos Llama usam a Llama
+Community License da Meta, que não é uma licença livre e tem regras de uso
+próprias: são opcionais e só baixados quando a pessoa escolhe.
 
 A lista completa de pacotes de cada versão, com as versões exatas, é publicada
 junto com a ISO no arquivo `duiaos-VERSÃO-ARQUITETURA.packages`. No sistema

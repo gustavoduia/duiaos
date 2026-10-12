@@ -1,0 +1,47 @@
+#!/bin/sh
+# DuiaOS — duiaos-ollama: usuário do serviço, migração do instalador oficial
+# e início do serviço.
+set -e
+
+case "$1" in
+  configure)
+    # Mesmo usuário e pasta do instalador oficial do Ollama: os modelos já
+    # baixados (/usr/share/ollama/.ollama/models) continuam valendo.
+    if ! getent group ollama >/dev/null; then
+      addgroup --quiet --system ollama
+    fi
+    if ! getent passwd ollama >/dev/null; then
+      adduser --quiet --system --ingroup ollama --home /usr/share/ollama \
+        --shell /usr/sbin/nologin --gecos "Ollama (IA local do DuiaOS)" ollama
+    fi
+    for GRUPO in render video; do
+      getent group "${GRUPO}" >/dev/null && adduser --quiet ollama "${GRUPO}" || true
+    done
+    install -d -o ollama -g ollama -m 0755 /usr/share/ollama /usr/share/ollama/.ollama
+
+    # Instalação oficial antiga (ollama.com/install.sh), fora de pacotes:
+    # o serviço em /etc esconderia o do pacote e /usr/local/bin vem antes no PATH.
+    for ANTIGO in /etc/systemd/system/ollama.service /usr/local/bin/ollama; do
+      if [ -e "${ANTIGO}" ] && ! dpkg-query -S "${ANTIGO}" >/dev/null 2>&1; then
+        rm -f "${ANTIGO}"
+        rm -f /etc/systemd/system/default.target.wants/ollama.service \
+              /etc/systemd/system/multi-user.target.wants/ollama.service
+        echo "duiaos-ollama: removido ${ANTIGO} (instalação oficial antiga)."
+      fi
+    done
+    if [ -d /usr/local/lib/ollama ] && ! dpkg-query -S /usr/local/lib/ollama >/dev/null 2>&1; then
+      rm -rf /usr/local/lib/ollama
+      echo "duiaos-ollama: removido /usr/local/lib/ollama (instalação oficial antiga)."
+    fi
+
+    if [ -d /run/systemd/system ]; then
+      systemctl daemon-reload
+      systemctl enable ollama.service >/dev/null 2>&1 || true
+      systemctl restart ollama.service || true
+    else
+      systemctl enable ollama.service >/dev/null 2>&1 || true
+    fi
+    ;;
+esac
+
+exit 0

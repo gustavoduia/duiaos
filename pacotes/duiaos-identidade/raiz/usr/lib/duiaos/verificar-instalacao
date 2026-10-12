@@ -3,7 +3,7 @@
 # DuiaOS — verifica a instalação de uma vez e imprime OK / AVISO / FALHA.
 #
 # Uso:    sudo /usr/lib/duiaos/verificar-instalacao
-# Do Mac: ssh -t duia@duiaos 'sudo /usr/lib/duiaos/verificar-instalacao'
+# Pela sessão SSH no Dell, o comando é o mesmo (sem nada na frente).
 #
 # Não altera nada no sistema. Sai com código 1 se houver alguma FALHA.
 # Copie a saída inteira e cole na conversa com o Claude.
@@ -190,6 +190,24 @@ else
 fi
 [ -r /etc/pam.d/duiaos-bloqueio ] && ok "Tela de Bloqueio: serviço PAM duiaos-bloqueio" \
   || falha "Tela de Bloqueio: /etc/pam.d/duiaos-bloqueio ausente"
+
+secao "IA local (Ollama)"
+if dpkg-query -W -f='${Status}' duiaos-ollama 2>/dev/null | grep -q "ok installed"; then
+  ok "Pacote duiaos-ollama $(dpkg-query -W -f='${Version}' duiaos-ollama)"
+  if systemctl is-active ollama.service >/dev/null 2>&1; then
+    ok "Serviço ollama ativo"
+    if tem curl && curl -fsS --max-time 3 http://127.0.0.1:11434/api/version >/dev/null 2>&1; then
+      ok "Ollama respondendo em 127.0.0.1:11434"
+    else
+      falha "Ollama não responde em 127.0.0.1:11434 (veja: journalctl -u ollama)"
+    fi
+  else
+    falha "Serviço ollama parado (veja: journalctl -u ollama)"
+  fi
+  [ -e /usr/local/bin/ollama ] && aviso "Sobrou uma instalação antiga em /usr/local/bin/ollama"
+else
+  aviso "IA local ausente (pacote duiaos-ollama não instalado)"
+fi
 
 secao "Disco"
 LIVRE_GB="$(df -BG --output=avail / | tail -n 1 | tr -dc '0-9')"

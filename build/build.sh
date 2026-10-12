@@ -41,7 +41,7 @@ log "DuiaOS ${VERSION} (${CODENAME}) — arquitetura ${ARCH}"
 log "Instalando o live-build"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
-apt-get install -y -qq live-build >/dev/null
+apt-get install -y -qq live-build curl ca-certificates zstd >/dev/null   # curl e zstd: pacote duiaos-ollama
 
 log "Preparando a pasta de trabalho ${WORK}"
 rm -rf "${WORK}"
@@ -84,8 +84,8 @@ if [ -d "${ROOT}/build/arch/${ARCH}" ]; then
   cp -a "${ROOT}/build/arch/${ARCH}/." config/
 fi
 
-# Código próprio do DuiaOS: os pacotes .deb (duiaos-identidade, duiaos-shell e
-# duiaos-desktop) são gerados aqui, do mesmo commit, e instalados na ISO pelo
+# Código próprio do DuiaOS: os pacotes .deb (duiaos-identidade, duiaos-shell,
+# duiaos-desktop e duiaos-ollama) são gerados aqui, do mesmo commit, e instalados na ISO pelo
 # live-build (config/packages.chroot). O sistema instalado recebe as
 # atualizações seguintes pelo repositório apt do DuiaOS (ADR 023).
 # Variáveis vindas do workflow: VERSAO_DEB, SUITE e, se houver, a chave
@@ -95,6 +95,10 @@ CHAVE="${ROOT}/pacotes/chave.gpg"
 [ -s "${CHAVE}" ] || CHAVE=""
 VERSAO_DEB="${VERSAO_DEB:-0.0.0+local}" VERSAO_SISTEMA="${VERSION}" SUITE="${SUITE:-teste}" \
   CHAVE_PUBLICA="${CHAVE}" bash "${ROOT}/pacotes/construir.sh" config/packages.chroot
+# Ollama (IA local, ADR 030): pacote da arquitetura da ISO, feito do release
+# oficial sem CUDA. O modelo padrão não vai na ISO: é baixado no 1º login.
+bash "${ROOT}/pacotes/duiaos-ollama/construir.sh" "${ARCH}" config/packages.chroot \
+  "${OLLAMA_CACHE:-${ROOT}/.cache/ollama}"
 
 chmod +x config/hooks/normal/*.hook.* 2>/dev/null || true
 

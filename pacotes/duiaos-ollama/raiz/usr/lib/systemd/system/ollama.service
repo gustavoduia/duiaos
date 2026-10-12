@@ -1,0 +1,26 @@
+[Unit]
+Description=Ollama — IA local do DuiaOS
+Documentation=https://ollama.com
+After=network-online.target
+
+[Service]
+ExecStart=/usr/bin/ollama serve
+User=ollama
+Group=ollama
+Environment=HOME=/usr/share/ollama
+Environment=OLLAMA_HOST=127.0.0.1:11434
+Environment=OLLAMA_MODELS=/usr/share/ollama/.ollama/models
+# Só modelos locais: nada de modelos na nuvem do ollama.com pela porta de trás.
+# A nuvem do DuiaOS passa pelo Wise/duiaos-ia, e só com consentimento (ADR 029).
+Environment=OLLAMA_NO_CLOUD=1
+Restart=always
+RestartSec=3
+# Endurecimento: só escreve na própria pasta
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=full
+ProtectHome=yes
+ReadWritePaths=/usr/share/ollama
+
+[Install]
+WantedBy=multi-user.target
