@@ -9,6 +9,7 @@ Uso:
   duiaos-ia remover MODELO      apaga um modelo baixado (não o ativo)
   duiaos-ia cancelar            cancela o download em andamento
   duiaos-ia garantir-padrao     sem modelo ativo, ativa ou baixa o padrão (chamado no login)
+  duiaos-ia medir               mede a velocidade do modelo ativo neste computador
 
 Pela sessão SSH, mudanças precisam de sudo (a autorização sem senha é só de
 quem está sentado no computador).
@@ -102,6 +103,43 @@ def acompanhar(conexao, modelo):
     return resultado["codigo"]
 
 
+def medir(conexao):
+    """Mede carregamento, leitura do pedido e geração do modelo ativo (duas vezes:
+    a segunda mostra o ganho com o modelo e o começo da conversa já na memória)."""
+    import time
+    import urllib.request
+    estado = json.loads(chamar(conexao, "Estado")[0])
+    modelo, endereco = estado.get("ativo"), estado.get("endereco", "http://127.0.0.1:11434")
+    if not modelo:
+        print("Nenhum modelo ativo.")
+        return 1
+    print(f"Modelo ativo: {modelo} · {'já' if estado.get('carregado') else 'ainda não'} carregado na memória\n")
+    abridor = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    instrucoes = ("Você é o Wise, o assistente do DuiaOS. Responda em português do Brasil, "
+                  "de forma simples e curta. " * 8)            # um começo de conversa de tamanho realista
+    corpo = {"model": modelo, "stream": False, "think": False, "options": {"num_predict": 80},
+             "messages": [{"role": "system", "content": instrucoes},
+                          {"role": "user", "content": "Em uma frase: o que um sistema operacional faz?"}]}
+    for rodada in ("1ª pergunta", "2ª pergunta"):
+        inicio = time.monotonic()
+        pedido = urllib.request.Request(endereco + "/api/chat", data=json.dumps(corpo).encode(),
+                                        headers={"Content-Type": "application/json"})
+        with abridor.open(pedido, timeout=600) as resposta:
+            r = json.load(resposta)
+        total = time.monotonic() - inicio
+        seg = lambda chave: r.get(chave, 0) / 1e9  # noqa: E731 — nanossegundos para segundos
+        leitura = r.get("prompt_eval_count", 0) / seg("prompt_eval_duration") if seg("prompt_eval_duration") else 0
+        geracao = r.get("eval_count", 0) / seg("eval_duration") if seg("eval_duration") else 0
+        print(f"{rodada}: {total:.1f} s no total")
+        print(f"  carregar o modelo:     {seg('load_duration'):6.1f} s")
+        print(f"  ler o pedido:          {seg('prompt_eval_duration'):6.1f} s  "
+              f"({r.get('prompt_eval_count', 0)} pedaços, {leitura:.0f}/s)")
+        print(f"  primeira palavra em:   {seg('load_duration') + seg('prompt_eval_duration'):6.1f} s")
+        print(f"  escrever a resposta:   {seg('eval_duration'):6.1f} s  ({r.get('eval_count', 0)} pedaços, {geracao:.1f}/s)")
+    print("\nPara ver se a placa de vídeo está ajudando: journalctl -u ollama | grep 'inference compute'")
+    return 0
+
+
 def main(argv):
     comando = argv[1] if len(argv) > 1 else "estado"
     argumento = argv[2] if len(argv) > 2 else ""
@@ -121,6 +159,8 @@ def main(argv):
             print("Feito." if comando == "remover" else f"Modelo ativo: {argumento}")
         elif comando == "cancelar":
             chamar(conexao, "Cancelar")
+        elif comando == "medir":
+            return medir(conexao)
         elif comando == "garantir-padrao":
             chamar(conexao, "GarantirPadrao", tempo=120000)
         else:

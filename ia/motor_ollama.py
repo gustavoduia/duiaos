@@ -106,3 +106,31 @@ class Ollama:
                 if status == "success":
                     return
         raise ErroOllama(f"O download de {nome} terminou antes da hora. Tente de novo.")
+
+    # ------------------------------------------------------------ memória
+    def carregados(self):
+        """Modelos carregados na memória agora (prontos para responder na hora)."""
+        try:
+            with self._pedir("GET", "/api/ps", tempo=3) as resposta:
+                dados = json.load(resposta)
+        except (OSError, ValueError) as erro:
+            raise ErroOllama("A IA local (Ollama) não está respondendo.") from erro
+        return {m.get("name") or m.get("model") for m in dados.get("models") or []
+                if isinstance(m.get("name") or m.get("model"), str)}
+
+    def carregar(self, nome, manter):
+        """Carrega o modelo na memória sem gerar nada. manter: -1 (sempre) ou
+        tempo sem uso até descarregar (ex.: "30m"). Leva de segundos a um minuto."""
+        try:
+            with self._pedir("POST", "/api/generate", {"model": nome, "keep_alive": manter}, tempo=300):
+                pass
+        except OSError as erro:
+            raise ErroOllama(f"Não consegui carregar {nome} na memória.") from erro
+
+    def descarregar(self, nome):
+        """Tira o modelo da memória (libera a RAM para o próximo)."""
+        try:
+            with self._pedir("POST", "/api/generate", {"model": nome, "keep_alive": 0}, tempo=30):
+                pass
+        except OSError:
+            pass

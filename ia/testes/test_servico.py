@@ -27,6 +27,8 @@ except (ImportError, ValueError):
 
 class OllamaFalso(BaseHTTPRequestHandler):
     instalados = set()
+    carregados = set()
+    pedidos_carregar = []
     pausa = 0.05
 
     def log_message(self, *_):
@@ -46,6 +48,8 @@ class OllamaFalso(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/api/version":
             self._json({"version": "0.40.3"})
+        elif self.path == "/api/ps":
+            self._json({"models": [{"name": n} for n in sorted(self.carregados)]})
         elif self.path == "/api/tags":
             self._json({"models": [{"name": n} for n in sorted(self.instalados)]})
         else:
@@ -60,7 +64,16 @@ class OllamaFalso(BaseHTTPRequestHandler):
             self._json({"error": "not found"}, 404)
 
     def do_POST(self):
-        nome = self._corpo()["model"]
+        corpo = self._corpo()
+        nome = corpo["model"]
+        if self.path == "/api/generate":            # carregar/descarregar da memória
+            OllamaFalso.pedidos_carregar.append((nome, corpo.get("keep_alive")))
+            if corpo.get("keep_alive") == 0:
+                self.carregados.discard(nome)
+            elif nome in self.instalados:
+                self.carregados.add(nome)
+            self._json({"model": nome, "done": True})
+            return
         self.send_response(200)
         self.send_header("Content-Type", "application/x-ndjson")
         self.end_headers()
@@ -83,6 +96,8 @@ class OllamaFalso(BaseHTTPRequestHandler):
 class TesteServico(unittest.TestCase):
     def setUp(self):
         OllamaFalso.instalados = set()
+        OllamaFalso.carregados = set()
+        OllamaFalso.pedidos_carregar = []
         OllamaFalso.pausa = 0.05
         self.http = ThreadingHTTPServer(("127.0.0.1", 0), OllamaFalso)
         threading.Thread(target=self.http.serve_forever, daemon=True).start()
@@ -177,6 +192,21 @@ class TesteServico(unittest.TestCase):
         self.cli("garantir-padrao")
         OllamaFalso.instalados.discard("phi4:14b")            # "ollama rm" pelo terminal
         self.assertTrue(self.esperar(lambda e: e["instalados"] == ["qwen3.5:4b"], segundos=15))
+
+    def test_modelo_ativo_fica_na_memoria(self):
+        OllamaFalso.instalados = {"qwen3.5:4b", "phi4-mini:3.8b"}
+        self.cli("garantir-padrao")
+        self.assertTrue(self.esperar(lambda e: e["carregado"]))
+        self.assertIn(("qwen3.5:4b", -1), OllamaFalso.pedidos_carregar)     # 6,5 GB de 15,5: sempre
+        self.cli("ativar", "phi4-mini:3.8b")
+        self.assertTrue(self.esperar(lambda e: e["carregado"] and e["ativo"] == "phi4-mini:3.8b"))
+        self.assertIn(("qwen3.5:4b", 0), OllamaFalso.pedidos_carregar)      # o anterior sai da memória
+        self.assertEqual(OllamaFalso.carregados, {"phi4-mini:3.8b"})
+        OllamaFalso.carregados.clear()                                     # o Ollama reiniciou
+        limite = time.monotonic() + 15                                     # volta sozinho para a memória
+        while "phi4-mini:3.8b" not in OllamaFalso.carregados and time.monotonic() < limite:
+            time.sleep(0.2)
+        self.assertIn("phi4-mini:3.8b", OllamaFalso.carregados)
 
     def test_cancelar(self):
         OllamaFalso.pausa = 0.3

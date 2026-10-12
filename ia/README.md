@@ -20,7 +20,9 @@ inteiro** (ADR 030), e cuida do catálogo de modelos. Vai para o pacote
   `ativo` é o modelo a usar (nome do Ollama, ex.: `qwen3.5:4b`), `endereco`
   é a API do Ollama (`http://127.0.0.1:11434`), `tarefa` traz o download em
   andamento (`modelo`, `fracao`, `concluido`, `total`, `automatico`) e
-  `ultima`, o resultado do último download.
+  `ultima`, o resultado do último download, `carregado` diz se o modelo já
+  está na memória, `manter` o `keep_alive` a usar e `instalados` os modelos
+  do catálogo já baixados.
 - **Mudar** (D-Bus do sistema, `org.duiaos.IA1` em `/org/duiaos/IA1`):
   `Estado() → s` (JSON com o catálogo), `Baixar(s)`, `Ativar(s)`,
   `Remover(s)`, `Cancelar()`, `GarantirPadrao()`; sinal `Mudou(s)` com o
@@ -28,6 +30,19 @@ inteiro** (ADR 030), e cuida do catálogo de modelos. Vai para o pacote
   polkit: a pessoa sentada no computador tem; pela sessão SSH, só com `sudo`.
 - Só modelos do catálogo são aceitos. O modelo ativo não pode ser removido
   (ative outro antes). Modelos que não cabem na memória são recusados.
+
+## Resposta rápida (ADR 032)
+
+- O serviço carrega o modelo ativo na memória ao subir, ao trocar de modelo e
+  quando o Ollama reinicia (confere a cada 10 s). Com o modelo usando até
+  metade da RAM, ele fica sempre carregado (`manter: -1` no estado público);
+  senão, sai após 30 min sem uso. O anterior sai da memória na troca.
+- Programas que falam com o Ollama devem mandar `keep_alive` igual ao
+  `manter` do estado e não mudar `num_ctx` (o contexto é fixo em 8192 no
+  `ollama.service`): os dois recarregariam o modelo.
+- Instruções fixas no começo do pedido são lidas uma vez só se o programa
+  "aquecer" o modelo com elas e começar toda conversa do mesmo jeito (o Wise
+  faz isso). `duiaos-ia medir` mostra os tempos neste computador.
 
 ## 1º login
 

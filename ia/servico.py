@@ -72,6 +72,8 @@ class Servico:
         self._ultimo_sinal = 0.0
         self._instalados = set()
         self._ollama_ok = False
+        self._carregado = False       # modelo ativo já na memória (resposta sem espera)
+        self._aquecendo = False
         self.config = self._ler_config()
 
     # ------------------------------------------------------------ persistência
@@ -110,6 +112,10 @@ class Servico:
             "tarefa": self.tarefa,
             "ultima": self.ultima,
             # Modelos do catálogo já baixados: as telas sabem na hora quando um entra ou sai
+            "carregado": self._carregado,
+            # Quanto tempo o modelo ativo fica na memória: os programas mandam o mesmo
+            # "keep_alive" ao Ollama para não encurtar esse tempo
+            "manter": self.manter_na_memoria(self.config["ativo"]) if self.config["ativo"] else "30m",
             "instalados": sorted(m["id"] for _f, m, _l in cat.modelos(self.catalogo) if m["id"] in self._instalados),
             "atualizado": int(time.time()),
         }
@@ -131,13 +137,64 @@ class Servico:
                                      GLib.Variant("(s)", (json.dumps(self.estado_publico()),)))
 
     def conferir_ollama(self):
-        """A cada 10 s: modelos baixados ou apagados por fora (ex.: "ollama rm") também avisam as telas."""
+        """A cada 10 s: modelos baixados ou apagados por fora (ex.: "ollama rm") também avisam as
+        telas, e o modelo ativo volta para a memória se saiu dela (ex.: o Ollama reiniciou)."""
+        antes = (self._instalados, self._ollama_ok, self._carregado)
         if not self.tarefa:
-            antes = (self._instalados, self._ollama_ok)
             self._atualizar_instalados()
-            if (self._instalados, self._ollama_ok) != antes:
-                self.mudou(recarregar=False)
+        ativo = self.config["ativo"]
+        if self._ollama_ok and ativo in self._instalados and not self._aquecendo:
+            try:
+                self._carregado = ativo in self.ollama.carregados()
+            except ErroOllama:
+                self._carregado = False
+            if not self._carregado and self.manter_na_memoria(ativo) == -1:
+                self.aquecer()
+        if (self._instalados, self._ollama_ok, self._carregado) != antes:
+            self.mudou(recarregar=False)
         return True
+
+    # ------------------------------------------------------------ memória
+    def manter_na_memoria(self, id_modelo):
+        """-1 (sempre carregado) quando o modelo usa até metade da memória do
+        computador; senão o Ollama o tira da memória após 30 min sem uso."""
+        modelo = cat.procurar(self.catalogo, id_modelo)
+        if modelo and self.memoria_gb > 0 and \
+                cat.memoria_necessaria_gb(modelo["download_gb"]) <= self.memoria_gb * cat.LIMITE_MANTER:
+            return -1
+        return "30m"
+
+    def aquecer(self, anterior=""):
+        """Carrega o modelo ativo na memória em segundo plano (e tira o anterior),
+        para a primeira pergunta não esperar o carregamento."""
+        ativo = self.config["ativo"]
+        if not ativo or self._aquecendo:
+            return
+        self._aquecendo = True
+        self._carregado = False
+        manter = self.manter_na_memoria(ativo)
+
+        def trabalho():
+            ok = False
+            try:
+                if anterior and anterior != ativo:
+                    self.ollama.descarregar(anterior)
+                if self.ollama.esperar(60):
+                    self.ollama.carregar(ativo, manter)
+                    ok = True
+            except ErroOllama as erro:
+                print(f"duiaos-ia: {erro}", file=sys.stderr, flush=True)
+            GLib.idle_add(self._aquecido, ativo, ok)
+
+        threading.Thread(target=trabalho, daemon=True).start()
+
+    def _aquecido(self, modelo, ok):
+        self._aquecendo = False
+        self._carregado = ok and modelo == self.config["ativo"]
+        if modelo != self.config["ativo"]:          # trocaram o ativo enquanto carregava
+            self.aquecer(modelo)
+        self.mudou(recarregar=False)
+        return False
 
     # ------------------------------------------------------------ autorização
     def autorizado(self, remetente):
@@ -237,7 +294,8 @@ class Servico:
                 self.config["padrao_tratado"] = True
             # Sem modelo ativo (1º login, por exemplo): o que acabou de chegar vira o ativo
             if not self.config["ativo"] or self.config["ativo"] not in self._instalados or automatico:
-                self.config["ativo"] = id_modelo
+                anterior, self.config["ativo"] = self.config["ativo"], id_modelo
+                self.aquecer(anterior)
         self.mudou(recarregar=False)
         return False
 
@@ -246,8 +304,9 @@ class Servico:
         self._exigir_ollama()
         if id_modelo not in self._instalados:
             raise Recusa("NaoInstalado", f"Baixe {id_modelo} antes de ativá-lo.")
-        self.config["ativo"] = id_modelo
+        anterior, self.config["ativo"] = self.config["ativo"], id_modelo
         self.config["padrao_tratado"] = True
+        self.aquecer(anterior)
         self.mudou(recarregar=False)
 
     def remover(self, id_modelo):
@@ -279,12 +338,14 @@ class Servico:
         padrao = self.catalogo.get("padrao", "")
         if padrao in self._instalados:
             self.config["ativo"] = padrao
+            self.aquecer()
             self.mudou(recarregar=False)
             return
         # Outro modelo do catálogo já baixado (ex.: o ativo foi apagado por fora): usa o primeiro
         for _familia, modelo, _licenca in cat.modelos(self.catalogo):
             if modelo["id"] in self._instalados:
                 self.config["ativo"] = modelo["id"]
+                self.aquecer()
                 self.mudou(recarregar=False)
                 return
         if self.config["padrao_tratado"] and ativo:
@@ -355,6 +416,7 @@ def main():
 
     def ao_receber_nome(_conexao, _nome):
         servico.mudou()            # grava o estado público assim que o serviço sobe
+        servico.conferir_ollama()  # e já carrega o modelo ativo na memória
         GLib.timeout_add_seconds(10, servico.conferir_ollama)
 
     def ao_perder_nome(_conexao, _nome):

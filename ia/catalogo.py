@@ -14,6 +14,9 @@ FOLGA_GB = 2.5
 # Fração da memória do computador que um modelo pode ocupar sem travar o resto
 LIMITE_BLOQUEIO = 0.9
 LIMITE_AVISO = 0.6
+# Até esta fração da memória, o modelo ativo fica sempre carregado (resposta sem
+# espera); acima, o Ollama o tira da memória após 30 min sem uso
+LIMITE_MANTER = 0.5
 
 
 def carregar(caminho=CATALOGO):

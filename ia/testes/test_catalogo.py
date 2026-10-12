@@ -45,6 +45,11 @@ class TesteCatalogo(unittest.TestCase):
         self.assertIn("46 GB", aviso)
         self.assertIn("16 GB", aviso)
 
+    def test_manter_na_memoria(self):
+        # 4B (6,5 GB) num computador de 15,5 GB fica sempre carregado; 9B (10,1 GB) não
+        self.assertLessEqual(cat.memoria_necessaria_gb(4.0), 15.5 * cat.LIMITE_MANTER)
+        self.assertGreater(cat.memoria_necessaria_gb(7.6), 15.5 * cat.LIMITE_MANTER)
+
     def test_memoria_total(self):
         with tempfile.NamedTemporaryFile("w", suffix="meminfo") as arquivo:
             arquivo.write("MemTotal:       16252928 kB\nMemFree: 1 kB\n")
