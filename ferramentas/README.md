@@ -14,6 +14,7 @@ Todos podem ser rodados de novo sem estragar nada.
 | `configurar-runners.sh mac\|dell` | Instala/refaz o runner da máquina e organiza `~/Projetos` |
 | `configurar-acesso-dell.sh` | Chave somente leitura para o Dell fazer `git pull` (repositório privado) |
 | `criar-repo-publico.sh` | Cria o `duiaos-fontes-abertas`, cadastra o token e sincroniza |
+| `atualizar-sistema.sh` | **Roda no Dell**: aplica o código do repositório ao DuiaOS já instalado, sem reinstalar |
 
 No Dell, o teste da instalação é `sudo /usr/lib/duiaos/verificar-instalacao`
 (ou, em instalações antigas,
@@ -79,6 +80,21 @@ Acompanhar: `gh run watch NUMERO` (Ctrl+C sai sem cancelar) · situação:
 3. Atualize: `git pull` no Mac e, na sessão SSH do Dell, `cd ~/Projetos/duiaos && git pull`.
 
 O Claude nunca envia nada direto para a `main`.
+
+## Testar sem reinstalar (Dell)
+
+Para aplicar uma mudança (por exemplo, a branch de um pull request) ao DuiaOS
+já instalado no Dell, sem gerar ISO nem reinstalar:
+
+```bash
+ssh -t gustavo@duiaos 'cd ~/Projetos/duiaos && git fetch && git checkout BRANCH \
+  && git pull && sudo bash ferramentas/atualizar-sistema.sh'
+ssh gustavo@duiaos sudo reboot
+```
+
+Volte para a `main` depois do merge (`git checkout main && git pull`). A
+reinstalação pela ISO continua sendo o teste completo antes de lançar uma
+versão.
 
 ## Lançar uma versão
 
