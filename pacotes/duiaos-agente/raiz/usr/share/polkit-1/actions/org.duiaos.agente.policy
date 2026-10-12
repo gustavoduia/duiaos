@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<!-- DuiaOS — ações do agente do sistema (duiaos-agente, ADR 034).
+     A aprovação é da pessoa, na interface (Wise ou outro programa do sistema),
+     que mostra o impacto antes. Por padrão o polkit pede senha de administrador;
+     a regra 50-duiaos-agente.rules libera, sem senha, quem está sentado no
+     computador (sessão local e ativa) e é administrador (grupo sudo) — a sessão
+     do DuiaOS não tem um agente de senha do polkit. -->
+<policyconfig>
+  <vendor>DuiaOS</vendor>
+  <action id="org.duiaos.agente.atualizar_sistema">
+    <description>Atualizar o sistema</description>
+    <message>É preciso autorização para atualizar o sistema</message>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+  </action>
+  <action id="org.duiaos.agente.instalar_aplicativo">
+    <description>Instalar um aplicativo</description>
+    <message>É preciso autorização para instalar aplicativos</message>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+  </action>
+  <action id="org.duiaos.agente.remover_aplicativo">
+    <description>Remover um aplicativo</description>
+    <message>É preciso autorização para remover aplicativos</message>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+  </action>
+</policyconfig>

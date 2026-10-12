@@ -6,7 +6,8 @@
 #   CANAL: estavel ou teste
 #
 # Estrutura gerada (padrão do Debian):
-#   pool/CANAL/*.deb                       pacotes (as 5 versões mais novas de cada)
+#   pool/CANAL/*.deb                       pacotes (as 5 versões mais novas de cada
+#                                          pacote em cada arquitetura)
 #   dists/CANAL/main/binary-*/Packages     índice dos pacotes
 #   dists/CANAL/Release, InRelease, Release.gpg   índice assinado
 #   duiaos.asc, duiaos.gpg                 chave pública (texto e binária)
@@ -29,12 +30,25 @@ CHAVE="${DUIAOS_APT_CHAVE_ID:-$(gpg --batch --list-secret-keys --with-colons | a
 
 mkdir -p "${REPO}/pool/${CANAL}"
 REPO="$(cd "${REPO}" && pwd)"
-cp -f "$@" "${REPO}/pool/${CANAL}/"
+# Uma versão publicada não muda: se o arquivo já está no repositório (ex.: o
+# duiaos-ollama, cuja versão só muda com uma versão nova do Ollama), fica o que
+# já foi publicado. Trocar o conteúdo de uma versão quebra quem já baixou.
+for DEB in "$@"; do
+  if [ -e "${REPO}/pool/${CANAL}/$(basename "${DEB}")" ]; then
+    echo "Já publicado (mantido): $(basename "${DEB}")"
+  else
+    cp "${DEB}" "${REPO}/pool/${CANAL}/"
+  fi
+done
 
-# Mantém só as versões mais novas de cada pacote
-for NOME in $(find "${REPO}/pool/${CANAL}" -name '*.deb' -printf '%f\n' | cut -d_ -f1 | sort -u); do
+# Mantém só as versões mais novas de cada pacote, em cada arquitetura
+# (nome_versão_arquitetura.deb)
+for GRUPO in $(find "${REPO}/pool/${CANAL}" -name '*.deb' -printf '%f\n' \
+    | awk -F_ '{sub(/\.deb$/, "", $3); print $1 "_" $3}' | sort -u); do
+  NOME="${GRUPO%_*}"
+  ARQUITETURA="${GRUPO##*_}"
   VERSOES=()
-  for ARQ in "${REPO}/pool/${CANAL}/${NOME}"_*.deb; do
+  for ARQ in "${REPO}/pool/${CANAL}/${NOME}"_*_"${ARQUITETURA}".deb; do
     VERSOES+=("$(dpkg-deb -f "${ARQ}" Version) ${ARQ}")
   done
   # Ordena pela regra de versões do Debian (da mais nova para a mais velha)
@@ -52,13 +66,13 @@ for NOME in $(find "${REPO}/pool/${CANAL}" -name '*.deb' -printf '%f\n' | cut -d
   done
 done
 
-# Índices
+# Índices: cada binary-ARQ lista os pacotes daquela arquitetura e os "all"
 cd "${REPO}"
 DISTS="dists/${CANAL}"
 rm -rf "${DISTS}"
 for ARQ in ${ARQUITETURAS}; do
   mkdir -p "${DISTS}/main/binary-${ARQ}"
-  apt-ftparchive packages "pool/${CANAL}" > "${DISTS}/main/binary-${ARQ}/Packages"
+  apt-ftparchive --arch "${ARQ}" packages "pool/${CANAL}" > "${DISTS}/main/binary-${ARQ}/Packages"
   gzip -9nkf "${DISTS}/main/binary-${ARQ}/Packages"
 done
 apt-ftparchive \

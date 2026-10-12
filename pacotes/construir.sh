@@ -4,7 +4,10 @@
 #
 #   duiaos-identidade  identidade, padrões do sistema, scripts, repositório apt
 #   duiaos-shell       interface gráfica (pasta shell/) e Tela de Entrada
-#   duiaos-desktop     metapacote: instala e mantém os dois acima
+#   duiaos-ia          IA do sistema: serviço org.duiaos.IA1, comando e Central de IA
+#   duiaos-agente      agente do sistema: ações aprovadas (org.duiaos.Agente1, ADR 034)
+#   duiaos-desktop     metapacote: instala e mantém todos os acima
+#   (o duiaos-ollama, por arquitetura, tem o próprio duiaos-ollama/construir.sh)
 #
 # Uso: bash pacotes/construir.sh PASTA_DE_SAIDA
 #
@@ -118,6 +121,22 @@ install -m 0644 "${RAIZ}/shell/sessao/autostart" "${RAIZ}/shell/sessao/environme
   "${RAIZ}/shell/sessao/rc.xml" "${SH}/etc/xdg/labwc/"
 install -m 0644 "${RAIZ}/shell/sessao/duiaos.desktop" "${SH}/usr/share/wayland-sessions/"
 fechar duiaos-shell
+
+# ------------------------------------------------------------------ duiaos-ia
+preparar duiaos-ia
+IA="${TRABALHO}/duiaos-ia"
+install -d "${IA}/usr/share/duiaos/ia" "${IA}/usr/share/duiaos/central-de-ia"
+install -m 0644 "${RAIZ}"/ia/*.py "${RAIZ}/ia/catalogo.json" "${IA}/usr/share/duiaos/ia/"
+install -m 0644 "${RAIZ}"/apps/central-de-ia/*.py "${RAIZ}"/apps/central-de-ia/*.qml \
+  "${IA}/usr/share/duiaos/central-de-ia/"
+fechar duiaos-ia
+
+# -------------------------------------------------------------- duiaos-agente
+preparar duiaos-agente
+AG="${TRABALHO}/duiaos-agente"
+install -d "${AG}/usr/share/duiaos/agente"
+install -m 0644 "${RAIZ}"/agente/*.py "${AG}/usr/share/duiaos/agente/"
+fechar duiaos-agente
 
 # ------------------------------------------------------------- duiaos-desktop
 preparar duiaos-desktop

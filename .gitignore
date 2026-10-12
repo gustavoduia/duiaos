@@ -23,3 +23,5 @@ __pycache__/
 # Pacotes do DuiaOS (gerados por pacotes/construir.sh)
 pacotes/chave.gpg
 /saida/
+# Downloads guardados pelo build (release do Ollama)
+.cache/

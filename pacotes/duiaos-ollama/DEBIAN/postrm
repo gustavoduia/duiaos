@@ -1,0 +1,8 @@
+#!/bin/sh
+# DuiaOS — duiaos-ollama: os modelos baixados (/usr/share/ollama) são dados da
+# pessoa e ficam; para apagá-los: sudo rm -rf /usr/share/ollama/.ollama/models
+set -e
+if [ -d /run/systemd/system ]; then
+  systemctl daemon-reload || true
+fi
+exit 0

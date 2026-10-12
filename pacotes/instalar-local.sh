@@ -32,6 +32,13 @@ fi
 VERSAO_DEB="${VERSAO_DEB}" VERSAO_SISTEMA="${VERSAO_SISTEMA}" SUITE="${SUITE:-teste}" \
   CHAVE_PUBLICA="${CHAVE}" bash pacotes/construir.sh "${TEMP}/debs"
 
+# Ollama (IA local) da arquitetura deste computador; o download (~1,5 GB) fica
+# guardado em ~/.cache/duiaos e só se repete quando a versão do Ollama mudar.
+if ! command -v zstd >/dev/null || ! command -v curl >/dev/null; then
+  sudo apt-get install -y -qq zstd curl
+fi
+bash pacotes/duiaos-ollama/construir.sh "$(dpkg --print-architecture)" "${TEMP}/debs"
+
 chmod 755 "${TEMP}" "${TEMP}/debs"
 chmod 644 "${TEMP}"/debs/*.deb
 sudo apt-get install -y --allow-downgrades \

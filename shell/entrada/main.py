@@ -74,11 +74,19 @@ class GreetdDemonstracao:
 
     def __init__(self):
         self._senha_ok = False
+        self._sessao = False
 
     def pedir(self, mensagem):
         import time
         tipo = mensagem["type"]
+        if tipo == "cancel_session":
+            self._sessao = False
+            return {"type": "success"}
         if tipo == "create_session":
+            # Como o greetd: uma sessão por vez; depois de um erro, é preciso cancelar
+            if self._sessao:
+                return {"type": "error", "error_type": "error", "description": "a session is already being configured"}
+            self._sessao = True
             return {"type": "auth_message", "auth_message_type": "secret", "auth_message": "Password: "}
         if tipo == "post_auth_message_response":
             time.sleep(0.8)
@@ -147,6 +155,10 @@ class Entrada(QObject):
                 if tipo == "success":
                     break
                 if tipo == "error":
+                    # O greetd mantém a sessão "em configuração" depois de um erro (senha
+                    # errada inclusive): sem cancelar, a próxima tentativa recebe "a session
+                    # is already being configured" e a Tela de Entrada trava.
+                    self._cancelar(greetd)
                     if resposta.get("error_type") == "auth_error":
                         self._resultado.emit(False, "Senha incorreta. Tente de novo.")
                     else:
@@ -163,7 +175,7 @@ class Entrada(QObject):
                     resposta = greetd.pedir({"type": "post_auth_message_response", "response": None})
                 else:
                     # Pergunta que esta tela ainda não sabe responder (ex.: trocar a senha vencida)
-                    greetd.pedir({"type": "cancel_session"})
+                    self._cancelar(greetd)
                     self._resultado.emit(False, aviso or "Esta conta pede uma etapa extra que a "
                                          "Tela de Entrada ainda não suporta: "
                                          + resposta.get("auth_message", "").strip())
@@ -171,7 +183,7 @@ class Entrada(QObject):
 
             resposta = greetd.pedir({"type": "start_session", "cmd": COMANDO_SESSAO, "env": AMBIENTE_SESSAO})
             if resposta.get("type") != "success":
-                greetd.pedir({"type": "cancel_session"})
+                self._cancelar(greetd)
                 self._resultado.emit(False, "Não foi possível abrir a sessão: "
                                      + resposta.get("description", "erro desconhecido"))
                 return
@@ -181,8 +193,16 @@ class Entrada(QObject):
                 pass
             self._resultado.emit(True, "")
         except (OSError, ConnectionError, KeyError, ValueError) as erro:
+            # Conexão nova na próxima tentativa (o greetd descarta a sessão da conexão perdida)
             self._greetd = None
             self._resultado.emit(False, f"Falha na comunicação com o sistema de login ({erro}).")
+
+    def _cancelar(self, greetd):
+        """Descarta a sessão em configuração para a próxima tentativa começar do zero."""
+        try:
+            greetd.pedir({"type": "cancel_session"})
+        except (OSError, ConnectionError, ValueError):
+            self._greetd = None
 
     def _ao_terminar(self, sucesso, mensagem):
         if sucesso:

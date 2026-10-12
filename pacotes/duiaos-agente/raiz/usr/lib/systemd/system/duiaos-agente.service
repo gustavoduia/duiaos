@@ -1,0 +1,20 @@
+[Unit]
+Description=Agente do sistema do DuiaOS (ações aprovadas: atualizar, instalar, remover)
+
+# Aberto pelo D-Bus quando um programa pede (org.duiaos.Agente1); sai sozinho
+# depois de 10 minutos sem uso. Roda como root porque o apt precisa.
+[Service]
+Type=dbus
+BusName=org.duiaos.Agente1
+ExecStart=/usr/bin/python3 /usr/share/duiaos/agente/agente.py
+LogsDirectory=duiaos-agente
+LogsDirectoryMode=0750
+UMask=0022
+# Sem reiniciar sozinho no meio de uma instalação: o apt não pode ser morto
+KillMode=process
+TimeoutStopSec=30min
+# Endurecimento possível para quem instala pacotes
+PrivateTmp=yes
+ProtectHome=read-only
+ProtectKernelTunables=yes
+ProtectControlGroups=yes

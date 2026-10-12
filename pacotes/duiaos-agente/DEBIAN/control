@@ -1,0 +1,17 @@
+Package: duiaos-agente
+Version: @VERSAO_DEB@
+Architecture: all
+Maintainer: DuiaOS <53358870+gustavoduia@users.noreply.github.com>
+Section: admin
+Priority: optional
+Depends: python3, python3-gi, gir1.2-glib-2.0, dbus, polkitd, apt
+Homepage: https://github.com/gustavoduia/duiaos-fontes-abertas
+Description: DuiaOS — agente do sistema (ações com aprovação)
+ Serviço duiaos-agente (D-Bus org.duiaos.Agente1): faz, com a aprovação da
+ pessoa e a autorização do polkit, só as ações de uma lista fechada —
+ atualizar o sistema, instalar e remover aplicativos pelo apt. Sempre simula
+ antes, nunca remove partes essenciais e registra tudo em
+ /var/log/duiaos-agente.
+ .
+ Software proprietário. Uso regido pelo EULA:
+ /usr/share/duiaos/licenca/EULA.md

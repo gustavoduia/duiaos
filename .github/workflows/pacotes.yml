@@ -34,7 +34,7 @@ jobs:
   pacotes:
     name: Gerar e publicar os pacotes
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Baixar o código
         uses: actions/checkout@v4
@@ -43,7 +43,8 @@ jobs:
 
       - name: Ferramentas
         run: |
-          command -v apt-ftparchive >/dev/null || sudo apt-get install -y -qq apt-utils
+          command -v apt-ftparchive >/dev/null && command -v zstd >/dev/null \
+            || sudo apt-get install -y -qq apt-utils zstd
 
       - name: Versão
         run: bash pacotes/versao.sh | tee -a "${GITHUB_ENV}"
@@ -68,6 +69,11 @@ jobs:
           CHAVE=""
           [ -s pacotes/chave.gpg ] && CHAVE="${PWD}/pacotes/chave.gpg"
           CHAVE_PUBLICA="${CHAVE}" bash pacotes/construir.sh saida
+          # Ollama (ADR 030): um pacote por arquitetura, do release oficial sem CUDA.
+          # A versão só muda com o arquivo pacotes/duiaos-ollama/VERSAO; o
+          # publicar.sh mantém a cópia já publicada da mesma versão.
+          bash pacotes/duiaos-ollama/construir.sh amd64 saida
+          bash pacotes/duiaos-ollama/construir.sh arm64 saida
 
       - name: Guardar os pacotes no GitHub (30 dias)
         uses: actions/upload-artifact@v4

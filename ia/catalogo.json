@@ -1,0 +1,72 @@
+{
+  "versao": 1,
+  "padrao": "qwen3.5:4b",
+  "padrao_alternativas": ["qwen3.5:2b", "qwen3.5:0.8b"],
+  "observacao": "Tamanhos aproximados do download na biblioteca do Ollama (outubro de 2026). Memória necessária é estimada pelo serviço (tamanho + contexto).",
+  "licencas": {
+    "apache-2.0": {"nome": "Apache 2.0", "livre": true, "url": "https://www.apache.org/licenses/LICENSE-2.0"},
+    "mit": {"nome": "MIT", "livre": true, "url": "https://opensource.org/license/mit"},
+    "llama3": {"nome": "Meta Llama 3 Community License", "livre": false, "url": "https://www.llama.com/llama3/license/"},
+    "llama3.1": {"nome": "Llama 3.1 Community License", "livre": false, "url": "https://www.llama.com/llama3_1/license/"},
+    "llama3.2": {"nome": "Llama 3.2 Community License", "livre": false, "url": "https://www.llama.com/llama3_2/license/"},
+    "llama3.3": {"nome": "Llama 3.3 Community License", "livre": false, "url": "https://www.llama.com/llama3_3/license/"}
+  },
+  "familias": [
+    {
+      "id": "qwen3.5", "nome": "Qwen3.5", "autor": "Alibaba", "licenca": "apache-2.0",
+      "descricao": "Família mais nova da Qwen: rápida, boa em português e em seguir instruções.",
+      "modelos": [
+        {"id": "qwen3.5:0.8b", "tamanho": "0.8B", "download_gb": 1.3, "descricao": "Muito leve; para computadores modestos"},
+        {"id": "qwen3.5:2b", "tamanho": "2B", "download_gb": 3.1, "descricao": "Leve e rápido"},
+        {"id": "qwen3.5:4b", "tamanho": "4B", "download_gb": 4.0, "descricao": "Equilíbrio entre qualidade e velocidade (padrão do DuiaOS)"},
+        {"id": "qwen3.5:9b", "tamanho": "9B", "download_gb": 7.6, "descricao": "Respostas melhores, mas cerca de 2x mais lento que o 4B sem placa de vídeo"},
+        {"id": "qwen3.5:27b", "tamanho": "27B", "download_gb": 20.0, "descricao": "Grande; para computadores com muita memória"}
+      ]
+    },
+    {
+      "id": "qwen3", "nome": "Qwen3", "autor": "Alibaba", "licenca": "apache-2.0",
+      "descricao": "Geração anterior da Qwen, com modo de raciocínio.",
+      "modelos": [
+        {"id": "qwen3:4b", "tamanho": "4B", "download_gb": 2.5, "descricao": "Leve"},
+        {"id": "qwen3:8b", "tamanho": "8B", "download_gb": 5.2, "descricao": "Intermediário"},
+        {"id": "qwen3:14b", "tamanho": "14B", "download_gb": 9.3, "descricao": "Respostas melhores; pede mais memória"},
+        {"id": "qwen3:32b", "tamanho": "32B", "download_gb": 20.0, "descricao": "Grande; para computadores com muita memória"}
+      ]
+    },
+    {
+      "id": "gemma4", "nome": "Gemma 4", "autor": "Google DeepMind", "licenca": "apache-2.0",
+      "descricao": "Modelos abertos do Google; os \"E\" são otimizados para notebooks.",
+      "modelos": [
+        {"id": "gemma4:e2b", "tamanho": "E2B", "download_gb": 7.5, "descricao": "Eficiente, feito para notebooks e celulares"},
+        {"id": "gemma4:e4b", "tamanho": "E4B", "download_gb": 9.5, "descricao": "Eficiente, com respostas melhores"},
+        {"id": "gemma4:12b", "tamanho": "12B", "download_gb": 8.0, "descricao": "Intermediário"},
+        {"id": "gemma4:26b", "tamanho": "26B", "download_gb": 19.0, "descricao": "Grande (mistura de especialistas)"},
+        {"id": "gemma4:31b", "tamanho": "31B", "download_gb": 20.0, "descricao": "O maior da família"}
+      ]
+    },
+    {
+      "id": "llama", "nome": "Llama", "autor": "Meta", "licenca": "llama3.3",
+      "descricao": "Modelos da Meta. A licença não é livre e tem regras de uso próprias: leia antes de baixar.",
+      "modelos": [
+        {"id": "llama3.2:1b", "tamanho": "3.2 · 1B", "download_gb": 1.3, "licenca": "llama3.2", "descricao": "Muito leve"},
+        {"id": "llama3.2:3b", "tamanho": "3.2 · 3B", "download_gb": 2.0, "licenca": "llama3.2", "descricao": "Leve"},
+        {"id": "llama3.1:8b", "tamanho": "3.1 · 8B", "download_gb": 4.9, "licenca": "llama3.1", "descricao": "Intermediário"},
+        {"id": "llama3:8b", "tamanho": "3 · 8B", "download_gb": 4.7, "licenca": "llama3", "descricao": "Geração original do Llama 3"},
+        {"id": "llama3.3:70b", "tamanho": "3.3 · 70B", "download_gb": 43.0, "licenca": "llama3.3", "descricao": "Muito grande; para computadores com muita memória"},
+        {"id": "llama3.1:70b", "tamanho": "3.1 · 70B", "download_gb": 43.0, "licenca": "llama3.1", "descricao": "Muito grande; para computadores com muita memória"},
+        {"id": "llama3:70b", "tamanho": "3 · 70B", "download_gb": 40.0, "licenca": "llama3", "descricao": "Muito grande; para computadores com muita memória"}
+      ]
+    },
+    {
+      "id": "phi", "nome": "Phi", "autor": "Microsoft", "licenca": "mit",
+      "descricao": "Modelos pequenos da Microsoft, bons em raciocínio.",
+      "modelos": [
+        {"id": "phi4-mini:3.8b", "tamanho": "4 mini · 3.8B", "download_gb": 2.5, "descricao": "Leve, geração mais nova"},
+        {"id": "phi4:14b", "tamanho": "4 · 14B", "download_gb": 9.1, "descricao": "Respostas melhores; pede mais memória"},
+        {"id": "phi3.5:3.8b", "tamanho": "3.5 · 3.8B", "download_gb": 2.2, "descricao": "Leve"},
+        {"id": "phi3:3.8b", "tamanho": "3 mini · 3.8B", "download_gb": 2.2, "descricao": "Leve, geração original"},
+        {"id": "phi3:14b", "tamanho": "3 medium · 14B", "download_gb": 7.9, "descricao": "Intermediário"}
+      ]
+    }
+  ]
+}

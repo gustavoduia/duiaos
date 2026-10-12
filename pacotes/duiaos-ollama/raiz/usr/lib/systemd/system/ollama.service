@@ -1,0 +1,39 @@
+[Unit]
+Description=Ollama — IA local do DuiaOS
+Documentation=https://ollama.com
+After=network-online.target
+
+[Service]
+ExecStart=/usr/bin/ollama serve
+User=ollama
+Group=ollama
+Environment=HOME=/usr/share/ollama
+Environment=OLLAMA_HOST=127.0.0.1:11434
+Environment=OLLAMA_MODELS=/usr/share/ollama/.ollama/models
+# Só modelos locais: nada de modelos na nuvem do ollama.com pela porta de trás.
+# A nuvem do DuiaOS passa pelo Wise/duiaos-ia, e só com consentimento (ADR 029).
+Environment=OLLAMA_NO_CLOUD=1
+# Resposta rápida (ADR 032): um modelo na memória por vez (o ativo do sistema),
+# um pedido por vez e o mesmo tamanho de contexto para todos os programas — se
+# cada um pedisse um tamanho, o Ollama recarregaria o modelo a cada troca.
+# O modelo ativo fica sempre carregado quando cabe (o duiaos-ia decide); os
+# outros saem da memória após 30 min sem uso.
+Environment=OLLAMA_MAX_LOADED_MODELS=1
+Environment=OLLAMA_NUM_PARALLEL=1
+Environment=OLLAMA_CONTEXT_LENGTH=8192
+Environment=OLLAMA_KEEP_ALIVE=30m
+# Deixa o Ollama ver a placa de vídeo integrada (ex.: Intel Iris Xe, pelo Vulkan).
+# Usar ou não é decidido por modelo e por computador: o duiaos-ia mede os dois
+# jeitos e manda "num_gpu" em cada pedido (0 = só o processador).
+Environment=OLLAMA_IGPU_ENABLE=1
+Restart=always
+RestartSec=3
+# Endurecimento: só escreve na própria pasta
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=full
+ProtectHome=yes
+ReadWritePaths=/usr/share/ollama
+
+[Install]
+WantedBy=multi-user.target

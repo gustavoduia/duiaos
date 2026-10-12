@@ -28,6 +28,12 @@ wlr-randr
 # Janelas abertas e foco (usado pela Ilha de Aplicativos)
 wlrctl
 
+# Acessibilidade (AT-SPI), captura de tela e teclado virtual (ADR 035):
+# leitores de tela e o Wise usando o computador
+at-spi2-core
+grim
+wtype
+
 # Qt6 / QML no Wayland e o módulo de painéis (layer-shell)
 qt6-wayland
 qt6-svg-plugins

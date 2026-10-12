@@ -1,0 +1,5 @@
+[D-BUS Service]
+Name=org.duiaos.IA1
+Exec=/bin/false
+User=duiaos-ia
+SystemdService=duiaos-ia.service

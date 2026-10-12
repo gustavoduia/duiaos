@@ -1,0 +1,7 @@
+# Ollama empacotado pelo DuiaOS (licença MIT): versão oficial e conferência
+# dos arquivos baixados (sha256sum.txt do release oficial).
+# Para atualizar: troque a versão e as duas somas, e aumente a REVISAO.
+OLLAMA=0.40.3
+REVISAO=3
+SHA256_AMD64=ce6f8b671a699bf1ebafb28d60dbbabf4f37b30b499145fa308a8ba72de021d6
+SHA256_ARM64=5754700747a93ea14db88888f08072386d2da6fbf7dd75be19a684348b9f28b8

@@ -1,0 +1,8 @@
+#!/bin/sh
+# DuiaOS — duiaos-ollama: para o serviço antes de remover.
+set -e
+if [ "$1" = "remove" ] && [ -d /run/systemd/system ]; then
+  systemctl stop ollama.service || true
+  systemctl disable ollama.service >/dev/null 2>&1 || true
+fi
+exit 0

@@ -15,6 +15,11 @@ fi
 python3 "${DUIAOS_SHELL}/barra-de-recursos/main.py" >/tmp/duiaos-barra-de-recursos.log 2>&1 &
 python3 "${DUIAOS_SHELL}/ilha-de-aplicativos/main.py" >/tmp/duiaos-ilha-de-aplicativos.log 2>&1 &
 
+# Acessibilidade do sistema (AT-SPI, ADR 035): leitores de tela e o Wise leem e
+# usam as janelas por ela. Avisa os aplicativos que há quem leia (Firefox e
+# outros só se descrevem quando isto está ligado).
+busctl --user set-property org.a11y.Bus /org/a11y/bus org.a11y.Status IsEnabled b true >/dev/null 2>&1 || true
+
 # Wise (se instalado): fica sempre rodando enquanto a sessão estiver aberta.
 # --fundo: começa descansando no canto da tela e cumprimenta a pessoa. Se ele
 # fechar ou travar, volta em 2 segundos.
@@ -25,6 +30,12 @@ if [ -x /usr/bin/duiaos-wise ]; then
       sleep 2
     done
   ) &
+fi
+
+# IA do sistema (ADR 030): sem modelo ativo (1º login), ativa o modelo padrão
+# ou começa a baixá-lo; o Wise e a Central de IA mostram o progresso.
+if [ -x /usr/bin/duiaos-ia ]; then
+  /usr/bin/duiaos-ia garantir-padrao >/tmp/duiaos-ia.log 2>&1 &
 fi
 
 # Tela de Bloqueio: após 10 minutos sem uso, antes de suspender e

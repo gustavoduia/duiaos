@@ -5,3 +5,7 @@
 # Desenvolvimento: para rodar a interface direto do repositório, copie este
 # arquivo para ~/.config/labwc/environment e descomente a linha abaixo.
 # DUIAOS_SHELL=/home/gustavo/Projetos/duiaos/shell
+
+# Acessibilidade (ADR 035): aplicativos Qt sempre se descrevem pelo AT-SPI,
+# para leitores de tela e para o Wise usar o computador como a pessoa
+QT_LINUX_ACCESSIBILITY_ALWAYS_ON=1
