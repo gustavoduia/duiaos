@@ -1,0 +1,49 @@
+---
+// DuiaOS — novidades de cada versão (notas de versão), mais recente primeiro.
+import Site from "../layouts/Site.astro";
+import dados from "../dados/versoes.json";
+const formatar = (d: string) => new Date(d + "T12:00:00").toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" });
+---
+<Site title="Novidades do DuiaOS" description="O que mudou em cada versão do DuiaOS e o que vem por aí.">
+  <div class="pagina">
+    <header>
+      <h1>Novidades</h1>
+      <p class="chamada-texto">O que mudou em cada versão. Para atualizar, peça ao Wise: "atualiza o sistema".</p>
+    </header>
+
+    <section class="proxima">
+      <h2>{dados.proxima.titulo}</h2>
+      <ul>{dados.proxima.novidades.map((n) => <li>{n}</li>)}</ul>
+    </section>
+
+    {dados.versoes.map((v) => (
+      <article class="versao">
+        <div class="lado">
+          <h2>{v.versao}</h2>
+          <p class="quando">{formatar(v.data)}</p>
+          <p class="quando">{v.canal}</p>
+        </div>
+        <div>
+          <p class="resumo">{v.resumo}</p>
+          <ul>{v.novidades.map((n) => <li>{n}</li>)}</ul>
+          <p><a href={v.pagina}>Arquivos e somas de verificação</a></p>
+        </div>
+      </article>
+    ))}
+  </div>
+</Site>
+
+<style>
+  .proxima { padding: 2rem 2.2rem; border-radius: 26px; background: var(--noite); color: #eef4ff; display: grid; gap: 1rem; }
+  .proxima h2 { font-size: clamp(1.6rem, 3vw, 2.2rem); }
+  .proxima li::marker { color: var(--brilho); }
+  .versao { display: grid; grid-template-columns: 12rem minmax(0, 1fr); gap: 2rem; padding: 3rem 0;
+            border-bottom: 1px solid var(--linha); }
+  .versao h2 { font-size: 2.6rem; }
+  .quando { color: var(--texto-suave); font-size: .95rem; }
+  .resumo { font-size: 1.15rem; margin-bottom: 1rem; }
+  ul { margin: 0; padding-left: 1.2rem; display: grid; gap: .45rem; }
+  a { color: var(--azul); }
+  .versao p:last-child { margin-top: 1.2rem; }
+  @media (max-width: 720px) { .versao { grid-template-columns: 1fr; gap: .5rem; } }
+</style>

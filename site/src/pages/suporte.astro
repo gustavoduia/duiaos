@@ -1,0 +1,111 @@
+---
+// DuiaOS — suporte: caminhos de ajuda e formulário de contato (gravado no D1
+// pelo /api/suporte; cada pedido recebe um número de protocolo).
+import Site from "../layouts/Site.astro";
+---
+<Site title="Suporte do DuiaOS" description="Ajuda com o DuiaOS e o Wise: documentação, solução de problemas e contato.">
+  <div class="pagina">
+    <header>
+      <h1>Como podemos ajudar?</h1>
+      <p class="chamada-texto">Comece pelo caminho mais rápido. Se não resolver, escreva para a gente.</p>
+    </header>
+
+    <section class="caminhos" aria-label="Caminhos de ajuda">
+      <div>
+        <h2>Pergunte ao Wise</h2>
+        <p>No próprio DuiaOS, aperte <kbd>Super</kbd> + <kbd>W</kbd> e descreva o problema. O Wise consulta o
+          computador e explica o que está acontecendo.</p>
+      </div>
+      <div>
+        <h2>Procure na documentação</h2>
+        <p>Passo a passo das tarefas, atalhos e as respostas para os problemas mais comuns.</p>
+        <p><a href="/documentacao/">Abrir a documentação</a> ou ir direto para a
+          <a href="/documentacao/problemas/wise-nao-responde/">solução de problemas</a>.</p>
+      </div>
+    </section>
+
+    <section class="contato">
+      <div class="texto-contato">
+        <h2>Fale com o suporte</h2>
+        <p>Conte o que aconteceu e o que você já tentou. Se puder, rode no terminal
+          <code>duiaos-ia diagnostico</code> e cole o resultado.</p>
+        <p class="aviso">Guardamos só o que você escrever aqui, para responder ao seu pedido.</p>
+      </div>
+      <form id="formulario" novalidate>
+        <label>Seu nome<input name="nome" autocomplete="name" required maxlength="120" /></label>
+        <label>E-mail para resposta<input name="email" type="email" autocomplete="email" required maxlength="200" /></label>
+        <label>Assunto
+          <select name="assunto">
+            <option>Instalação</option>
+            <option>Wise e IA</option>
+            <option>Aplicativos e atualizações</option>
+            <option>Hardware (Wi-Fi, som, vídeo)</option>
+            <option>Outro</option>
+          </select>
+        </label>
+        <label>O que aconteceu<textarea name="mensagem" rows="6" required maxlength="8000"></textarea></label>
+        <label class="escondido" aria-hidden="true">Não preencha<input name="site" tabindex="-1" autocomplete="off" /></label>
+        <button class="botao" type="submit">Enviar pedido</button>
+        <p class="resultado" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+  </div>
+</Site>
+
+<style>
+  .caminhos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3rem; margin-bottom: 5rem; }
+  .caminhos > div { display: grid; gap: .8rem; align-content: start; }
+  .caminhos h2, .contato h2 { font-size: clamp(1.6rem, 3vw, 2.2rem); }
+  .caminhos p, .texto-contato p { color: var(--texto-suave); }
+  a { color: var(--azul); }
+  kbd { font: inherit; font-size: .82em; padding: .05em .4em; border-radius: 6px; border: 1px solid var(--linha); border-bottom-width: 2px; }
+  code { font-size: .9em; background: var(--branco); padding: .1em .4em; border-radius: 6px; }
+  .contato { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 3rem;
+             padding: 2.5rem; border-radius: 28px; background: var(--branco); }
+  .texto-contato { display: grid; gap: 1rem; align-content: start; }
+  .aviso { font-size: .9rem; }
+  form { display: grid; gap: 1rem; }
+  label { display: grid; gap: .35rem; font-weight: 600; font-size: .95rem; }
+  input, select, textarea {
+    font: inherit; font-weight: 400; color: var(--tinta); padding: .75rem .9rem; border-radius: 12px;
+    border: 1.5px solid var(--linha); background: #f8faff;
+  }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--azul); box-shadow: 0 0 0 3px rgba(46, 107, 230, .18); }
+  .escondido { position: absolute; left: -9999px; }
+  button { justify-self: start; }
+  .resultado { min-height: 1.5em; color: var(--texto-suave); }
+  .resultado.erro { color: #c0392b; }
+  @media (max-width: 760px) { .caminhos, .contato { grid-template-columns: 1fr; } .contato { padding: 1.5rem; } }
+</style>
+
+<script>
+  const formulario = document.getElementById("formulario") as HTMLFormElement;
+  const resultado = formulario.querySelector(".resultado") as HTMLElement;
+  formulario.addEventListener("submit", async (evento) => {
+    evento.preventDefault();
+    if (!formulario.checkValidity()) {
+      resultado.textContent = "Preencha nome, e-mail válido e o que aconteceu.";
+      resultado.classList.add("erro");
+      return;
+    }
+    const botao = formulario.querySelector("button") as HTMLButtonElement;
+    botao.disabled = true;
+    resultado.classList.remove("erro");
+    resultado.textContent = "Enviando…";
+    try {
+      const dados = Object.fromEntries(new FormData(formulario));
+      const resposta = await fetch("/api/suporte", {
+        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(dados),
+      });
+      const corpo = await resposta.json().catch(() => ({}));
+      if (!resposta.ok) throw new Error(corpo.erro || "Não deu para enviar agora.");
+      formulario.reset();
+      resultado.textContent = `Pedido enviado. Seu protocolo é ${corpo.protocolo}. Responderemos no e-mail informado.`;
+    } catch (erro) {
+      resultado.textContent = `${(erro as Error).message} Tente de novo em alguns minutos.`;
+      resultado.classList.add("erro");
+    } finally {
+      botao.disabled = false;
+    }
+  });
+</script>

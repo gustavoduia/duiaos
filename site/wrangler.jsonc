@@ -1,0 +1,24 @@
+// DuiaOS — site no Cloudflare Workers (ADR 038).
+// Deploy: `npm run deploy` (pelo Mac, com `npx wrangler login`) ou o workflow
+// .github/workflows/site.yml (segredos CLOUDFLARE_API_TOKEN e CLOUDFLARE_ACCOUNT_ID).
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "duiaos-site",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-10-12",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "404-page",
+    "html_handling": "auto-trailing-slash",
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    { "binding": "DB", "database_name": "duiaos-site", "database_id": "0e4339d8-13b9-46b1-91e2-af21785b0096",
+      "migrations_dir": "migrations" }
+  ],
+  "kv_namespaces": [
+    { "binding": "CACHE", "id": "abd420e6987e4c13b62861053ec1e77c" }
+  ],
+  "observability": { "enabled": true }
+}
