@@ -5,12 +5,9 @@
 # copia os arquivos do sistema e da interface e liga a Tela de Entrada e a
 # animação de boot.
 #
-# Roda NO DELL (no próprio DuiaOS), a partir da pasta do repositório:
+# Onde rodar: 🔗 DELL (sessão SSH) — na janela já conectada ao Dell
+# (ou 💻 DELL LOCAL, no teclado do próprio Dell). Nunca no Mac.
 #   cd ~/Projetos/duiaos && git pull && sudo bash ferramentas/atualizar-sistema.sh
-#
-# Ou do Mac, pelo SSH (exemplo com a branch de um pull request):
-#   ssh -t gustavo@duiaos 'cd ~/Projetos/duiaos && git fetch && git checkout BRANCH \
-#     && git pull && sudo bash ferramentas/atualizar-sistema.sh'
 #
 # Depois, reinicie. Para voltar ao início manual pelo terminal:
 #   sudo systemctl disable greetd && sudo systemctl set-default multi-user.target
