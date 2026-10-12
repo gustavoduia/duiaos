@@ -337,6 +337,12 @@ class Ilha(QObject):
 
 def main():
     app = QGuiApplication(sys.argv)
+    # Registros e falhas no journal do sistema (duiaos_registro, ADR 040)
+    try:
+        import duiaos_registro
+        duiaos_registro.ligar("duiaos-ilha-de-aplicativos", qt=True)
+    except ImportError:
+        pass
     # A integração layer-shell vale só para este painel: sem isto, os programas
     # abertos daqui (Wise, aplicativos Qt) herdariam a variável e virariam
     # "painéis" sem barra de título, sem botões e sem redimensionar.

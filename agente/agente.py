@@ -382,6 +382,12 @@ class Agente:
 
 
 def main():
+    # Registros e falhas no journal do sistema (duiaos_registro, ADR 040)
+    try:
+        import duiaos_registro
+        duiaos_registro.ligar("duiaos-agente")
+    except ImportError:
+        pass
     argumentos = argparse.ArgumentParser(description="Agente do sistema do DuiaOS")
     argumentos.add_argument("--sessao", action="store_true", help="barramento da sessão (testes)")
     argumentos.add_argument("--sem-polkit", action="store_true", help="não pedir autorização (testes)")

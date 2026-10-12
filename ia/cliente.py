@@ -200,6 +200,12 @@ def diagnostico(conexao):
 
 
 def main(argv):
+    # Registros e falhas no journal do sistema (duiaos_registro, ADR 040)
+    try:
+        import duiaos_registro
+        duiaos_registro.ligar("duiaos-ia-cliente")
+    except ImportError:
+        pass
     comando = argv[1] if len(argv) > 1 else "estado"
     argumento = argv[2] if len(argv) > 2 else ""
     if comando in ("-h", "--help", "ajuda"):

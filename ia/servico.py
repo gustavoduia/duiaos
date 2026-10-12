@@ -525,6 +525,12 @@ class Servico:
 
 
 def main():
+    # Registros e falhas no journal do sistema (duiaos_registro, ADR 040)
+    try:
+        import duiaos_registro
+        duiaos_registro.ligar("duiaos-ia")
+    except ImportError:
+        pass
     argumentos = argparse.ArgumentParser(description="Serviço de IA do DuiaOS")
     argumentos.add_argument("--sessao", action="store_true", help="usar o barramento da sessão (testes)")
     argumentos.add_argument("--sem-polkit", action="store_true", help="não pedir autorização (testes)")

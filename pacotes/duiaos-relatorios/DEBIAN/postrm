@@ -1,0 +1,11 @@
+#!/bin/sh
+# DuiaOS — duiaos-relatorios: na remoção completa (purge), apaga os relatórios e a configuração.
+set -e
+if [ "$1" = "purge" ]; then
+  rm -rf /var/lib/duiaos-relatorios /etc/duiaos/relatorios /etc/duiaos/relatorios.conf
+fi
+if [ -d /run/systemd/system ]; then
+  systemctl daemon-reload >/dev/null 2>&1 || true
+fi
+journalctl --update-catalog >/dev/null 2>&1 || true
+exit 0

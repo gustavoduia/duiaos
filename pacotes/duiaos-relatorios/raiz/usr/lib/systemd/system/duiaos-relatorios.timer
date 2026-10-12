@@ -1,0 +1,11 @@
+[Unit]
+Description=DuiaOS — Ajude a melhorar o DuiaOS (a cada hora)
+
+[Timer]
+OnBootSec=15min
+OnUnitActiveSec=1h
+RandomizedDelaySec=10min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -173,6 +173,12 @@ def main():
     demonstracao = "--demonstracao" in sys.argv
     captura = sys.argv[sys.argv.index("--captura") + 1] if "--captura" in sys.argv else ""
     app = QGuiApplication(sys.argv)
+    # Registros e falhas no journal do sistema (duiaos_registro, ADR 040)
+    try:
+        import duiaos_registro
+        duiaos_registro.ligar("duiaos-central-de-ia", qt=True)
+    except ImportError:
+        pass
     app.setApplicationName("duiaos-central-de-ia")
     app.setApplicationDisplayName("Central de IA")
     app.setDesktopFileName("duiaos-central-de-ia")

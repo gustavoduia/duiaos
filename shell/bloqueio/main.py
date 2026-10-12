@@ -108,6 +108,12 @@ class Bloqueio(QObject):
 
 def main():
     app = QGuiApplication(sys.argv)
+    # Registros e falhas no journal do sistema (duiaos_registro, ADR 040)
+    try:
+        import duiaos_registro
+        duiaos_registro.ligar("duiaos-bloqueio", qt=True)
+    except ImportError:
+        pass
     app.setApplicationName("duiaos-bloqueio")
     # Fechar janelas não desbloqueia: só a senha correta encerra o programa.
     app.setQuitOnLastWindowClosed(False)

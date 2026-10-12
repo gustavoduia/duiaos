@@ -1,0 +1,10 @@
+// DuiaOS — quem está no computador pode pedir a coleta e o envio agora ("duiaos-relatorios enviar" e o
+// "Não ficou bom" do Wise). Só iniciar este serviço; o que ele envia continua decidido pelo nível escolhido.
+polkit.addRule(function(action, subject) {
+    if (action.id == "org.freedesktop.systemd1.manage-units" &&
+        action.lookup("unit") == "duiaos-relatorios.service" &&
+        action.lookup("verb") == "start" &&
+        subject.local && subject.active) {
+        return polkit.Result.YES;
+    }
+});

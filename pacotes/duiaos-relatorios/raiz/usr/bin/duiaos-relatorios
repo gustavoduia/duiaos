@@ -1,0 +1,3 @@
+#!/bin/sh
+# DuiaOS — "Ajude a melhorar o DuiaOS" pelo terminal (duiaos-relatorios ajuda).
+exec /usr/bin/python3 -m duiaos_relatorios "$@"
