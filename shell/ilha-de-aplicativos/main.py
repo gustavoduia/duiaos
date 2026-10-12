@@ -337,6 +337,10 @@ class Ilha(QObject):
 
 def main():
     app = QGuiApplication(sys.argv)
+    # A integração layer-shell vale só para este painel: sem isto, os programas
+    # abertos daqui (Wise, aplicativos Qt) herdariam a variável e virariam
+    # "painéis" sem barra de título, sem botões e sem redimensionar.
+    os.environ.pop("QT_WAYLAND_SHELL_INTEGRATION", None)
     app.setApplicationName("duiaos-ilha-de-aplicativos")
 
     # Sem ambiente de desktop completo, o Qt não conhece as pastas de ícones
