@@ -26,7 +26,8 @@ Atualizado em: 12/10/2026 (18h30) · por: Claude (conta do Gustavo) · sessão s
   W19): se existir, remover no GitHub (Settings › Deploy keys) e apagar `~/.ssh/duiaos-diagnosticos` no Dell.
 
 ## 3. Em andamento (quem / branch / PR rascunho)
-- Nenhuma frente aberta.
+- Claude (conta do Gustavo) · `claude/registros-f2-f3` · logs F2 (uso agregado + tela "Ajude a melhorar o
+  DuiaOS") e F3 (envio pelo site); depois a preparação da 0.3.0. Wise: #10 (desempenho, apps, Wi-Fi).
 
 ## 4. Próximos passos (em ordem sugerida)
 1. **Desempenho do Wise** (visto nos relatórios de 12/10 18h20): aquecimento de ~49 s depois do boot e ~38 s
