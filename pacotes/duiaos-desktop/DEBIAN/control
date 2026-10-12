@@ -4,7 +4,7 @@ Architecture: all
 Maintainer: DuiaOS <53358870+gustavoduia@users.noreply.github.com>
 Section: metapackages
 Priority: optional
-Depends: duiaos-identidade (= @VERSAO_DEB@), duiaos-shell (= @VERSAO_DEB@), duiaos-ia (= @VERSAO_DEB@), duiaos-ollama
+Depends: duiaos-identidade (= @VERSAO_DEB@), duiaos-shell (= @VERSAO_DEB@), duiaos-ia (= @VERSAO_DEB@), duiaos-agente (= @VERSAO_DEB@), duiaos-ollama
 Homepage: https://github.com/gustavoduia/duiaos-fontes-abertas
 Description: DuiaOS — sistema completo (metapacote)
  Instala e mantém atualizados todos os componentes próprios do DuiaOS.

@@ -1,0 +1,10 @@
+#!/bin/sh
+# DuiaOS — duiaos-agente: recarrega o D-Bus e o systemd (o serviço abre sob demanda).
+set -e
+if [ "$1" = "configure" ] && [ -d /run/systemd/system ]; then
+  systemctl daemon-reload || true
+  systemctl reload dbus.service >/dev/null 2>&1 || true
+  # Versão nova: a antiga, se estiver aberta, sai; o D-Bus abre a nova no próximo pedido
+  systemctl try-restart duiaos-agente.service >/dev/null 2>&1 || true
+fi
+exit 0

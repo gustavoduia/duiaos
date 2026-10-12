@@ -1,0 +1,9 @@
+// DuiaOS — ações do agente do sistema sem senha para quem está no computador
+// (sessão local e ativa) e é administrador (grupo sudo). A pessoa já aprovou o
+// impacto na interface; de fora (SSH) ou sem ser administrador, pede senha.
+polkit.addRule(function (action, subject) {
+    if (action.id.indexOf("org.duiaos.agente.") === 0 &&
+        subject.local && subject.active && subject.isInGroup("sudo")) {
+        return polkit.Result.YES;
+    }
+});
