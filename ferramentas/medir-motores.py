@@ -458,8 +458,8 @@ def principal():
                     rodar(f"OpenVINO · INT4 · placa + MTP ({n} por vez)", "openvino",
                           medir_openvino, python, pasta, "GPU", n, a.repeticoes, threads)
             else:
-                dizer("    OpenVINO na placa fica de fora: falta o driver OpenCL da Intel"
-                      " (sudo apt install intel-opencl-icd) — instale e rode de novo para medir.")
+                dizer("    OpenVINO na placa fica de fora: falta o driver OpenCL da Intel (compute-runtime,"
+                      " que não está no Debian 13); medindo no processador.")
                 for n in (1, 2):
                     rodar(f"OpenVINO · INT4 · processador + MTP ({n} por vez)", "openvino",
                           medir_openvino, python, pasta, "CPU", n, a.repeticoes, threads)
