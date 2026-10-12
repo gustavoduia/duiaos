@@ -3,6 +3,9 @@
 # DuiaOS — duiaos-identidade: ajustes depois de instalar ou atualizar.
 # Antes ficava nos hooks da ISO (0500 e parte do 0510); agora vale também
 # para quem atualiza pelo apt.
+# O repositório apt NÃO é ligado aqui: na geração da ISO o live-build faria
+# "apt update" nele. Quem liga é o pos-instalacao (sistema instalado pela ISO)
+# ou /usr/lib/duiaos/configurar-repositorio, à mão.
 # =============================================================================
 set -e
 
@@ -16,9 +19,11 @@ em_chroot() { systemd-detect-virt --quiet --chroot 2>/dev/null; }
 identidade() {
   # O dpkg-divert guarda o arquivo do Debian com o sufixo .debian; assim uma
   # atualização do base-files não apaga a identidade do DuiaOS.
+  # (sem --rename: os arquivos são do base-files, um pacote essencial)
   for ARQUIVO in /usr/lib/os-release /etc/issue /etc/issue.net /etc/motd; do
     if [ "$(dpkg-divert --truename "${ARQUIVO}")" = "${ARQUIVO}" ]; then
-      dpkg-divert --quiet --package duiaos-identidade --rename \
+      [ -e "${ARQUIVO}" ] && cp -a "${ARQUIVO}" "${ARQUIVO}.debian"
+      dpkg-divert --quiet --package duiaos-identidade --no-rename \
         --divert "${ARQUIVO}.debian" --add "${ARQUIVO}"
     fi
   done
@@ -86,21 +91,12 @@ menu_de_boot() {
   fi
 }
 
-repositorio() {
-  # Liga o repositório de atualizações do DuiaOS. Na geração da ISO (chroot)
-  # não: quem liga é o pos-instalacao, já no computador instalado.
-  if ! em_chroot && [ ! -e /etc/apt/sources.list.d/duiaos.sources ]; then
-    /usr/lib/duiaos/configurar-repositorio
-  fi
-}
-
 case "$1" in
   configure)
     identidade
     teclado "$@"
     animacao_de_boot
     menu_de_boot
-    repositorio
     ;;
 esac
 

@@ -6,8 +6,11 @@ case "$1" in
   remove|purge)
     for ARQUIVO in /usr/lib/os-release /etc/issue /etc/issue.net /etc/motd; do
       if dpkg-divert --listpackage "${ARQUIVO}" 2>/dev/null | grep -qx duiaos-identidade; then
-        rm -f "${ARQUIVO}"
-        dpkg-divert --quiet --package duiaos-identidade --rename --remove "${ARQUIVO}"
+        dpkg-divert --quiet --package duiaos-identidade --no-rename --remove "${ARQUIVO}"
+        # Devolve o arquivo original do Debian
+        if [ -e "${ARQUIVO}.debian" ]; then
+          mv -f "${ARQUIVO}.debian" "${ARQUIVO}"
+        fi
       fi
     done
     ;;
