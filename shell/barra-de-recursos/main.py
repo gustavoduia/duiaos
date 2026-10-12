@@ -123,9 +123,19 @@ class Sistema(QObject):
         self._bateria = -1
         self._carregando = False
         self._wise = comum.wise_instalado()
+        self._wise_estado = ""
         self._timer = QTimer(self, interval=5000, timeout=self.atualizar)
         self._timer.start()
+        # O estado do Wise muda rápido (abre, pensa, descansa): leitura a cada segundo
+        self._timer_wise = QTimer(self, interval=1000, timeout=self.atualizar_wise)
+        self._timer_wise.start()
         self.atualizar()
+
+    def atualizar_wise(self):
+        estado = comum.estado_wise()
+        if estado != self._wise_estado:
+            self._wise_estado = estado
+            self.mudou.emit()
 
     def atualizar(self):
         # Wi-Fi: nome da rede conectada
@@ -178,6 +188,7 @@ class Sistema(QObject):
     bateria = Property(int, lambda self: self._bateria, notify=mudou)
     carregando = Property(bool, lambda self: self._carregando, notify=mudou)
     wise = Property(bool, lambda self: self._wise, notify=mudou)
+    wiseEstado = Property(str, lambda self: self._wise_estado, notify=mudou)
 
 
 def main():
