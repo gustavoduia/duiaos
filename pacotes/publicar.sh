@@ -9,7 +9,7 @@
 #   pool/CANAL/*.deb                       pacotes (as 5 versões mais novas de cada)
 #   dists/CANAL/main/binary-*/Packages     índice dos pacotes
 #   dists/CANAL/Release, InRelease, Release.gpg   índice assinado
-#   duiaos.asc                             chave pública para conferir as assinaturas
+#   duiaos.asc, duiaos.gpg                 chave pública (texto e binária)
 #
 # Requer: apt-ftparchive (apt-utils), dpkg, gpg com a chave de assinatura
 # importada (DUIAOS_APT_CHAVE_ID escolhe a chave; padrão: a primeira secreta).
@@ -76,6 +76,7 @@ mv "${REPO}/Release.tmp" "${DISTS}/Release"
 gpg --batch --yes --local-user "${CHAVE}" --clearsign -o "${DISTS}/InRelease" "${DISTS}/Release"
 gpg --batch --yes --local-user "${CHAVE}" --armor --detach-sign -o "${DISTS}/Release.gpg" "${DISTS}/Release"
 gpg --batch --yes --armor --export "${CHAVE}" > "${REPO}/duiaos.asc"
+gpg --batch --yes --export "${CHAVE}" > "${REPO}/duiaos.gpg"   # formato do Signed-By
 
 echo "Canal ${CANAL} publicado em ${REPO}:"
 find "${REPO}/pool/${CANAL}" -name '*.deb' -printf '  %f\n' | sort
