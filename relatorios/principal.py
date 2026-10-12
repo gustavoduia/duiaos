@@ -4,6 +4,8 @@
   duiaos-relatorios ver [ARQUIVO]           mostra o último relatório (pendente ou enviado), como vai/foi enviado
   duiaos-relatorios enviar                  coleta e envia agora (pede ao serviço; não precisa de sudo)
   sudo duiaos-relatorios nivel NIVEL        desligado | erros | erros_e_uso | desenvolvimento
+  duiaos-relatorios escolher NIVEL          (usado pela tela "Ajude a melhorar o DuiaOS", pelo pkexec)
+                                            desligado | erros | erros_e_uso
   sudo duiaos-relatorios novo-identificador troca o número aleatório desta instalação
   sudo duiaos-relatorios apagar             apaga os relatórios guardados neste computador
   duiaos-relatorios coletar                 (usado pelo serviço) coleta e envia
@@ -44,7 +46,8 @@ def estado():
     config = cfg.Config.carregar()
     print(f"Ajude a melhorar o DuiaOS: {cfg.NOMES_NIVEIS[config.nivel]}")
     if config.coleta:
-        print(f"Envio: {config.transporte}" + (f" ({config.repositorio})" if config.transporte == "git" else ""))
+        destino = config.repositorio if config.transporte == "git" else (config.endereco or cfg.ENDERECO_PADRAO)
+        print(f"Envio: {config.transporte} ({destino})")
     try:
         situacao = json.loads((cfg.PASTA_ESTADO / "situacao.json").read_text())
     except (OSError, ValueError):
@@ -104,6 +107,25 @@ def nivel(argumentos):
     return 0
 
 
+# O que a tela "Ajude a melhorar o DuiaOS" pode escolher. "desenvolvimento" (conversas do Wise, envio pelo Git)
+# é só para computadores de teste e só pelo terminal (sudo duiaos-relatorios nivel).
+ESCOLHAS_DA_TELA = ("desligado", "erros", "erros_e_uso")
+
+
+def escolher(argumentos):
+    """Chamado pela tela pelo pkexec (polkit org.duiaos.relatorios.escolher): grava a escolha da pessoa."""
+    if not argumentos or argumentos[0] not in ESCOLHAS_DA_TELA:
+        print("Uso: duiaos-relatorios escolher " + " | ".join(ESCOLHAS_DA_TELA), file=sys.stderr)
+        return 2
+    _exigir_root()
+    resultado = nivel(argumentos[:1])
+    if resultado == 0 and registro:
+        # Conta quantas pessoas escolhem cada opção (só sai somado, e só se ela escolheu "erros e uso")
+        registro.info("uso.ajude_a_melhorar", "Escolha em Ajude a melhorar o DuiaOS", componente="duiaos-relatorios",
+                      nivel=argumentos[0])
+    return resultado
+
+
 def coletar_e_enviar():
     from . import coleta, envio
     config = cfg.Config.carregar()
@@ -138,6 +160,8 @@ def main(argv=None):
         return ver(argv[1:])
     if comando == "nivel":
         return nivel(argv[1:])
+    if comando == "escolher":
+        return escolher(argv[1:])
     if comando == "coletar":
         _exigir_root()
         return coletar_e_enviar()

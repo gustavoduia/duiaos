@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Ajude a melhorar o DuiaOS
+GenericName=Relatórios de erros e uso
+Comment=Escolha se o DuiaOS envia relatórios de erros e de uso para o desenvolvimento
+Exec=duiaos-ajude-a-melhorar
+Icon=duiaos-ajude-a-melhorar
+StartupWMClass=duiaos-ajude-a-melhorar
+Terminal=false
+Categories=Settings;System;
+Keywords=privacidade;relatórios;erros;diagnóstico;telemetria;uso;enviar;

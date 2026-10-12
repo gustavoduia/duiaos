@@ -1,0 +1,4 @@
+#!/bin/sh
+# DuiaOS — "Ajude a melhorar o DuiaOS" (escolha do que é enviado; --primeira-entrada só abre se ainda não
+# foi escolhido).
+exec /usr/bin/python3 /usr/share/duiaos/ajude-a-melhorar/main.py "$@"

@@ -69,6 +69,10 @@ Regras:
 | Falhas registradas em todos os programas do DuiaOS | `shell/*/main.py`, `apps/central-de-ia/main.py`, `ia/`, `agente/` | `shell/barra-de-recursos/main.py::duiaos_registro.ligar`, `ia/servico.py::duiaos_registro.ligar("duiaos-ia")` | ADR 040 | main |
 | Coletor `duiaos-relatorios`: níveis, anonimização, perfil, falhas agrupadas, envio Git | `relatorios/`, `pacotes/duiaos-relatorios/` | `relatorios/coleta.py::def assinatura_nativa`, `relatorios/duiaos_registro/privacidade.py::def anonimizar` | ADR 040 | main |
 | Journal persistente, systemd-coredump e catálogo | `pacotes/duiaos-relatorios/raiz/usr/lib/systemd/` | `pacotes/duiaos-relatorios/raiz/usr/lib/systemd/journald.conf.d/50-duiaos.conf::Storage=persistent`, `pacotes/duiaos-relatorios/raiz/usr/lib/systemd/catalog/duiaos.catalog::0b0f983a3fad41bb9a9730053146311a` | ADR 040 | main |
+| Uso agregado: lista conhecida, somado no computador (nível erros e uso) | `relatorios/uso.py`, `relatorios/coleta.py`, `shell/` | `relatorios/uso.py::def agregar`, `relatorios/coleta.py::def agregar_uso`, `shell/ilha-de-aplicativos/main.py::uso.aplicativo_aberto` | ADR 041 | PR #12 |
+| Janela "Ajude a melhorar o DuiaOS" (1ª entrada sem opção marcada; Central de Aplicativos) | `apps/ajude-a-melhorar/`, `shell/sessao/autostart` | `apps/ajude-a-melhorar/AjudeAMelhorar.qml::Nenhuma opção vem marcada`, `shell/sessao/autostart::--primeira-entrada` | ADR 041 | PR #12 |
+| Escolha pelo polkit (administrador sem senha; desenvolvimento só pelo terminal) | `pacotes/duiaos-relatorios/raiz/usr/share/polkit-1/`, `relatorios/principal.py` | `pacotes/duiaos-relatorios/raiz/usr/share/polkit-1/actions/org.duiaos.relatorios.policy::org.duiaos.relatorios.escolher`, `relatorios/principal.py::ESCOLHAS_DA_TELA` | ADR 041 | PR #12 |
+| Envio pelo site (HTTPS, sem credencial; padrão) | `relatorios/envio.py`, `relatorios/config.py` | `relatorios/envio.py::def enviar_https`, `relatorios/config.py::ENDERECO_PADRAO` | ADR 041 | PR #12 |
 | Leitura dos relatórios pelo Claude | `ferramentas/ler-relatorios.py` | `ferramentas/ler-relatorios.py::def falhas_agrupadas` | ADR 040 | main |
 
 ## Site e documentação

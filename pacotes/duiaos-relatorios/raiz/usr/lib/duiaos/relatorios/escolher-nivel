@@ -1,0 +1,4 @@
+#!/bin/sh
+# DuiaOS — grava a escolha da tela "Ajude a melhorar o DuiaOS" (chamado pelo pkexec; ação do polkit
+# org.duiaos.relatorios.escolher). Só aceita: desligado | erros | erros_e_uso.
+exec /usr/bin/python3 -m duiaos_relatorios escolher "$1"

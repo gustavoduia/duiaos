@@ -5,8 +5,10 @@ gustavoduia/duiaos-diagnosticos em /var/lib/duiaos-relatorios/repositorio, chave
 (deploy key com escrita só nesse repositório) e chave do GitHub fixada (known_hosts). Grava
 maquinas/<maquina>/<AAAA-MM-DD>/<HHMMSS>.json e maquinas/<maquina>/perfil.json, num commit por envio.
 
-Transporte "https" (usuários; fase 3): o Worker do site recebe, sem credencial no computador, e grava no
-mesmo repositório em lotes.
+Transporte "https" (usuários; padrão): cada relatório vai num POST para o Worker do site
+(config.ENDERECO_PADRAO), sem credencial no computador; o Worker grava no mesmo repositório em lotes. Só os
+níveis "erros" e "erros_e_uso" (o Worker recusa "desenvolvimento"). Se o site pedir para esperar (429) ou
+estiver fora, o que não foi aceito fica em pendentes/ para a próxima coleta.
 
 Depois do envio o relatório vai para enviados/ (os últimos GUARDAR_ENVIADOS ficam para a pessoa conferir,
 como no Ubuntu Insights). A situação do nível é conferida de novo na hora de enviar.
@@ -94,6 +96,40 @@ def enviar_git(config, relatorios, pasta):
         _git(["push", "-q", "origin", f"HEAD:{ramo}"], copia)
 
 
+TEMPO_HTTPS = 30
+
+
+def enviar_https(config, relatorios, pasta, abrir=None):
+    """Envia um a um; devolve os caminhos aceitos (os outros ficam pendentes)."""
+    import urllib.error
+    import urllib.request
+    abrir = abrir or urllib.request.urlopen
+    endereco = config.endereco or cfg.ENDERECO_PADRAO
+    if not endereco.startswith("https://"):
+        raise ErroDeEnvio("o endereço do envio precisa ser https://")
+    aceitos = []
+    for caminho, relatorio in relatorios:
+        corpo = json.dumps(relatorio, ensure_ascii=False).encode("utf-8")
+        pedido = urllib.request.Request(endereco, data=corpo, method="POST",
+                                        headers={"Content-Type": "application/json", "User-Agent": "duiaos-relatorios"})
+        try:
+            with abrir(pedido, timeout=TEMPO_HTTPS) as resposta:
+                if resposta.status in (200, 201, 202):
+                    aceitos.append(caminho)
+        except urllib.error.HTTPError as erro:
+            if erro.code in (400, 413):                 # o site nunca vai aceitar este: descarta
+                caminho.unlink(missing_ok=True)
+                continue
+            if aceitos:
+                break                                   # 429/5xx: o resto fica para a próxima
+            raise ErroDeEnvio(f"o site respondeu {erro.code}") from erro
+        except (urllib.error.URLError, TimeoutError, OSError) as erro:
+            if aceitos:
+                break
+            raise ErroDeEnvio(f"sem conexão com o site: {erro}") from erro
+    return aceitos
+
+
 def enviar_pendentes(config, pasta=None, transporte=None):
     """Envia tudo o que está em pendentes/. Devolve {"enviados": n} ou {"erro": "..."}."""
     pasta = Path(pasta or cfg.PASTA_ESTADO)
@@ -120,11 +156,15 @@ def enviar_pendentes(config, pasta=None, transporte=None):
                                               "(ferramentas/configurar-relatorios.sh)"}
             transporte = enviar_git
         else:
-            return {"enviados": 0, "erro": "o envio pelo site ainda não está disponível (fase 3)"}
+            if config.nivel == "desenvolvimento":
+                return {"enviados": 0, "erro": "o nível desenvolvimento só envia pelo Git (configurar-relatorios.sh)"}
+            transporte = enviar_https
     try:
-        transporte(config, relatorios, pasta)
+        aceitos = transporte(config, relatorios, pasta)
     except (ErroDeEnvio, OSError, subprocess.SubprocessError) as erro:
         return {"enviados": 0, "erro": str(erro)}
+    if aceitos is not None:                               # https: só os aceitos saem de pendentes/
+        relatorios = [(c, r) for c, r in relatorios if c in set(aceitos)]
     enviados = pasta / "enviados"
     enviados.mkdir(exist_ok=True)
     for caminho, _ in relatorios:

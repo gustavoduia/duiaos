@@ -5,7 +5,7 @@ Maintainer: DuiaOS <53358870+gustavoduia@users.noreply.github.com>
 Section: admin
 Priority: optional
 Depends: python3, systemd, systemd-coredump
-Recommends: git, openssh-client, pciutils
+Recommends: git, openssh-client, pciutils, pkexec, python3-pyside6.qtquick, python3-pyside6.qtqml
 Homepage: https://github.com/gustavoduia/duiaos-fontes-abertas
 Description: DuiaOS — registros do sistema e "Ajude a melhorar o DuiaOS"
  Padroniza os registros do DuiaOS: tudo vai para o journal do systemd

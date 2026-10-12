@@ -169,6 +169,16 @@ def janelas_abertas():
     return abertos
 
 
+def registrar_uso(evento, **dados):
+    """Uso agregado de "Ajude a melhorar o DuiaOS" (relatorios/uso.py): só sai do computador somado e no
+    nível "erros e uso". Sem o duiaos_registro, não faz nada."""
+    try:
+        import duiaos_registro
+    except ImportError:
+        return
+    duiaos_registro.info(evento, evento, **dados)
+
+
 def iniciar(comando):
     if comando:
         subprocess.Popen(comando, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
@@ -277,6 +287,8 @@ class Ilha(QObject):
             iniciar(["wlrctl", "toplevel", "focus", "app_id:" + item["appId"]])
         else:
             iniciar(comando_de_exec(item))
+            if item.get("id"):
+                registrar_uso("uso.aplicativo_aberto", aplicativo=item["id"], por="ilha")
 
     # ----- Central de Aplicativos
     def _sinal_alternar(self, _numero, _quadro):
@@ -285,6 +297,7 @@ class Ilha(QObject):
     def _verificar_sinal(self):
         if self._pedido_alternar:
             self._pedido_alternar = False
+            self._por_atalho = True
             self.alternarCentral()
 
     @Slot()
@@ -296,6 +309,9 @@ class Ilha(QObject):
             self.buscar("")
             self._central_visivel = True
             self.centralMudou.emit()
+            registrar_uso("uso.central_de_aplicativos",
+                          por="atalho" if getattr(self, "_por_atalho", False) else "botao")
+        self._por_atalho = False
 
     @Slot()
     def fecharCentral(self):
@@ -316,6 +332,7 @@ class Ilha(QObject):
         app = next((a for a in self._todos if a["id"] == id_desktop), None)
         if app:
             iniciar(comando_de_exec(app))
+            registrar_uso("uso.aplicativo_aberto", aplicativo=id_desktop, por="central")
         self.fecharCentral()
 
     @Slot(str)

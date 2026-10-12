@@ -146,6 +146,10 @@ install -d "${RL}/usr/lib/python3/dist-packages/duiaos_relatorios" \
   "${RL}/usr/lib/python3/dist-packages/duiaos_registro"
 install -m 0644 "${RAIZ}"/relatorios/*.py "${RL}/usr/lib/python3/dist-packages/duiaos_relatorios/"
 install -m 0644 "${RAIZ}"/relatorios/duiaos_registro/*.py "${RL}/usr/lib/python3/dist-packages/duiaos_registro/"
+# Tela "Ajude a melhorar o DuiaOS" (1ª entrada e Central de Aplicativos)
+install -d "${RL}/usr/share/duiaos/ajude-a-melhorar"
+install -m 0644 "${RAIZ}"/apps/ajude-a-melhorar/*.py "${RAIZ}"/apps/ajude-a-melhorar/*.qml \
+  "${RL}/usr/share/duiaos/ajude-a-melhorar/"
 fechar duiaos-relatorios
 
 # ------------------------------------------------------------- duiaos-desktop
