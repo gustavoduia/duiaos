@@ -33,9 +33,17 @@ Atualizado em: 12/10/2026 (19h20) · por: Claude (conta do Gustavo) · sessão s
 2. Depois do merge de #9 e #5: lançar a versão 0.3.0 (ISO + apt) e retirar os avisos "Na próxima versão" da
    documentação. O Wise ainda não entra na ISO (distribuição pública do Wise não decidida — pergunta abaixo).
 3. Google/Microsoft na agenda: Gustavo registra os aplicativos (duiaos-wise/docs/contas-de-agenda.md).
-4. Seguir o plano (docs/visao.md): W3 voz, W4 Central de IA completa (gateway da nuvem no duiaos-ia), P4 instalador.
+4. Logs do sistema, F1 (decisão acima): PR novo a partir da main depois dos merges.
+5. Seguir o plano (docs/visao.md): W3 voz, W4 Central de IA completa (gateway da nuvem no duiaos-ia), P4 instalador.
 
 ## 5. Decisões recentes (detalhe nos ADRs)
+- 12/10 (tarde): **logs do sistema** padronizados como nas distribuições (journald + falhas estilo apport/
+  coredump + perfil estilo Ubuntu Insights + uso agregado estilo eos-metrics), centralizados no repositório
+  privado `duiaos-diagnosticos` para TODO o sistema (não só o Wise). Consentimento: pergunta na 1ª entrada,
+  sem opção marcada (nada sai antes). Usuários enviam ao Worker do site, que grava no repositório em lotes;
+  computadores de teste enviam pelo Git (nível "Desenvolvimento"). Nome visível: **"Ajude a melhorar o
+  DuiaOS"**. Fases: F1 registro + falhas + perfil + coletor `duiaos-relatorios` (Git) e Wise migrado; F2 uso +
+  tela de consentimento; F3 Worker + agrupamento de falhas. Começa depois do merge de #9, Wise #5/#6 e site #2/#3.
 - 12/10: motor **Ollama mantido** (ADR 036; medição no Dell). Pente de RAM fica para depois.
 - 12/10: agenda local + .ics + CalDAV + Google + Microsoft; clima com cidade escolhida (MET Norway).
 - 12/10: o Wise opera qualquer aplicativo como a pessoa, com aprovação nas ações arriscadas.
