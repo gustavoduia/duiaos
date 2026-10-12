@@ -10,7 +10,8 @@
 # Antes: o computador precisa do pacote duiaos-relatorios (pacotes/instalar-local.sh ou apt).
 # O que faz (pode rodar de novo sem problema):
 #   1. cria o repositório privado, se ainda não existir;
-#   2. cria no computador uma chave SSH do SISTEMA (/etc/duiaos/relatorios/chave_git, só root) e a
+#   2. cria no computador uma chave SSH do SISTEMA (/etc/duiaos/relatorios/chave_git: a privada só o
+#      root lê; a .pub, todos) e a
 #      cadastra como deploy key com escrita, válida só nesse repositório;
 #   3. grava /etc/duiaos/relatorios.conf (nível desenvolvimento, transporte git);
 #   4. faz a primeira coleta e o primeiro envio.
@@ -45,15 +46,18 @@ echo "==> Chave do sistema e configuração (sudo no computador)"
 # shellcheck disable=SC2029  # REPO e MAQUINA expandem no Mac de propósito
 ssh -t "${DELL}" "sudo sh -c '
   set -e
-  install -d -m 0700 /etc/duiaos/relatorios
+  install -d -m 0755 /etc/duiaos/relatorios
   test -f /etc/duiaos/relatorios/chave_git || \
     ssh-keygen -q -t ed25519 -N \"\" -C duiaos-relatorios-${MAQUINA} -f /etc/duiaos/relatorios/chave_git
+  chmod 0600 /etc/duiaos/relatorios/chave_git
+  chmod 0644 /etc/duiaos/relatorios/chave_git.pub
+  rm -f /tmp/duiaos-relatorios-chave.pub
   printf \"[relatorios]\nnivel = desenvolvimento\ntransporte = git\nrepositorio = git@github.com:${REPO}.git\nmaquina = ${MAQUINA}\n\" \
     > /etc/duiaos/relatorios.conf
   chmod 0644 /etc/duiaos/relatorios.conf
-  install -m 0644 /etc/duiaos/relatorios/chave_git.pub /tmp/duiaos-relatorios-chave.pub
 '"
-CHAVE="$(ssh "${DELL}" "cat /tmp/duiaos-relatorios-chave.pub && rm -f /tmp/duiaos-relatorios-chave.pub")"
+# A chave pública é legível por todos (a privada, só pelo root): sem cópias temporárias
+CHAVE="$(ssh "${DELL}" "cat /etc/duiaos/relatorios/chave_git.pub")"
 
 echo "==> Deploy key com escrita (só neste repositório)"
 TMP="$(mktemp)"; trap 'rm -f "${TMP}"' EXIT
