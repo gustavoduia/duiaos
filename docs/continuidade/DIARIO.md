@@ -3,6 +3,22 @@
 Uma entrada por sessão, a mais nova em cima. Só acrescentar; nunca apagar.
 Formato: data · quem/conta · branches/PRs · o que foi feito · decisões · o que ficou pendente.
 
+## 12–13/10/2026 (noite) · Claude (conta do Gustavo) · duiaos #12, duiaos-wise #10, duiaos-websites #8–#10
+- Pedido do Gustavo: as cinco etapas de uma vez (há muito a fazer depois: explorador de arquivos, Configurações,
+  painel de controle).
+- Desempenho do Wise medido nos relatórios: o 1º aquecimento (~49 s) é a 1ª leitura de ~3.700 pedaços
+  (instruções 600, ferramentas 3.000); depois cada pedido lê só o novo (~1 s). O pedido de 37,7 s esperou o
+  aquecimento e escreveu 77 pedaços anunciando a busca. → aquecimento antes do login (serviço do sistema),
+  instrução de agir sem anunciar. A remoção das frases de aprovação das ferramentas foi bloqueada (enfraquece a
+  segurança) e ficou.
+- Reclamações de 12/10: aplicativo fora do apt (catálogo com versão web e equivalentes; o filtro tirava o
+  LibreOffice da busca) e "desliga o wifi" virando "desligar o computador" (ferramenta de Wi-Fi/Bluetooth e
+  conferência no código).
+- F2 (uso agregado, janela de escolha, polkit) e F3 (`/api/relatorios`, lote por hora no GitHub, issue semanal),
+  testados com D1 real em memória e no `wrangler dev`.
+- 0.3.0: perguntei como o Wise chegaria a quem baixa a ISO e recomendei sair sem ele; o Gustavo corrigiu: o Wise
+  é o cérebro do DuiaOS e vai instalado com o sistema (ADR 042). Feito pelo build com token de leitura.
+
 ## 12/10/2026 (18h30) · Claude (conta do Gustavo) · fechamento do bloco
 - Merge de duiaos #10, Wise #8, site #5/#6 e diagnosticos #1. F1 dos logs completa e testada no Dell: a falha de
   teste, um defeito real do próprio coletor (corrigido) e uma reclamação do Wise chegaram ao

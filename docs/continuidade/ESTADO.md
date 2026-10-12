@@ -3,8 +3,8 @@
 > Atualize este arquivo no FIM de cada bloco de trabalho, no mesmo PR. Ele é o que a próxima sessão (de
 > qualquer conta) lê para continuar. Escreva fatos verificáveis: branch, PR, commit, o que está instalado onde.
 
-Atualizado em: 12/10/2026 (18h30) · por: Claude (conta do Gustavo) · sessão session_01LzmCWyGMx1FKt4d1cuh5R8
-**Bloco fechado.** Nenhum PR aberto em nenhum dos quatro repositórios. O próximo chat começa daqui.
+Atualizado em: 12/10/2026 (21h) · por: Claude (conta do Gustavo) · sessão session_01CiC8yo8v1GpMMnY2gZUjqx
+**Bloco fechado, com PRs prontos para o Gustavo** (seção 1). As cinco etapas do plano estão entregues.
 
 ## 1. O que está na main e o que está pendente
 - **duiaos main**: PRs #1–#5, #9 (IA do sistema, duiaos-agente, acessibilidade, medição, continuidade; ADRs
@@ -15,6 +15,11 @@ Atualizado em: 12/10/2026 (18h30) · por: Claude (conta do Gustavo) · sessão s
 - **duiaos-diagnosticos main**: #1 (README/CLAUDE.md) + relatórios enviados pelo Dell (`maquinas/dell/`).
 - **Versão publicada (ISO/apt estável)**: ainda a 0.2.0 (12/10 02h17). Tudo acima está no canal `teste` e na
   main, à espera da 0.3.0.
+- **PRs prontos (13/10), ordem de merge**: (1) Wise #10 (desempenho W20, aplicativos fora do apt, Wi-Fi, uso
+  agregado) + site #9 (irmão); (2) duiaos #12 (F2, F3, Wise na ISO — ADR 042, notas da 0.3.0; ADRs 041–042) +
+  site #8 (irmão: `/api/relatorios`, cron, documentação); (3) criar os segredos `DUIAOS_TOKEN_WISE` (duiaos) e
+  `GITHUB_DIAGNOSTICOS` (duiaos-websites); (4) testar no Dell; (5) `lancar-versao.sh 0.3.0`; (6) site #10
+  (rascunho: retira os avisos "Na próxima versão") só depois da 0.3.0 publicada.
 
 ## 2. O que está instalado em cada máquina
 | Máquina | duiaos | duiaos-wise | Como conferir |
@@ -26,26 +31,27 @@ Atualizado em: 12/10/2026 (18h30) · por: Claude (conta do Gustavo) · sessão s
   W19): se existir, remover no GitHub (Settings › Deploy keys) e apagar `~/.ssh/duiaos-diagnosticos` no Dell.
 
 ## 3. Em andamento (quem / branch / PR rascunho)
-- Claude (conta do Gustavo) · `claude/registros-f2-f3` · logs F2 (uso agregado + tela "Ajude a melhorar o
-  DuiaOS") e F3 (envio pelo site); depois a preparação da 0.3.0. Wise: #10 (desempenho, apps, Wi-Fi).
+- Nenhuma frente aberta (os PRs da seção 1 esperam o Gustavo).
 
 ## 4. Próximos passos (em ordem sugerida)
-1. **Desempenho do Wise** (visto nos relatórios de 12/10 18h20): aquecimento de ~49 s depois do boot e ~38 s
-   para responder a um pedido simples com 25 ferramentas (uma rodada de ~22 s). Medir com os relatórios e
-   atacar (menos ferramentas por pedido, instruções mais curtas, aquecimento antes do login).
-2. **Reclamação de 12/10** (Wise): pergunta sobre instalar um aplicativo que não existe no apt (Microsoft 365)
-   teve resposta ruim — o Wise deve explicar alternativas (versão web, equivalentes livres). Detalhe no
-   `duiaos-diagnosticos` (`ler-relatorios.py --componente duiaos-wise --eventos`).
-3. **Logs F2**: eventos de uso agregados (`uso.*`, só lista conhecida) + tela "Ajude a melhorar o DuiaOS" na
-   1ª entrada (sem opção marcada) e nas Configurações (polkit para mudar o nível).
-4. **Logs F3**: `/api/relatorios` no Worker do site (sem credencial no computador) gravando em lotes no
-   `duiaos-diagnosticos`; resumo semanal das falhas como issue.
-5. **Lançar a 0.3.0** (ISO + apt estável) e tirar os avisos "Na próxima versão" da documentação; decidir como o
-   Wise chega a quem baixa a ISO.
-6. Google/Microsoft na agenda (`duiaos-wise/docs/contas-de-agenda.md`); plano: W3 voz, W4 gateway da nuvem no
-   duiaos-ia, P4 instalador próprio (BitLocker).
+1. **Lançar a 0.3.0** (passos da seção 1). Conferir no Dell, depois do merge do Wise #10: o aquecimento antes do
+   login (`journalctl -u duiaos-wise-aquecimento -b`; evento `wise.medida` "aquecimento_no_boot") e o tempo do
+   1º pedido após entrar (antes: ~38 s com espera do aquecimento).
+2. **Explorador de arquivos** (pedido do Gustavo, 13/10): nome visível a definir com ele.
+3. **Configurações** (pedido do Gustavo, 13/10): aplicativo de configurações do sistema; recebe as páginas que
+   hoje são aplicativos separados (Central de IA, Ajude a melhorar o DuiaOS) e as opções do Wise.
+4. **Painel de controle** (pedido do Gustavo, 13/10): definir com ele a diferença para as Configurações (no
+   Windows são uma coisa só hoje; sugestão: um só aplicativo).
+5. Antes da 1.0: distribuir o Wise compilado (ADR 042), Google/Microsoft na agenda, W3 voz, W4 gateway da nuvem
+   no duiaos-ia, P4 instalador próprio (BitLocker).
 
 ## 5. Decisões recentes (detalhe nos ADRs)
+- 13/10: **o Wise vai instalado com o sistema** (ISO e apt; ADR 042). Código continua no repositório privado; o
+  build usa o segredo `DUIAOS_TOKEN_WISE`. Lançamento = mesma tag no Wise e no DuiaOS.
+- 13/10: "Ajude a melhorar o DuiaOS" F2/F3 (ADR 041): uso só de lista conhecida e somado; janela da 1ª entrada
+  sem opção marcada; envio padrão pelo site (sem credencial no computador).
+- 13/10 (Wise W20): aquecimento antes do login; instruções para agir sem anunciar e fazer só o pedido;
+  descartado mandar só as ferramentas do assunto (quebra o reaproveitamento do começo da conversa).
 - 12/10 (noite): F1 dos logs entregue e testada no Dell (biblioteca `duiaos_registro` em todos os programas,
   coletor `duiaos-relatorios`, journal persistente, coredump, catálogo; Wise W19). PR empilhado: antes do
   merge do PR de baixo, mudar a base do de cima para a main (o `--delete-branch` fecha o de cima).
@@ -65,7 +71,8 @@ Atualizado em: 12/10/2026 (18h30) · por: Claude (conta do Gustavo) · sessão s
 - Titular dos direitos (PF ou CNPJ).
 - Nome visível do recurso "Wise usando o computador" (hoje "Usar o computador").
 - Domínio do site (ex.: duiaos.com.br / duiaos.com).
-- Como o Wise chega a quem baixa a ISO (repositório apt privado, pacote fechado no apt público, só no Dell)?
+- Explorador de arquivos, Configurações e Painel de controle: nomes visíveis e se Configurações e Painel são um
+  aplicativo só.
 - Licença da documentação: proprietária (hoje) ou aberta (CC BY-SA, como o Ubuntu)?
 
 ## 7. Fila de problemas conhecidos
@@ -76,7 +83,8 @@ Atualizado em: 12/10/2026 (18h30) · por: Claude (conta do Gustavo) · sessão s
 - Chave do repositório apt vence em 2036. Distribuição pública do Wise não decidida.
 - Placas NVIDIA: sem CUDA no duiaos-ollama. `intel-opencl-icd` não existe no Debian 13.
 - Programas de terceiros que não mandam as "opcoes" fazem o Ollama recarregar o modelo.
-- Wise com 25 ferramentas: aquecimento ~49 s após o boot e respostas de ~38 s (medido em 12/10; próximo passo 1).
+- Wise: 1ª leitura das instruções + ferramentas ~49 s (≈3.700 pedaços a ~77/s no Dell); agora feita antes do
+  login (W20) — falta medir no Dell. Escrita ~7–9 pedaços/s: respostas longas continuam lentas.
 - `zramswap.service` falhou em 5 boots antes de 12/10 17h29; o relatório agora traz as últimas linhas do
   serviço que falha — conferir se voltar a aparecer.
 - `gkr-pam: unable to locate daemon control file` na Tela de Entrada: normal (o cofre abre logo depois).
