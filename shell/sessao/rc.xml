@@ -1,15 +1,28 @@
 <?xml version="1.0"?>
 <!--
   DuiaOS — configuração do compositor labwc.
-  Instalação para teste: cp shell/sessao/rc.xml ~/.config/labwc/rc.xml
+  Instalado em /etc/xdg/labwc/rc.xml (um ~/.config/labwc/rc.xml o substitui).
+  DUIAOS_SHELL vem de iniciar-sessao (padrão /usr/share/duiaos/shell).
 -->
 <labwc_config>
+  <theme>
+    <font place=""><name>Inter</name><size>10</size></font>
+    <cornerRadius>10</cornerRadius>
+  </theme>
   <keyboard>
     <!-- Mantém os atalhos padrão do labwc -->
     <default />
     <!-- Super + Espaço: abre e fecha a Central de Aplicativos -->
     <keybind key="W-space">
-      <action name="Execute" command="sh -c &quot;$HOME/Projetos/duiaos/shell/ilha-de-aplicativos/alternar-central.sh&quot;" />
+      <action name="Execute" command="sh -c &quot;$DUIAOS_SHELL/ilha-de-aplicativos/alternar-central.sh&quot;" />
+    </keybind>
+    <!-- Super + L: bloqueia a tela -->
+    <keybind key="W-l">
+      <action name="Execute" command="sh -c &quot;$DUIAOS_SHELL/bloqueio/bloquear&quot;" />
+    </keybind>
+    <!-- Ctrl + Alt + Delete: Menu de Energia -->
+    <keybind key="C-A-Delete">
+      <action name="Execute" command="sh -c &quot;python3 $DUIAOS_SHELL/menu-de-energia/main.py&quot;" />
     </keybind>
   </keyboard>
 </labwc_config>

@@ -1,6 +1,23 @@
-# DuiaOS — pacotes da interface gráfica (sessão, Barra de Recursos, Ilha de Aplicativos).
-# Instalação: sudo apt install -y $(grep -v '^#' shell/pacotes.list)
-# Depois de estabilizada, esta lista entra na ISO.
+# DuiaOS — pacotes da interface gráfica: Tela de Entrada e de Bloqueio, sessão,
+# Barra de Recursos, Ilha de Aplicativos, Menu de Energia e animação de boot.
+# Esta lista entra na ISO (build/build.sh a copia para config/package-lists).
+# Instalação manual: sudo apt install -y $(grep -v '^#' shell/pacotes.list)
+
+# Tela de Entrada: gerenciador de login (greetd) e compositor de tela única (cage)
+greetd
+cage
+
+# Tela de Bloqueio: conferência da senha (PAM), bloqueio automático e reserva
+python3-pamela
+swayidle
+swaylock
+
+# Sessão do usuário: D-Bus por sessão e permissões (polkit)
+dbus-user-session
+polkitd
+
+# Animação de boot e de desligamento
+plymouth
 
 # Compositor, terminal, fundo e telas
 labwc
@@ -15,6 +32,9 @@ wlrctl
 qt6-wayland
 qt6-svg-plugins
 qml6-module-org-kde-layershell
+qml6-module-qtqml
+qml6-module-qtqml-models
+qml6-module-qtqml-workerscript
 qml6-module-qtquick
 qml6-module-qtquick-controls
 qml6-module-qtquick-layouts

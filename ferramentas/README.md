@@ -1,7 +1,8 @@
 # Ferramentas do DuiaOS
 
-Scripts para o dia a dia. **Todos rodam na janela do Terminal do Mac**, na
-pasta `~/Projetos/duiaos`. Os que mexem no Dell entram nele sozinhos por SSH.
+Scripts para o dia a dia. **Rodam na janela do Terminal do Mac**, na pasta
+`~/Projetos/duiaos`; os que mexem no Dell entram nele sozinhos por SSH.
+Exceção: `atualizar-sistema.sh` roda na sessão SSH já conectada ao Dell.
 Todos podem ser rodados de novo sem estragar nada.
 
 | Script | O que faz |
@@ -14,6 +15,7 @@ Todos podem ser rodados de novo sem estragar nada.
 | `configurar-runners.sh mac\|dell` | Instala/refaz o runner da máquina e organiza `~/Projetos` |
 | `configurar-acesso-dell.sh` | Chave somente leitura para o Dell fazer `git pull` (repositório privado) |
 | `criar-repo-publico.sh` | Cria o `duiaos-fontes-abertas`, cadastra o token e sincroniza |
+| `atualizar-sistema.sh` | **Roda no Dell**: aplica o código do repositório ao DuiaOS já instalado, sem reinstalar |
 
 No Dell, o teste da instalação é `sudo /usr/lib/duiaos/verificar-instalacao`
 (ou, em instalações antigas,
@@ -79,6 +81,22 @@ Acompanhar: `gh run watch NUMERO` (Ctrl+C sai sem cancelar) · situação:
 3. Atualize: `git pull` no Mac e, na sessão SSH do Dell, `cd ~/Projetos/duiaos && git pull`.
 
 O Claude nunca envia nada direto para a `main`.
+
+## Testar sem reinstalar (Dell)
+
+Aplica uma mudança (por exemplo, a branch de um pull request) ao DuiaOS já
+instalado no Dell, sem gerar ISO nem reinstalar.
+
+🔗 **DELL (sessão SSH)**
+```bash
+cd ~/Projetos/duiaos && git fetch && git checkout BRANCH && git pull
+sudo bash ferramentas/atualizar-sistema.sh
+sudo reboot
+```
+
+Depois do merge, volte para a `main` (`git checkout main && git pull`). A
+reinstalação pela ISO continua sendo o teste completo antes de lançar uma
+versão.
 
 ## Lançar uma versão
 

@@ -8,6 +8,21 @@ Logotipo: conceito **Órbita** — um “D” aberto com um ponto em órbita.
 | `logo/duiaos-simbolo-escuro.svg` | Símbolo para fundos escuros |
 | `logo/duiaos-icone-app.svg` | Ícone de aplicativo (quadrado azul) |
 
+## Papel de parede e animação de boot
+
+| Arquivo | Uso |
+| --- | --- |
+| `papel-de-parede/orbita.svg` | Papel de parede padrão "Órbita" (fonte); `gerar.py` cria o JPEG 4K da ISO |
+| `plymouth/*.svg` | Imagens da animação de boot (Plymouth); `gerar.py` cria os PNGs do tema `duiaos` |
+| `grub/*.svg` | Menu de boot (GRUB) |
+
+Para regenerar as imagens (precisa de `cairosvg`, ImageMagick e da fonte Manrope):
+
+```bash
+python3 branding/papel-de-parede/gerar.py
+python3 branding/plymouth/gerar.py
+```
+
 ## Paleta
 
 | Papel | Nome | Hex |

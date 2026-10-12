@@ -1,0 +1,21 @@
+#!/bin/sh
+# DuiaOS — interface gráfica: Tela de Entrada (greetd), sessão e animação de boot.
+# A interface fica em /usr/share/duiaos/shell e a configuração do labwc em
+# /etc/xdg/labwc (copiadas por build/build.sh).
+set -e
+
+chmod +x /usr/lib/duiaos/* \
+  /usr/share/duiaos/shell/entrada/iniciar \
+  /usr/share/duiaos/shell/sessao/iniciar-sessao \
+  /usr/share/duiaos/shell/bloqueio/bloquear
+
+# Tela de Entrada: o greetd abre o cage como _greetd; o grupo video dá acesso à tela.
+usermod -aG video _greetd
+
+# Liga a tela gráfica no boot
+systemctl enable greetd.service
+systemctl set-default graphical.target
+
+# Animação de boot do DuiaOS (a imagem de inicialização é refeita pelo
+# live-build logo depois dos hooks)
+plymouth-set-default-theme duiaos

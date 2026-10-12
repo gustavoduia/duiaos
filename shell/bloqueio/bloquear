@@ -1,0 +1,54 @@
+#!/bin/sh
+# =============================================================================
+# DuiaOS — bloqueia a tela (Tela de Bloqueio).
+#
+# Usado pelo Menu de Energia, pelo atalho Super+L, ao suspender e após
+# 10 minutos sem uso (swayidle, em sessao/autostart).
+#
+# - Uma tela só: se já estiver bloqueada, não abre outra.
+# - Se a Tela de Bloqueio for encerrada sem a senha correta (ex.: travou),
+#   ela é aberta de novo na hora.
+# - Se não conseguir abrir várias vezes seguidas, usa o swaylock como reserva,
+#   para a sessão nunca ficar desprotegida.
+# - Volta assim que a tela aparece (o swayidle só suspende depois disso).
+# =============================================================================
+PASTA="$(cd "$(dirname "$0")" && pwd)"
+EXECUCAO="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+PRONTA="${EXECUCAO}/duiaos-bloqueio.pronta"
+REGISTRO="${EXECUCAO}/duiaos-bloqueio.log"
+
+exec 9>"${EXECUCAO}/duiaos-bloqueio.trava"
+if ! flock -n 9; then
+  exit 0   # já está bloqueada
+fi
+
+rm -f "${PRONTA}"
+(
+  falhas=0
+  while :; do
+    inicio="$(date +%s)"
+    if python3 "${PASTA}/main.py" >>"${REGISTRO}" 2>&1; then
+      break   # senha correta
+    fi
+    if [ $(( $(date +%s) - inicio )) -lt 5 ]; then
+      falhas=$((falhas + 1))
+    else
+      falhas=0
+    fi
+    if [ "${falhas}" -ge 5 ]; then
+      echo "$(date): Tela de Bloqueio não abriu; usando o swaylock." >>"${REGISTRO}"
+      swaylock -c F7F9FC && break
+      sleep 1
+    fi
+    sleep 0.3
+  done
+  rm -f "${PRONTA}"
+) &
+
+# Espera a tela aparecer (até 5 segundos)
+i=0
+while [ ! -e "${PRONTA}" ] && [ "${i}" -lt 50 ]; do
+  sleep 0.1
+  i=$((i + 1))
+done
+exit 0

@@ -5,9 +5,12 @@
 import QtQuick
 import QtQuick.Window
 import org.kde.layershell 1.0 as LayerShell
+import "../comum/telas.js" as Telas
 
 Window {
     id: central
+    // Fica na tela principal (a do notebook, quando houver; comum/telas.js)
+    screen: Telas.principal(Qt.application.screens)
 
     readonly property color corFundo: "#F7F9FC"
     readonly property color corSuperficie: "#FFFFFF"

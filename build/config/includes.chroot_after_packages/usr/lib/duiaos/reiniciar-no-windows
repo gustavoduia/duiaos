@@ -7,16 +7,29 @@
 # o caminho que o BitLocker reconhece como seguro: assim ele não pede a chave
 # de recuperação. No boot seguinte, o computador volta a abrir o DuiaOS.
 #
-# Uso: sudo /usr/lib/duiaos/reiniciar-no-windows
+# Uso:
+#   sudo /usr/lib/duiaos/reiniciar-no-windows              reinicia no Windows
+#   /usr/lib/duiaos/reiniciar-no-windows --verificar       só confere se há Windows
+#                                                          (sem sudo; código 0 = há)
+#
+# Na interface (Menu de Energia, Tela de Entrada e Tela de Bloqueio), a opção
+# "Reiniciar no Windows" usa o serviço duiaos-reiniciar-no-windows.service,
+# liberado pelo polkit para quem está no computador (sessão local e ativa).
 # =============================================================================
 set -e
+
+ENTRADA="$(efibootmgr 2>/dev/null | sed -n 's/^Boot\([0-9A-Fa-f]\{4\}\)\*\{0,1\} \{1,\}Windows Boot Manager.*/\1/p' | head -n 1)"
+
+if [ "${1:-}" = "--verificar" ]; then
+  [ -n "${ENTRADA}" ]
+  exit $?
+fi
 
 if [ "$(id -u)" -ne 0 ]; then
   echo "Use com sudo: sudo $0" >&2
   exit 1
 fi
 
-ENTRADA="$(efibootmgr | sed -n 's/^Boot\([0-9A-Fa-f]\{4\}\)\*\{0,1\} \{1,\}Windows Boot Manager.*/\1/p' | head -n 1)"
 if [ -z "${ENTRADA}" ]; then
   echo "Não encontrei o Windows Boot Manager no firmware deste computador." >&2
   exit 1

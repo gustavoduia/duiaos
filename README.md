@@ -28,8 +28,9 @@
 > [duiaos-fontes-abertas](https://github.com/gustavoduia/duiaos-fontes-abertas).
 
 > **Em desenvolvimento.** A versão 1.0 tem o codinome **Zoinho**.
-> Já funcionam: instalação (inclusive ao lado do Windows), interface gráfica
-> própria com Barra de Recursos, Ilha de Aplicativos e Central de Aplicativos.
+> Já funcionam: instalação (inclusive ao lado do Windows), animação de boot,
+> Tela de Entrada e Tela de Bloqueio, interface gráfica própria com Barra de
+> Recursos, Ilha de Aplicativos, Central de Aplicativos e Menu de Energia.
 > O Wise ainda está em projeto.
 
 ## Propósito
@@ -50,7 +51,7 @@ serviços conectados.
 ## O Wise
 
 O coração do DuiaOS é o **Wise**: um assistente de texto e voz, disponível
-desde o login, ativado pela palavra "Wise". Ele não é um chat solto: é a
+logo depois do login (Tela de Entrada), ativado pela palavra "Wise". Ele não é um chat solto: é a
 camada que transforma pedidos em tarefas, executadas por ferramentas
 autorizadas, com permissões, confirmação proporcional ao risco e registro de
 tudo o que foi feito.
@@ -126,7 +127,7 @@ Guia completo: [ferramentas/README.md](ferramentas/README.md) (ADRs 020, 024 e 0
 | Pasta | Conteúdo |
 | --- | --- |
 | `build/` | Geração da ISO (live-build), instalador e ajustes do sistema |
-| `shell/` | Interface: Barra de Recursos, Ilha e Central de Aplicativos, sessão |
+| `shell/` | Interface: Tela de Entrada e de Bloqueio, Barra de Recursos, Ilha e Central de Aplicativos, Menu de Energia, sessão |
 | `wise/` | O Wise (a criar) |
 | `apps/` | Aplicativos do DuiaOS, como a Central de Configurações |
 | `installer/` | Instalador próprio (Calamares com a identidade do DuiaOS) |

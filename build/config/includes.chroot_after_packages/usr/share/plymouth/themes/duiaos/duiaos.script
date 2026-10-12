@@ -1,0 +1,96 @@
+# =============================================================================
+# DuiaOS — animação de boot e de desligamento (Plymouth).
+#
+# Fundo Branco gelo, o "D" do símbolo no centro e o ponto Azul Duia
+# balançando na abertura do "D", sobre a mesma órbita do logotipo.
+# Imagens geradas por branding/plymouth/gerar.py.
+# =============================================================================
+
+Window.SetBackgroundTopColor(0.969, 0.976, 0.988);     # Branco gelo #F7F9FC
+Window.SetBackgroundBottomColor(0.910, 0.941, 0.996);  # Azul névoa  #E8F0FE
+
+largura = Window.GetWidth();
+altura = Window.GetHeight();
+
+# Tamanho do símbolo proporcional à tela (as imagens são grandes e reduzidas aqui).
+lado = Math.Int(altura * 0.15);
+if (lado < 96) lado = 96;
+
+# Coordenadas do logotipo: viewBox de 104 unidades, órbita com centro (46, 52) e raio 40.
+unidade = lado / 104;
+
+simbolo.sprite = Sprite(Image("simbolo-sem-ponto.png").Scale(lado, lado));
+simbolo.x = Window.GetX() + Math.Int((largura - lado) / 2);
+simbolo.y = Window.GetY() + Math.Int(altura * 0.42 - lado / 2);
+simbolo.sprite.SetPosition(simbolo.x, simbolo.y, 1);
+simbolo.sprite.SetOpacity(0);
+
+nome.largura = Math.Int(lado * 1.6);
+nome.altura = Math.Int(nome.largura / 4);
+nome.sprite = Sprite(Image("nome.png").Scale(nome.largura, nome.altura));
+nome.sprite.SetPosition(Window.GetX() + Math.Int((largura - nome.largura) / 2),
+                        simbolo.y + lado + Math.Int(lado * 0.22), 1);
+nome.sprite.SetOpacity(0);
+
+ponto.lado = Math.Int(16 * unidade);
+ponto.imagem = Image("ponto.png").Scale(ponto.lado, ponto.lado);
+ponto.sprite = Sprite(ponto.imagem);
+ponto.sprite.SetZ(2);
+ponto.sprite.SetOpacity(0);
+orbita.cx = simbolo.x + 46 * unidade;
+orbita.cy = simbolo.y + 52 * unidade;
+orbita.raio = 40 * unidade;
+
+quadro = 0;
+
+# Dentro das funções, variáveis globais alteradas usam o prefixo "global.".
+fun atualizar() {
+  global.quadro = global.quadro + 1;
+
+  # Entrada suave (cerca de meio segundo)
+  opacidade = global.quadro / 25;
+  if (opacidade > 1) opacidade = 1;
+  simbolo.sprite.SetOpacity(opacidade);
+  nome.sprite.SetOpacity(opacidade);
+
+  # O ponto balança na abertura do "D", sobre a órbita, entre 44° e 66°
+  # (sem encostar no traço), passando pela posição do logotipo (55°),
+  # e pulsa de leve.
+  onda = Math.Sin(global.quadro * 0.06);
+  angulo = (55 + 11 * onda) * Math.Pi / 180;
+  x = orbita.cx + orbita.raio * Math.Cos(angulo) - ponto.lado / 2;
+  y = orbita.cy + orbita.raio * Math.Sin(angulo) - ponto.lado / 2;
+  ponto.sprite.SetPosition(Math.Int(x), Math.Int(y), 2);
+  ponto.sprite.SetOpacity(opacidade * (0.8 + 0.2 * Math.Cos(global.quadro * 0.06)));
+}
+Plymouth.SetRefreshFunction(atualizar);
+
+# ---------------------------------------------------------------------------
+# Senha (ex.: disco criptografado): um ponto para cada caractere digitado.
+# ---------------------------------------------------------------------------
+senha.lado = Math.Int(lado * 0.09);
+senha.imagem = Image("ponto.png").Scale(senha.lado, senha.lado);
+senha.total = 0;
+
+fun mostrar_senha(pergunta, caracteres) {
+  for (i = 0; i < senha.total; i++)
+    senha.pontos[i].SetOpacity(0);
+  espaco = senha.lado * 2;
+  inicio = Window.GetX() + largura / 2 - (caracteres * espaco) / 2;
+  topo = simbolo.y + lado + Math.Int(lado * 0.75);
+  for (i = 0; i < caracteres; i++) {
+    if (i >= senha.total) {
+      global.senha.pontos[i] = Sprite(senha.imagem);
+      global.senha.total = i + 1;
+    }
+    senha.pontos[i].SetPosition(Math.Int(inicio + i * espaco), topo, 3);
+    senha.pontos[i].SetOpacity(1);
+  }
+}
+Plymouth.SetDisplayPasswordFunction(mostrar_senha);
+
+fun modo_normal() {
+  for (i = 0; i < senha.total; i++)
+    senha.pontos[i].SetOpacity(0);
+}
+Plymouth.SetDisplayNormalFunction(modo_normal);

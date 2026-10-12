@@ -1,12 +1,16 @@
 // DuiaOS — Barra de Recursos.
 // Mostra o símbolo do DuiaOS, data e hora, Wi-Fi, volume e bateria.
+// Um clique no símbolo abre o Menu de Energia.
 // A posição (topo, base, esquerda ou direita) vem de configuracao.posicao.
 import QtQuick
 import QtQuick.Window
 import org.kde.layershell 1.0 as LayerShell
+import "../comum/telas.js" as Telas
 
 Window {
     id: barra
+    // Fica na tela principal (a do notebook, quando houver; comum/telas.js)
+    screen: Telas.principal(Qt.application.screens)
 
     // Cores e fontes da identidade visual (branding/README.md)
     readonly property color corFundo: "#F7F9FC"
@@ -86,6 +90,13 @@ Window {
         }
     }
 
+    // Área clicável sobre o símbolo: abre o Menu de Energia
+    component BotaoEnergia: MouseArea {
+        anchors { fill: parent; margins: -6 }
+        cursorShape: Qt.PointingHandCursor
+        onClicked: sistema.abrirMenuDeEnergia()
+    }
+
     component Rotulo: Text {
         font { family: barra.fonte; pixelSize: 13 }
         color: barra.corTexto
@@ -99,6 +110,7 @@ Window {
 
         Simbolo {
             anchors { left: parent.left; leftMargin: 14; verticalCenter: parent.verticalCenter }
+            BotaoEnergia {}
         }
         Rotulo {
             anchors.centerIn: parent
@@ -132,6 +144,7 @@ Window {
 
         Simbolo {
             anchors { top: parent.top; topMargin: 14; horizontalCenter: parent.horizontalCenter }
+            BotaoEnergia {}
         }
         Column {
             anchors { top: parent.top; topMargin: 52; horizontalCenter: parent.horizontalCenter }

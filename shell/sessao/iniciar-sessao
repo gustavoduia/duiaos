@@ -1,0 +1,32 @@
+#!/bin/sh
+# =============================================================================
+# DuiaOS — inicia a sessão gráfica (compositor labwc + interface do DuiaOS).
+#
+# Chamado pela Tela de Entrada depois da senha correta (e, no modo live,
+# direto pelo greetd). A configuração do labwc fica em /etc/xdg/labwc
+# (autostart, environment, rc.xml); um arquivo com o mesmo nome em
+# ~/.config/labwc substitui o do sistema.
+# =============================================================================
+export XDG_SESSION_TYPE=wayland
+export XDG_SESSION_DESKTOP=duiaos
+export XDG_CURRENT_DESKTOP=DuiaOS:wlroots
+
+# Pasta da interface. Para testar o código do repositório, defina em
+# ~/.config/labwc/environment: DUIAOS_SHELL=/home/USUARIO/Projetos/duiaos/shell
+export DUIAOS_SHELL="${DUIAOS_SHELL:-/usr/share/duiaos/shell}"
+
+# Teclado igual ao do sistema (/etc/default/keyboard; padrão ABNT2)
+if [ -r /etc/default/keyboard ]; then
+  # shellcheck source=/dev/null
+  . /etc/default/keyboard
+fi
+export XKB_DEFAULT_MODEL="${XKBMODEL:-abnt2}"
+export XKB_DEFAULT_LAYOUT="${XKBLAYOUT:-br}"
+export XKB_DEFAULT_VARIANT="${XKBVARIANT:-}"
+export XKB_DEFAULT_OPTIONS="${XKBOPTIONS:-}"
+
+# Aplicativos Qt e GTK usam o Wayland
+export QT_QPA_PLATFORM=wayland
+export MOZ_ENABLE_WAYLAND=1
+
+exec labwc

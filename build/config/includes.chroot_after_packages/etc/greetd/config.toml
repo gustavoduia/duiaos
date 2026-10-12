@@ -1,0 +1,13 @@
+# DuiaOS — gerenciador de login (greetd).
+# Mostra a Tela de Entrada; depois da senha correta, abre a sessão do DuiaOS.
+# No modo live, /usr/lib/duiaos/preparar-entrada acrescenta a entrada
+# automática do usuário live (veja greetd.service.d/duiaos.conf).
+
+[terminal]
+# Terminal virtual da tela gráfica
+vt = 7
+
+[default_session]
+# A Tela de Entrada (QML), dentro do compositor cage
+command = "/usr/share/duiaos/shell/entrada/iniciar"
+user = "_greetd"

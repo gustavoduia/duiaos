@@ -132,7 +132,8 @@ fi
 QUEBRADOS="$(dpkg --audit 2>/dev/null | wc -l)"
 [ "${QUEBRADOS}" -eq 0 ] && ok "Nenhum pacote com instalação incompleta" || falha "dpkg --audit encontrou problemas"
 FALTAM=""
-for P in labwc foot swaybg wlrctl qml6-module-org-kde-layershell python3-pyside6.qtquick; do
+for P in labwc foot swaybg wlrctl qml6-module-org-kde-layershell python3-pyside6.qtquick \
+         greetd cage swayidle swaylock python3-pamela plymouth; do
   dpkg -s "${P}" >/dev/null 2>&1 || FALTAM="${FALTAM} ${P}"
 done
 [ -z "${FALTAM}" ] && ok "Pacotes da interface instalados" || aviso "Pacotes da interface faltando:${FALTAM}"
@@ -141,6 +142,43 @@ if [ -r /usr/share/duiaos/licenca/EULA.md ]; then
 else
   aviso "EULA ausente (normal em instalações anteriores ao patch de licença)"
 fi
+
+secao "Interface: Tela de Entrada, sessão e animação de boot"
+if [ -r /usr/share/duiaos/shell/entrada/main.py ]; then
+  ok "Interface instalada em /usr/share/duiaos/shell"
+else
+  falha "Interface ausente em /usr/share/duiaos/shell"
+fi
+if systemctl is-enabled greetd.service >/dev/null 2>&1; then
+  systemctl is-active greetd.service >/dev/null 2>&1 && ok "Tela de Entrada (greetd) ligada e ativa" \
+    || falha "greetd ligado, mas parado (veja: journalctl -b -u greetd)"
+else
+  falha "Tela de Entrada (greetd) não está ligada no boot"
+fi
+[ "$(systemctl get-default 2>/dev/null)" = "graphical.target" ] && ok "Boot na tela gráfica (graphical.target)" \
+  || aviso "Boot padrão não é a tela gráfica: $(systemctl get-default 2>/dev/null)"
+if tem plymouth-set-default-theme; then
+  TEMA="$(plymouth-set-default-theme 2>/dev/null)"
+  [ "${TEMA}" = "duiaos" ] && ok "Animação de boot do DuiaOS (Plymouth)" || falha "Tema do Plymouth: ${TEMA:-nenhum}"
+  grep -qw splash /proc/cmdline && ok "Animação ligada no boot (splash)" \
+    || aviso "Boot sem 'splash' (rode: sudo update-grub e reinicie)"
+else
+  falha "Plymouth não está instalado"
+fi
+[ -r /usr/share/duiaos/papel-de-parede/orbita.jpg ] && ok "Papel de parede instalado" \
+  || falha "Papel de parede ausente"
+if [ -r /etc/polkit-1/rules.d/50-duiaos-reiniciar-no-windows.rules ] \
+   && systemctl cat duiaos-reiniciar-no-windows.service >/dev/null 2>&1; then
+  if sh /usr/lib/duiaos/reiniciar-no-windows --verificar; then
+    ok "\"Reiniciar no Windows\" disponível no Menu de Energia"
+  else
+    aviso "\"Reiniciar no Windows\" oculto: Windows não encontrado no firmware"
+  fi
+else
+  falha "Serviço ou regra do polkit do \"Reiniciar no Windows\" ausente"
+fi
+[ -r /etc/pam.d/duiaos-bloqueio ] && ok "Tela de Bloqueio: serviço PAM duiaos-bloqueio" \
+  || falha "Tela de Bloqueio: /etc/pam.d/duiaos-bloqueio ausente"
 
 secao "Disco"
 LIVRE_GB="$(df -BG --output=avail / | tail -n 1 | tr -dc '0-9')"
