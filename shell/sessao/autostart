@@ -15,6 +15,18 @@ fi
 python3 "${DUIAOS_SHELL}/barra-de-recursos/main.py" >/tmp/duiaos-barra-de-recursos.log 2>&1 &
 python3 "${DUIAOS_SHELL}/ilha-de-aplicativos/main.py" >/tmp/duiaos-ilha-de-aplicativos.log 2>&1 &
 
+# Wise (se instalado): fica sempre rodando enquanto a sessão estiver aberta.
+# --fundo: começa descansando no canto da tela e cumprimenta a pessoa. Se ele
+# fechar ou travar, volta em 2 segundos.
+if [ -x /usr/bin/duiaos-wise ]; then
+  (
+    while kill -0 "${LABWC_PID}" 2>/dev/null; do
+      /usr/bin/duiaos-wise --fundo >>/tmp/duiaos-wise.log 2>&1
+      sleep 2
+    done
+  ) &
+fi
+
 # Tela de Bloqueio: após 10 minutos sem uso, antes de suspender e
 # quando o sistema pede (loginctl lock-session)
 BLOQUEAR="${DUIAOS_SHELL}/bloqueio/bloquear"

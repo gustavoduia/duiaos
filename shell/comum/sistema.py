@@ -23,14 +23,31 @@ REINICIAR_NO_WINDOWS = [
 BLOQUEAR = PASTA_SHELL / "bloqueio" / "bloquear"
 
 # Wise (repositório privado duiaos-wise, pacote duiaos-wise). Contrato com a
-# interface: o comando abaixo existe quando o Wise está instalado, e
-# "duiaos-wise --alternar" abre ou fecha a janela do Wise.
+# interface do DuiaOS:
+#   - /usr/bin/duiaos-wise existe quando o Wise está instalado;
+#   - "duiaos-wise --alternar" abre ou fecha a janela;
+#   - "duiaos-wise --fundo" é chamado ao abrir a sessão (sessao/autostart);
+#   - $XDG_RUNTIME_DIR/duiaos-wise.estado: JSON {"pid", "estado"}, com estado
+#     "aberto", "descansando" ou "pensando", enquanto o Wise roda.
 WISE = "/usr/bin/duiaos-wise"
 WISE_DESKTOP = "duiaos-wise.desktop"
+WISE_ESTADO = Path(os.environ.get("XDG_RUNTIME_DIR", "/tmp")) / "duiaos-wise.estado"
 
 
 def wise_instalado():
     return os.access(WISE, os.X_OK)
+
+
+def estado_wise():
+    """Estado do Wise ("aberto", "descansando", "pensando") ou "" se ele não está rodando."""
+    import json
+    try:
+        dados = json.loads(WISE_ESTADO.read_text())
+        os.kill(int(dados["pid"]), 0)          # o processo ainda existe?
+    except (OSError, ValueError, KeyError, TypeError):
+        return ""
+    estado = dados.get("estado", "")
+    return estado if estado in ("aberto", "descansando", "pensando") else ""
 
 
 def alternar_wise():

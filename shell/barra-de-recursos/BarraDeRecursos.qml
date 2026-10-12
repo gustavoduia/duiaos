@@ -121,6 +121,22 @@ Window {
         }
     }
 
+    // Ícone do Wise perto da bateria: aparece enquanto o Wise está rodando
+    // (descansando fica mais apagado). Um clique abre ou fecha o Wise.
+    component IndicadorWise: Image {
+        visible: sistema.wiseEstado !== ""
+        source: "file:///usr/share/icons/hicolor/scalable/apps/duiaos-wise.svg"
+        width: 20; height: 20
+        sourceSize: Qt.size(40, 40)
+        opacity: sistema.wiseEstado === "descansando" ? 0.55 : 1.0
+        Behavior on opacity { NumberAnimation { duration: 200 } }
+        MouseArea {
+            anchors { fill: parent; margins: -6 }
+            cursorShape: Qt.PointingHandCursor
+            onClicked: sistema.abrirWise()
+        }
+    }
+
     component Rotulo: Text {
         font { family: barra.fonte; pixelSize: 13 }
         color: barra.corTexto
@@ -162,6 +178,7 @@ Window {
                 color: (!sistema.carregando && sistema.bateria <= 15) ? barra.corAviso : barra.corTexto
                 text: (sistema.carregando ? "Carregando  " : "Bateria  ") + sistema.bateria + "%"
             }
+            IndicadorWise { anchors.verticalCenter: parent.verticalCenter }
         }
     }
 
@@ -215,6 +232,7 @@ Window {
                 color: (!sistema.carregando && sistema.bateria <= 15) ? barra.corAviso : barra.corTexto
                 text: (sistema.carregando ? "Carr.\n" : "Bat.\n") + sistema.bateria + "%"
             }
+            IndicadorWise { anchors.horizontalCenter: parent.horizontalCenter }
         }
     }
 }

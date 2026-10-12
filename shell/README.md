@@ -47,11 +47,21 @@ A tela também bloqueia sozinha após 10 minutos sem uso e antes de suspender
 ## Wise
 
 O Wise fica no repositório privado `duiaos-wise` (pacote `duiaos-wise`). A
-interface só conhece o contrato: o comando `/usr/bin/duiaos-wise` existe
-quando ele está instalado, e `duiaos-wise --alternar` abre ou fecha a janela.
-Com ele instalado aparecem o botão "Wise" na Barra de Recursos, o Wise como
-primeiro item fixo da Ilha de Aplicativos (`duiaos-wise.desktop`) e o atalho
-Super+W. Sem ele, nada disso aparece.
+interface só conhece o contrato:
+
+| Contrato | Uso |
+| --- | --- |
+| `/usr/bin/duiaos-wise` | Existe quando o Wise está instalado |
+| `duiaos-wise --alternar` | Abre ou fecha a janela (botão da Barra, Ilha, Super+W, ícone perto da bateria) |
+| `duiaos-wise --fundo` | Chamado ao abrir a sessão (`sessao/autostart`), que o reabre se ele fechar; o Wise começa descansando e cumprimenta a pessoa |
+| `$XDG_RUNTIME_DIR/duiaos-wise.estado` | JSON `{"pid", "estado"}` com `aberto`, `descansando` ou `pensando`, enquanto ele roda |
+| `duiaos-wise.desktop` e o ícone `duiaos-wise` | Wise como primeiro item fixo da Ilha; ícone na Barra |
+
+Com ele instalado aparecem o botão "Wise" na Barra de Recursos, o ícone do
+Wise perto da bateria (mais apagado quando ele descansa), o Wise como
+primeiro item fixo da Ilha de Aplicativos e o atalho Super+W. O botão
+flutuante com a carinha, no canto inferior direito, é do próprio Wise. Sem
+ele instalado, nada disso aparece.
 
 ## Menu de Energia
 
