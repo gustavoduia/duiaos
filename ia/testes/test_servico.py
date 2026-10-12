@@ -158,8 +158,11 @@ class TesteServico(unittest.TestCase):
         recusa = self.cli("remover", "phi4-mini:3.8b")
         self.assertNotEqual(recusa.returncode, 0)
         self.assertIn("modelo ativo", recusa.stderr)
+        self.assertIn("qwen3.5:4b", self.estado()["instalados"])
         self.assertEqual(self.cli("remover", "qwen3.5:4b").returncode, 0)
         self.assertNotIn("qwen3.5:4b", OllamaFalso.instalados)
+        # O estado público já sai sem o modelo removido (as telas atualizam na hora)
+        self.assertEqual(self.estado()["instalados"], ["phi4-mini:3.8b"])
         catalogo = self.cli("catalogo").stdout
         self.assertIn("* phi4-mini:3.8b", catalogo)
         self.assertIn("x llama3.3:70b", catalogo)
@@ -168,6 +171,12 @@ class TesteServico(unittest.TestCase):
         self.assertIn("catálogo", self.cli("baixar", "malicioso:latest").stderr)
         self.assertIn("memória", self.cli("baixar", "llama3.3:70b").stderr)
         self.assertIn("Baixe", self.cli("ativar", "gemma4:e4b").stderr)
+
+    def test_modelo_apagado_por_fora_aparece_sozinho(self):
+        OllamaFalso.instalados = {"qwen3.5:4b", "phi4:14b"}
+        self.cli("garantir-padrao")
+        OllamaFalso.instalados.discard("phi4:14b")            # "ollama rm" pelo terminal
+        self.assertTrue(self.esperar(lambda e: e["instalados"] == ["qwen3.5:4b"], segundos=15))
 
     def test_cancelar(self):
         OllamaFalso.pausa = 0.3

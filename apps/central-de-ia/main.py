@@ -61,8 +61,11 @@ class Central(QObject):
         anterior = self._estado
         self._estado = {**anterior, **publico}
         self.mudou.emit()
-        # Terminou um download ou trocou o ativo: a lista de baixados mudou
-        if (anterior.get("tarefa") and not publico.get("tarefa")) or anterior.get("ativo") != publico.get("ativo"):
+        # Um modelo entrou ou saiu, terminou um download ou trocou o ativo:
+        # busca o catálogo de novo para a lista mostrar na hora
+        if (anterior.get("instalados") != publico.get("instalados")
+                or (anterior.get("tarefa") and not publico.get("tarefa"))
+                or anterior.get("ativo") != publico.get("ativo")):
             self.recarregar()
 
     estadoJson = Property(str, lambda self: json.dumps(self._estado), notify=mudou)
@@ -86,6 +89,8 @@ class Central(QObject):
                     self.erro.emit("O serviço de IA do sistema (duiaos-ia) não respondeu.")
             elif ao_responder:
                 ao_responder(resposta.arguments())
+            elif metodo != "Estado":
+                self.recarregar()          # ação feita: a lista reflete na hora
             v.deleteLater()
 
         vigia.finished.connect(terminou)

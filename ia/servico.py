@@ -109,6 +109,8 @@ class Servico:
             "memoria_gb": self.memoria_gb,
             "tarefa": self.tarefa,
             "ultima": self.ultima,
+            # Modelos do catálogo já baixados: as telas sabem na hora quando um entra ou sai
+            "instalados": sorted(m["id"] for _f, m, _l in cat.modelos(self.catalogo) if m["id"] in self._instalados),
             "atualizado": int(time.time()),
         }
 
@@ -127,6 +129,15 @@ class Servico:
         if self.conexao:
             self.conexao.emit_signal(None, CAMINHO, NOME, "Mudou",
                                      GLib.Variant("(s)", (json.dumps(self.estado_publico()),)))
+
+    def conferir_ollama(self):
+        """A cada 10 s: modelos baixados ou apagados por fora (ex.: "ollama rm") também avisam as telas."""
+        if not self.tarefa:
+            antes = (self._instalados, self._ollama_ok)
+            self._atualizar_instalados()
+            if (self._instalados, self._ollama_ok) != antes:
+                self.mudou(recarregar=False)
+        return True
 
     # ------------------------------------------------------------ autorização
     def autorizado(self, remetente):
@@ -344,6 +355,7 @@ def main():
 
     def ao_receber_nome(_conexao, _nome):
         servico.mudou()            # grava o estado público assim que o serviço sobe
+        GLib.timeout_add_seconds(10, servico.conferir_ollama)
 
     def ao_perder_nome(_conexao, _nome):
         print("duiaos-ia: não consegui o nome org.duiaos.IA1 no D-Bus.", file=sys.stderr)
