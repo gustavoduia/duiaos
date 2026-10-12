@@ -6,17 +6,12 @@
 Atualizado em: 12/10/2026 (19h20) · por: Claude (conta do Gustavo) · sessão session_01LzmCWyGMx1FKt4d1cuh5R8
 
 ## 1. O que está na main e o que está pendente
-- **duiaos main**: PRs #1–#5 (P3, P3b pacotes/apt, entradas do Wise, IA do sistema ADR 029, Wise na sessão).
-- **duiaos-wise main**: PRs #1 (W1) e #2 (presença com a carinha **antiga**, simples).
-- **duiaos-websites main**: PR #1 — site e documentação **publicados** (duiaos.gustavoduia.workers.dev e
-  duiaos-docs.gustavoduia.workers.dev), publicação automática a cada merge. PR #2 aberto: avisos "Na próxima versão".
-- **Pendentes de merge** — cada PR reúne os anteriores; fechar os antigos sem merge:
-  | Repositório | PR | Branch | Reúne | Conteúdo |
-  | --- | --- | --- | --- | --- |
-  | duiaos | **#9** | `claude/tres-frentes` | #6, #7, #8 | duiaos-ollama, duiaos-ia, Central de IA (ADRs 030–033), duiaos-agente (034), acessibilidade (035), medição de motores, continuidade, ADRs 036–039, teste do PR irmão |
-| duiaos-wise | **#5** | `claude/wise-tres-frentes` | #3, #4 | carinha de robô (W10), resposta rápida (W11–W12), aprovação W2/W16, clima W13, agenda W14, uso do computador W15, continuidade |
-- **Risco conhecido**: enquanto o #5 do Wise não entra na main, quem instalar o Wise da main volta à carinha
-  antiga. Foi o que aconteceu em 12/10. Merge recomendado o quanto antes.
+- **duiaos main**: PRs #1–#5 e **#9** (duiaos-ollama, duiaos-ia, Central de IA, duiaos-agente, acessibilidade,
+  medição de motores, continuidade; ADRs 030–039), merge em 12/10 (17h30). #6–#8 fechados.
+- **duiaos-wise main**: #1, #2 e **#5** (carinha de robô, aprovação, clima, agenda, uso do computador).
+  **#7** aberto (diagnóstico W17 + correções W18; substitui o #6, fechado quando a base foi apagada).
+- **duiaos-websites main**: #1 e #2 (publicados). **#4** aberto (irmão do Wise #7; substitui o #3).
+- **duiaos #10** (`claude/logs-do-sistema`, rascunho): logs do sistema, F1.
 
 ## 2. O que está instalado em cada máquina
 | Máquina | duiaos | duiaos-wise | Como conferir |
@@ -25,8 +20,8 @@ Atualizado em: 12/10/2026 (19h20) · por: Claude (conta do Gustavo) · sessão s
 | Mac | — | — | — |
 
 ## 3. Em andamento (quem / branch / PR rascunho)
-- Wise #6 (`claude/diagnostico-do-wise`, sobre o #5): diagnóstico para o Claude (W17) e correções do log de
-  12/10 (W18); irmão duiaos-websites #3. Nada muda neste repositório além deste registro.
+- Claude (conta do Gustavo): `claude/logs-do-sistema` (PR #10, rascunho) — logs do sistema F1: biblioteca
+  `duiaos-registro`, falhas, perfil, coletor `duiaos-relatorios` com envio ao `duiaos-diagnosticos`.
 
 ## 4. Próximos passos
 1. Gustavo: testar no Dell as duas branches (instalar-local + reboot) e fazer o merge de duiaos #9 e Wise #5.
