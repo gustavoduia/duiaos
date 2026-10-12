@@ -8,6 +8,7 @@ medição e voltam sozinhos no fim (mesmo se der erro ou Ctrl+C).
   python3 ferramentas/medir-motores.py                 # tudo (~30–40 min, ~7 GB de downloads)
   python3 ferramentas/medir-motores.py --sem-openvino  # só Ollama e llama.cpp
   python3 ferramentas/medir-motores.py --pequeno       # Qwen3.5 0.8B: confere o script (~5 min)
+  python3 ferramentas/medir-motores.py --placa --sem-openvino   # MTP/rascunho na placa (Vulkan)
 
 O que é medido (pedido típico do Wise: lê ~150 pedaços, escreve 100):
   1. Ollama atual, com as opções calibradas pelo duiaos-ia (threads, placa).
@@ -368,6 +369,8 @@ def principal():
     p.add_argument("--sem-openvino", action="store_true")
     p.add_argument("--sem-ollama", action="store_true", help="não mede o Ollama (ex.: fora do DuiaOS)")
     p.add_argument("--pequeno", action="store_true", help="usa o Qwen3.5 0.8B: só para conferir o script")
+    p.add_argument("--placa", action="store_true",
+                   help="MTP, rascunho e ngram na placa de vídeo (Vulkan), sem comparar com o processador")
     a = p.parse_args()
     if platform.machine() not in LLAMA:
         raise SystemExit("Arquitetura não suportada por este script.")
@@ -423,15 +426,18 @@ def principal():
     try:
         if servicos:
             servicos.parar()
-        if blob:
+        if blob and not a.placa:
             rodar("llama-server · arquivo do Ollama · processador", "ollama",
                   medir_llama, binario, blob, threads, False, [], a.repeticoes)
+        if blob:
             rodar("llama-server · arquivo do Ollama · placa (Vulkan)", "ollama",
                   medir_llama, binario, blob, threads, True, [], a.repeticoes)
         # Melhor lugar para o resto: o que o llama-server mediu melhor
         placa = na_placa
         medidos = [l for l in linhas if l.get("grupo") == "ollama" and "erro" not in l]
-        if len(medidos) == 2:
+        if a.placa:
+            placa = True
+        elif len(medidos) == 2:
             placa = medidos[1]["total_s"] < medidos[0]["total_s"]
         onde = "placa" if placa else "processador"
         rodar(f"llama-server · MTP-GGUF sem MTP · {onde}", "mtp",
