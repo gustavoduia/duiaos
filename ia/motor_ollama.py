@@ -54,7 +54,7 @@ class Ollama:
             with self._pedir("GET", "/api/tags", tempo=3) as resposta:
                 dados = json.load(resposta)
         except (OSError, ValueError) as erro:
-            raise ErroOllama("A IA local (Ollama) não está respondendo.") from erro
+            raise ErroOllama("O motor de IA local (Ollama) não está respondendo.") from erro
         nomes = set()
         for modelo in dados.get("models") or []:
             nome = modelo.get("name") or modelo.get("model")
@@ -70,7 +70,7 @@ class Ollama:
             if erro.code != 404:          # já não existia: tudo bem
                 raise ErroOllama(f"O Ollama não conseguiu remover {nome} (erro {erro.code}).") from erro
         except OSError as erro:
-            raise ErroOllama("A IA local (Ollama) não está respondendo.") from erro
+            raise ErroOllama("O motor de IA local (Ollama) não está respondendo.") from erro
 
     def baixar(self, nome, ao_progresso, cancelado):
         """Baixa um modelo. ao_progresso(concluido, total, status) é chamado a cada
@@ -82,7 +82,7 @@ class Ollama:
         except urllib.error.HTTPError as erro:
             raise ErroOllama(f"O Ollama recusou o download de {nome} (erro {erro.code}).") from erro
         except OSError as erro:
-            raise ErroOllama("A IA local (Ollama) não está respondendo.") from erro
+            raise ErroOllama("O motor de IA local (Ollama) não está respondendo.") from erro
         with resposta:
             for linha in resposta:
                 if cancelado():
@@ -114,7 +114,7 @@ class Ollama:
             with self._pedir("GET", "/api/ps", tempo=3) as resposta:
                 dados = json.load(resposta)
         except (OSError, ValueError) as erro:
-            raise ErroOllama("A IA local (Ollama) não está respondendo.") from erro
+            raise ErroOllama("O motor de IA local (Ollama) não está respondendo.") from erro
         return {m.get("name") or m.get("model") for m in dados.get("models") or []
                 if isinstance(m.get("name") or m.get("model"), str)}
 

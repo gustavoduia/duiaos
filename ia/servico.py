@@ -342,7 +342,7 @@ class Servico:
     def _exigir_ollama(self):
         self._atualizar_instalados()
         if not self._ollama_ok:
-            raise Recusa("SemOllama", "A IA local (Ollama) não está respondendo. "
+            raise Recusa("SemOllama", "O motor de IA local (Ollama) não está respondendo. "
                                       "Veja: systemctl status ollama")
 
     def baixar(self, id_modelo, automatico=False):
@@ -368,7 +368,7 @@ class Servico:
     def _baixar(self, id_modelo):
         try:
             if not self.ollama.esperar(60):
-                raise ErroOllama("A IA local (Ollama) não está respondendo.")
+                raise ErroOllama("O motor de IA local (Ollama) não está respondendo.")
             self.ollama.baixar(id_modelo,
                                lambda c, t, s: GLib.idle_add(self._progresso, c, t, s),
                                self._cancelar.is_set)

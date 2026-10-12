@@ -191,7 +191,7 @@ fi
 [ -r /etc/pam.d/duiaos-bloqueio ] && ok "Tela de Bloqueio: serviço PAM duiaos-bloqueio" \
   || falha "Tela de Bloqueio: /etc/pam.d/duiaos-bloqueio ausente"
 
-secao "IA local (Ollama)"
+secao "IA local: motor (Ollama) e modelo ativo"
 if dpkg-query -W -f='${Status}' duiaos-ollama 2>/dev/null | grep -q "ok installed"; then
   ok "Pacote duiaos-ollama $(dpkg-query -W -f='${Version}' duiaos-ollama)"
   if systemctl is-active ollama.service >/dev/null 2>&1; then

@@ -53,7 +53,7 @@ def gb(numero):
 def mostrar_estado(estado):
     print(f"Modelo ativo: {estado['ativo'] or 'nenhum'}")
     if not estado.get("ollama"):
-        print("Aviso: a IA local (Ollama) não está respondendo.")
+        print("Aviso: o motor de IA local (Ollama) não está respondendo; nenhum modelo pode responder.")
     tarefa = estado.get("tarefa")
     if tarefa:
         print(f"Baixando {tarefa['modelo']}: {tarefa['fracao'] * 100:.0f}% "

@@ -10,7 +10,7 @@ Provides: ollama
 Conflicts: ollama
 Replaces: ollama
 Homepage: https://ollama.com
-Description: Ollama — IA local do DuiaOS (empacotado pelo DuiaOS)
+Description: Ollama — motor que roda os modelos de IA local do DuiaOS
  Roda modelos de linguagem no próprio computador (llama.cpp), com a API em
  127.0.0.1:11434. Versão oficial do Ollama, sem as bibliotecas de placas
  NVIDIA (CUDA); usa o processador e, quando disponível, Vulkan.

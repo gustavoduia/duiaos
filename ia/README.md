@@ -5,6 +5,18 @@ serviço que guarda **o modelo de IA local ativo, um só para o sistema
 inteiro** (ADR 030), e cuida do catálogo de modelos. Vai para o pacote
 `duiaos-ia`, junto com a Central de IA (`apps/central-de-ia/`).
 
+## Termos (usar sempre assim)
+
+| Termo | O que é | Exemplo |
+| --- | --- | --- |
+| **Motor de IA local** | O programa que roda modelos no computador. Sozinho não responde nada | **Ollama** (pacote `duiaos-ollama`, serviço `ollama.service`) |
+| **Modelo** | O "cérebro" que o motor roda: é ele que entende e responde | **Qwen3.5 4B** (padrão), Qwen3.5 9B, Gemma 4, Llama, Phi |
+| **Modelo ativo** | O único modelo que o sistema usa agora | escolhido na Central de IA |
+| **IA do sistema** | O serviço `duiaos-ia`: escolhe o modelo ativo e cuida do motor | `duiaos-ia`, Central de IA |
+
+Ollama não é modelo e Llama (da Meta) não tem relação com o Ollama, apesar do
+nome parecido. O Wise usa a IA do sistema: o Ollama rodando o modelo ativo.
+
 | Arquivo | O que faz |
 | --- | --- |
 | `catalogo.json` | Modelos oferecidos: Qwen3.5, Qwen3, Gemma 4, Llama 3 a 3.3 e Phi-3 a 4, com tamanho, licença e o padrão (`qwen3.5:4b`) |

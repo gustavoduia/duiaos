@@ -168,7 +168,7 @@ ApplicationWindow {
                     color: cores.erro
                     text: !central.servicoOk
                           ? "O serviço de IA do sistema não está respondendo. Tente abrir a Central de novo em instantes."
-                          : "A IA local (Ollama) não está respondendo. Reinicie o computador ou veja: systemctl status ollama"
+                          : "O motor de IA local (Ollama) não está respondendo, então nenhum modelo pode responder. Reinicie o computador ou veja: systemctl status ollama"
                 }
             }
             Rectangle {
