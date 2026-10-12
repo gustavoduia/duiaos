@@ -25,7 +25,8 @@ Atualizado em: 12/10/2026 (19h20) · por: Claude (conta do Gustavo) · sessão s
 | Mac | — | — | — |
 
 ## 3. Em andamento (quem / branch / PR rascunho)
-- Nenhuma frente aberta além dos PRs #9 (duiaos), #5 (Wise) e #2 (duiaos-websites).
+- Wise #6 (`claude/diagnostico-do-wise`, sobre o #5): diagnóstico para o Claude (W17) e correções do log de
+  12/10 (W18); irmão duiaos-websites #3. Nada muda neste repositório além deste registro.
 
 ## 4. Próximos passos
 1. Gustavo: testar no Dell as duas branches (instalar-local + reboot) e fazer o merge de duiaos #9 e Wise #5.

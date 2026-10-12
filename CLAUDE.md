@@ -6,6 +6,8 @@ A memória do projeto é este repositório, não o histórico de uma conversa. S
 1. Leia, nesta ordem: `docs/continuidade/CONTEXTO.md` → `docs/continuidade/ESTADO.md` →
    `docs/continuidade/RECURSOS.md` → as duas últimas entradas de `docs/continuidade/DIARIO.md`.
    Se a tarefa envolve o Wise, leia também `duiaos-wise/CLAUDE.md` e `duiaos-wise/docs/continuidade/`.
+   Falha do Wise relatada → diagnósticos no repositório privado `duiaos-diagnosticos` (seção "Quando o Gustavo
+   relatar uma falha do Wise" do `duiaos-wise/CLAUDE.md`). Nunca copie esses dados para este repositório.
 2. Confira os PRs abertos (`gh api repos/gustavoduia/duiaos/pulls?state=open`) e compare com a seção 1 do
    ESTADO. Se houver PR aberto que o ESTADO não conhece, PARE e pergunte ao Gustavo.
 3. Escolha a base: a `main` atualizada; se houver PR aberto que reúne trabalho ainda sem merge, parta da branch
