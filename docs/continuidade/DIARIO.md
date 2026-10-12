@@ -14,7 +14,8 @@ Formato: data · quem/conta · branches/PRs · o que foi feito · decisões · o
   conferência automática (`ferramentas/conferir-recursos.py`), seção "instalado em cada máquina", regras para
   várias contas.
 - Pedidos novos: documentação para usuários desde o início (como as distros fazem) e site do DuiaOS no
-  Cloudflare Workers (ADRs 037–038).
+  Cloudflare Workers (ADRs 037–038). A pedido do Gustavo, site e documentação foram para o repositório privado
+  `duiaos-websites`, como dois aplicativos (ADR 039), com PR irmão exigido quando algo visível muda.
 
 ## 11–12/10/2026 · Claude (conta do Gustavo) · duiaos #1–#8, duiaos-wise #1–#4
 - P3 (Tela de Entrada/Bloqueio, boot, papel de parede, Menu de Energia), P3b (pacotes .deb e apt assinado),

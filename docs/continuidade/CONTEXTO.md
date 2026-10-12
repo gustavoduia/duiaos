@@ -2,8 +2,8 @@
 
 Muda pouco. Vale para qualquer pessoa ou conta do Claude que trabalhe no
 projeto. Ordem de leitura no início de toda sessão: `CLAUDE.md` → este arquivo
-→ `ESTADO.md` → `RECURSOS.md` (e, no Wise, os equivalentes em
-`duiaos-wise/docs/continuidade/`).
+→ `ESTADO.md` → `RECURSOS.md` (e, no Wise e no site, os equivalentes em
+`duiaos-wise/docs/continuidade/` e `duiaos-websites/docs/continuidade/`).
 
 ## Pessoas e forma de trabalho
 - Dono: **Gustavo** (GitHub `gustavoduia`), fuso America/Sao_Paulo. Decide tudo e dá nome a todo componente
@@ -45,6 +45,9 @@ projeto. Ordem de leitura no início de toda sessão: `CLAUDE.md` → este arqui
   Fase final: volta a PRIVADO e o build passa a ser local. Não colocar aqui nada do código do Wise.
 - `gustavoduia/duiaos-fontes-abertas` (público): espelho de `publico/`, ISOs nos Releases e, na branch gh-pages,
   o repositório apt (https://gustavoduia.github.io/duiaos-fontes-abertas/apt).
+- `gustavoduia/duiaos-websites` (PRIVADO): site (`site/`, duiaos.gustavoduia.workers.dev) e documentação
+  (`documentacao/`, duiaos-docs.gustavoduia.workers.dev); com domínio: duiaos.com.br e docs.duiaos.com.br.
+  Mudança visível no sistema ou no Wise = PR irmão lá (ADR 039).
 - `gustavoduia/duiaos-wise` (PRIVADO): o Wise. O público só conhece `/usr/bin/duiaos-wise --alternar` e
   `duiaos-wise.desktop`; o Wise só lê `/var/lib/duiaos-ia/estado.json`. Dell acessa por deploy key
   (Host github-duiaos-wise).
@@ -53,7 +56,7 @@ projeto. Ordem de leitura no início de toda sessão: `CLAUDE.md` → este arqui
 ## Pastas padrão (ADR 024) — iguais no Mac e no Dell
 `~/Projetos/duiaos` · `~/Projetos/duiaos-wise` · `~/Projetos/duiaos-fontes-abertas` (só leitura) ·
 `~/Projetos/duiaos-isos` · `~/Projetos/duiaos-runner` · Mac: `~/Projetos/duiaos-chaves` (chave privada do apt).
-Mac = /Users/gustavoduia/Projetos; Dell = /home/gustavo/Projetos.
+`~/Projetos/duiaos-websites`. Mac = /Users/gustavoduia/Projetos; Dell = /home/gustavo/Projetos.
 
 ## Máquinas
 - Mac: MacBook Air M4 16 GB. Runner `mac-m4` (Colima), só arm64.
@@ -68,7 +71,7 @@ Mac = /Users/gustavoduia/Projetos; Dell = /home/gustavo/Projetos.
 - IA nativa: assistente **Wise** (só após o login); a IA é do sistema operacional (ADR 029): serviço `duiaos-ia`
   + Central de IA; um só modelo ativo (ADR 030); o Wise é cliente. Motor: **Ollama** (mantido em 12/10 após
   medição; ADR 036).
-- Site e documentação para usuários: `site/` (Astro + Starlight, Cloudflare Workers; ADRs 037 e 038).
+- Site e documentação para usuários: repositório privado `duiaos-websites` (ADRs 037–039).
 - O Wise usa o computador como a pessoa (12/10): "o Wise é soberano no sistema" — com aprovação para enviar,
   apagar, pagar, instalar ou confirmar.
 - Nomes já definidos: Barra de Recursos (painel), Ilha de Aplicativos (dock), Central de Aplicativos (lançador),
@@ -93,5 +96,5 @@ Mac = /Users/gustavoduia/Projetos; Dell = /home/gustavo/Projetos.
 - IA: `ia/` (serviço Python + Gio, polkit com anotação owner), `apps/central-de-ia/`.
 - Agente: `agente/` (duiaos-agente, ADR 034).
 - Documentação técnica: `docs/visao.md`, `docs/decisoes.md` (ADRs), `pacotes/README.md`, `shell/README.md`,
-  `ia/README.md`. Documentação para usuários e site: `site/` (guia em `site/README.md`; ADRs 037 e 038).
-- Cloudflare (conta do Gustavo): Worker `duiaos-site`, D1 `duiaos-site`, KV `duiaos-site-cache`.
+  `ia/README.md`. Documentação para usuários e site: `duiaos-websites` (guia em `duiaos-websites/CLAUDE.md`).
+- Cloudflare (conta do Gustavo): Workers `duiaos` e `duiaos-docs`, D1 `duiaos-site`, KV `duiaos-site-cache`.

@@ -20,8 +20,9 @@ A memória do projeto é este repositório, não o histórico de uma conversa. S
   ambiente não tiver `gi`); `shellcheck` nos scripts mudados.
 - Recurso novo ou mudado → linha em `docs/continuidade/RECURSOS.md` com conferência.
 - Decisão nova → ADR em `docs/decisoes.md`.
-- Recurso visível para o usuário → página na documentação (`site/src/content/docs/documentacao/`, ADR 037,
-  guia de escrita em `site/README.md`), no mesmo PR; `cd site && npm run build` sem erro.
+- Recurso visível para o usuário → **PR irmão** no `gustavoduia/duiaos-websites` (mesmo nome de branch) com a
+  página da documentação (e o site, se for de divulgar), seguindo `duiaos-websites/CLAUDE.md`. Cite o irmão na
+  descrição (`gustavoduia/duiaos-websites#N`) — o workflow `documentacao-irma.yml` confere.
 
 ## Ao terminar o bloco de trabalho
 - Atualize `docs/continuidade/ESTADO.md` (o que está na main, PRs, o que está instalado em cada máquina,

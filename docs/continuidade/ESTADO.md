@@ -11,8 +11,9 @@ Atualizado em: 12/10/2026 (13h40) · por: Claude (conta do Gustavo) · sessão s
 - **Pendentes de merge** — cada PR reúne os anteriores; fechar os antigos sem merge:
   | Repositório | PR | Branch | Reúne | Conteúdo |
   | --- | --- | --- | --- | --- |
-  | duiaos | **#9** | `claude/tres-frentes` | #6, #7, #8 | duiaos-ollama, duiaos-ia, Central de IA (ADRs 030–033), duiaos-agente (034), acessibilidade (035), medição de motores, continuidade, documentação e site (036–038) |
-  | duiaos-wise | **#5** | `claude/wise-tres-frentes` | #3, #4 | carinha de robô (W10), resposta rápida (W11–W12), aprovação W2/W16, clima W13, agenda W14, uso do computador W15, continuidade |
+  | duiaos | **#9** | `claude/tres-frentes` | #6, #7, #8 | duiaos-ollama, duiaos-ia, Central de IA (ADRs 030–033), duiaos-agente (034), acessibilidade (035), medição de motores, continuidade, ADRs 036–039, teste do PR irmão |
+  | duiaos-websites | **#1** | `claude/site-e-documentacao` | — | site e documentação (ADRs 037–039) |
+| duiaos-wise | **#5** | `claude/wise-tres-frentes` | #3, #4 | carinha de robô (W10), resposta rápida (W11–W12), aprovação W2/W16, clima W13, agenda W14, uso do computador W15, continuidade |
 - **Risco conhecido**: enquanto o #5 do Wise não entra na main, quem instalar o Wise da main volta à carinha
   antiga. Foi o que aconteceu em 12/10. Merge recomendado o quanto antes.
 
@@ -27,11 +28,8 @@ Atualizado em: 12/10/2026 (13h40) · por: Claude (conta do Gustavo) · sessão s
 
 ## 4. Próximos passos
 1. Gustavo: testar no Dell as duas branches (instalar-local + reboot) e fazer o merge de duiaos #9 e Wise #5.
-2. Site + documentação (ADRs 037–038) prontos em `site/` (testados localmente com `wrangler dev`; capturas
-   conferidas em computador e celular). D1 `duiaos-site` (tabela criada) e KV `duiaos-site-cache` já existem na
-   conta Cloudflare do Gustavo. **Falta a 1ª publicação** (pelo Mac: `npx wrangler login && npm run deploy`) e os
-   segredos `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` no GitHub para o `site.yml` publicar sozinho.
-   Depois: domínio, ajuda dentro do sistema (`duiaos-ajuda`), "esta página ajudou?".
+2. Site e documentação: repositório `duiaos-websites` (PR #1). Falta a 1ª publicação pelo Mac e os segredos do
+   Cloudflare naquele repositório (ver `duiaos-websites/docs/continuidade/ESTADO.md`).
 3. Google/Microsoft na agenda: Gustavo registra os aplicativos (duiaos-wise/docs/contas-de-agenda.md).
 4. Seguir o plano (docs/visao.md): W3 voz, W4 Central de IA completa (gateway da nuvem no duiaos-ia), P4 instalador.
 

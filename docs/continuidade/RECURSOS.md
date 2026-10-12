@@ -63,13 +63,12 @@ Regras:
 
 ## Site e documentação
 
+Moraram aqui até 12/10 e foram para o repositório `duiaos-websites` (ADR 039), com inventário próprio em
+`duiaos-websites/docs/continuidade/RECURSOS.md`.
+
 | Recurso | Onde | Conferência | Desde | Situação |
 | --- | --- | --- | --- | --- |
-| Página inicial com a Órbita em 3D e cenas na rolagem (dia → noite → dia) | `site/src/pages/index.astro`, `site/src/scripts/` | `site/src/scripts/orbita.js::caminhoDoD`, `site/src/scripts/cenas.js::noite-agora` | ADR 038 | PR #9 |
-| Downloads com a versão mais nova (API + KV) | `site/src/pages/baixar.astro`, `site/worker/index.js` | `site/worker/index.js::/api/versoes` | ADR 038 | PR #9 |
-| Suporte com protocolo (D1) | `site/src/pages/suporte.astro`, `site/migrations/` | `site/worker/index.js::INSERT INTO chamados` | ADR 038 | PR #9 |
-| Documentação para usuários (Diátaxis, busca) | `site/src/content/docs/documentacao/` | `site/astro.config.mjs::documentacao/como-fazer`, `site/src/content/docs/documentacao/wise/usar-aplicativos-pelo-wise.md::nunca faz` | ADR 037 | PR #9 |
-| Publicação automática no Cloudflare | `.github/workflows/site.yml` | `.github/workflows/site.yml::wrangler deploy` | ADR 038 | PR #9 |
+| PR irmão exigido quando algo visível muda | `.github/workflows/documentacao-irma.yml` | `.github/workflows/documentacao-irma.yml::Documentação: não precisa` | ADR 039 | PR #9 |
 
 ## Processo
 
