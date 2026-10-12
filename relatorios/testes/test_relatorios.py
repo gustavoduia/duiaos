@@ -298,6 +298,57 @@ class TestEnvio(ComPasta):
         self.assertEqual(len(list((self.pasta / "pendentes").glob("*.json"))), 1)
 
 
+class TestCorrecoesDoDell(ComPasta):
+    """O que o primeiro relatório do Dell (12/10) mostrou."""
+
+    def test_servico_que_falhou_leva_as_ultimas_linhas(self):
+        falhou = entrada("zramswap.service: Failed with result 'exit-code'.", 4, UNIT="zramswap.service",
+                         UNIT_RESULT="exit-code", SYSLOG_IDENTIFIER="systemd", _SYSTEMD_UNIT="init.scope")
+        pedidos = []
+
+        def contexto(unidade, boot):
+            pedidos.append((unidade, boot))
+            return ["zramswap: motivo da falha"]
+        eventos, _ = coleta.montar([falhou], "erros", (), contexto)
+        self.assertEqual(pedidos, [("zramswap.service", "abcdef0123456789")])
+        self.assertEqual(eventos[0]["contexto"], ["zramswap: motivo da falha"])
+        self.assertEqual(eventos[0]["unidade_afetada"], "zramswap.service")
+
+    def test_limite_nao_pula_registros(self):
+        linhas = [json.dumps({"MESSAGE": f"m{i}", "__CURSOR": f"c{i}"}) + "\n" for i in range(10)]
+
+        class Processo:
+            def __init__(self, *a, **k):
+                self.stdout = iter(linhas + ["-- cursor: c9\n"])
+
+            def kill(self):
+                pass
+
+            def wait(self):
+                return 0
+        with mock.patch.object(coleta, "LIMITE_ENTRADAS", 4):
+            entradas, cursor = coleta.ler_journal(None, 0, executar=Processo)
+        self.assertEqual(len(entradas), 4)
+        self.assertEqual(cursor, "c3")                      # a próxima coleta continua do 5º
+
+    def test_estado_sem_sudo(self):
+        (self.pasta / "pendentes").mkdir(mode=0o700)
+        (self.pasta / "pendentes" / "x.json").write_text("{}")
+        coleta.publicar_situacao(self.pasta, coleta=time.time(), envio={"t": time.time(), "enviados": 1})
+        situacao = self.pasta / "situacao.json"
+        self.assertEqual(oct(situacao.stat().st_mode & 0o777), "0o644")
+        self.assertEqual(json.loads(situacao.read_text())["pendentes"], 1)
+        from relatorios import principal
+        saida = io.StringIO()
+        with mock.patch.object(cfg, "PASTA_ESTADO", self.pasta), mock.patch("sys.stdout", saida), \
+                mock.patch.object(cfg.Config, "carregar", return_value=cfg.Config("desenvolvimento")), \
+                mock.patch.object(Path, "is_dir", side_effect=PermissionError("sem permissão")):
+            self.assertEqual(principal.estado(), 0)
+            self.assertEqual(principal._arquivos("pendentes"), [])
+        self.assertIn("Pendentes: 1", saida.getvalue())
+        self.assertIn("relatório(s)", saida.getvalue())
+
+
 class TestPerfil(unittest.TestCase):
     def test_perfil_real_sem_dados_pessoais(self):
         dados = perfil.coletar()

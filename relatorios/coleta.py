@@ -52,20 +52,45 @@ def ler_journal(cursor, desde=None, executar=subprocess.Popen):
     entradas, novo = [], cursor
     processo = executar(comando, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
                         env={"PATH": "/usr/bin:/bin", "LC_ALL": "C.UTF-8", "SYSTEMD_COLORS": "0"})
+    cortado = False
     for linha in processo.stdout:
         if linha.startswith("-- cursor: "):
             novo = linha[len("-- cursor: "):].strip()
             continue
         if len(entradas) >= LIMITE_ENTRADAS:
-            continue                                  # continua lendo até o cursor do fim
+            # Muito para uma vez só: para aqui e a próxima coleta continua deste ponto (nada é pulado)
+            cortado = True
+            processo.kill()
+            break
         try:
             entradas.append(json.loads(linha))
         except ValueError:
             pass
     processo.wait()
-    if entradas and novo == cursor:                    # sem a linha de cursor: usa o da última entrada
+    if entradas and (cortado or novo == cursor):       # cortado, ou sem a linha de cursor: a última lida
         novo = entradas[-1].get("__CURSOR", cursor)
     return entradas, novo
+
+
+def contexto_do_servico(unidade, boot, linhas=15, executar=subprocess.run):
+    """Últimas linhas do serviço que falhou, naquele início (o que o `systemctl status` mostraria): a causa
+    costuma estar em mensagens comuns do próprio serviço, que o nível não levaria."""
+    if not unidade or not boot:
+        return []
+    try:
+        saida = executar(["journalctl", "--no-pager", "-o", "json", "-u", unidade, f"_BOOT_ID={boot}",
+                          "-n", str(linhas)], capture_output=True, text=True, timeout=20,
+                         env={"PATH": "/usr/bin:/bin", "LC_ALL": "C.UTF-8"}).stdout
+    except (OSError, subprocess.SubprocessError):
+        return []
+    resultado = []
+    for linha in saida.splitlines():
+        try:
+            e = json.loads(linha)
+        except ValueError:
+            continue
+        resultado.append(f"{_texto(e.get('SYSLOG_IDENTIFIER') or e.get('_COMM'))}: {_texto(e.get('MESSAGE'))}")
+    return resultado
 
 
 def _do_duiaos(e):
@@ -143,7 +168,7 @@ def _chave_repeticao(r):
     return (r["tipo"], r["origem"], re.sub(r"\d+", "#", r["mensagem"])[:200])
 
 
-def montar(entradas, nivel, nomes=()):
+def montar(entradas, nivel, nomes=(), contexto=None):
     """Eventos e falhas agrupadas, já com a privacidade do nível."""
     eventos, falhas, repetidos = [], {}, {}
     for e in entradas:
@@ -151,6 +176,8 @@ def montar(entradas, nivel, nomes=()):
         if tipo is None:
             continue
         r = compactar(e, tipo)
+        if tipo == "servico_falhou" and contexto is not None:
+            r["contexto"] = contexto(_texto(e.get("UNIT")), _texto(e.get("_BOOT_ID")))
         if nivel != "desenvolvimento":
             r = anonimizar(r, nomes)
         else:
@@ -205,18 +232,20 @@ def _salvar_estado(pasta, estado):
     temporario.replace(pasta / "estado.json")
 
 
-def coletar(config, pasta=None, journal=ler_journal, coletar_perfil=perfil_mod.coletar, agora=None, nomes=None):
+def coletar(config, pasta=None, journal=ler_journal, coletar_perfil=perfil_mod.coletar, agora=None, nomes=None,
+            contexto=contexto_do_servico):
     """Gera um relatório em pendentes/ se houver algo. Devolve o caminho (ou None)."""
     if not config.coleta:
         return None
     pasta = Path(pasta or cfg.PASTA_ESTADO)
-    (pasta / "pendentes").mkdir(parents=True, exist_ok=True)
+    for nome in ("pendentes", "enviados"):            # relatórios: só o root lê (podem ter dados pessoais)
+        (pasta / nome).mkdir(mode=0o700, parents=True, exist_ok=True)
     agora = agora or time.time()
     estado = _ler_estado(pasta)
     inicio = estado.get("coletado_ate") or agora - PRIMEIRA_COLETA
     entradas, cursor = journal(estado.get("cursor"), inicio)
     nomes = nomes_pessoais() if nomes is None else nomes
-    eventos, falhas = montar(entradas, config.nivel, nomes)
+    eventos, falhas = montar(entradas, config.nivel, nomes, contexto)
 
     perfil = None
     atual = coletar_perfil()
@@ -251,3 +280,22 @@ def coletar(config, pasta=None, journal=ler_journal, coletar_perfil=perfil_mod.c
     temporario.replace(caminho)
     _salvar_estado(pasta, estado)                      # o cursor só avança com o relatório gravado
     return caminho
+
+
+def publicar_situacao(pasta=None, **dados):
+    """situacao.json (0644): o que `duiaos-relatorios estado` mostra sem sudo — horários e contagens, sem
+    conteúdo dos relatórios."""
+    pasta = Path(pasta or cfg.PASTA_ESTADO)
+    arquivo = pasta / "situacao.json"
+    try:
+        atual = json.loads(arquivo.read_text())
+    except (OSError, ValueError):
+        atual = {}
+    atual.update(dados)
+    atual["pendentes"] = len(list((pasta / "pendentes").glob("*.json"))) if (pasta / "pendentes").is_dir() else 0
+    atual["enviados"] = len(list((pasta / "enviados").glob("*.json"))) if (pasta / "enviados").is_dir() else 0
+    temporario = pasta / "situacao.json.tmp"
+    temporario.write_text(json.dumps(atual, ensure_ascii=False))
+    os.chmod(temporario, 0o644)
+    temporario.replace(arquivo)
+    return atual

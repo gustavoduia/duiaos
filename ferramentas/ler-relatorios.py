@@ -90,13 +90,15 @@ def resumo(relatorios, raiz):
         print(f"  {curto(g['mensagem'], 220)}")
     print()
 
-    erros, avisos, servicos = Counter(), Counter(), Counter()
+    erros, avisos, servicos, contextos = Counter(), Counter(), Counter(), {}
     for r in relatorios:
         for e in r.get("eventos", []):
             chave = f"{e.get('origem')}: {curto(e.get('mensagem'), 150)}"
             vezes = e.get("repeticoes", 1)
             if e["tipo"] == "servico_falhou":
-                servicos[f"{e.get('unidade') or e.get('unidade_afetada') or e.get('origem')} ({e.get('resultado')})"] += vezes
+                nome = f"{e.get('unidade_afetada') or e.get('unidade') or e.get('origem')} ({e.get('resultado')})"
+                servicos[nome] += vezes
+                contextos.setdefault(nome, e.get("contexto") or [])
             elif e["tipo"] == "erro":
                 erros[chave] += vezes
             elif e["tipo"] == "aviso":
@@ -106,6 +108,8 @@ def resumo(relatorios, raiz):
         print(f"## {titulo} ({sum(contador.values())})")
         for texto, vezes in contador.most_common(15):
             print(f"- {vezes}× {texto}")
+            for linha in (contextos.get(texto) or [])[-6:] if contador is servicos else []:
+                print(f"    {curto(linha, 200)}")
         print()
 
     print("## Computadores")
@@ -153,6 +157,8 @@ def listar_eventos(relatorios, componente):
             vezes = f" (×{e['repeticoes']})" if e.get("repeticoes") else ""
             print(f"{hora(e.get('t'))} {r['_maquina']} [{e['tipo']}] {e.get('origem')} "
                   f"{e.get('evento', '')}: {curto(e.get('mensagem'), 400)}{vezes}{curto(extra, 600)}")
+            for linha in e.get("contexto") or []:
+                print(f"    {curto(linha, 300)}")
 
 
 def main():

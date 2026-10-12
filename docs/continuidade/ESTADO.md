@@ -17,7 +17,7 @@ Atualizado em: 12/10/2026 (17h55) · por: Claude (conta do Gustavo) · sessão s
 ## 2. O que está instalado em cada máquina
 | Máquina | duiaos | duiaos-wise | Como conferir |
 | --- | --- | --- | --- |
-| Dell | branch `claude/tres-frentes` (medição); pacotes: a confirmar | a confirmar (carinha antiga ⇒ provavelmente a main) | 🔗 DELL: `dpkg -l 'duiaos*' \| grep ^ii` e `cd ~/Projetos/duiaos-wise && git log --oneline -1` |
+| Dell | branch `claude/logs-do-sistema` (#10) instalada; relatórios ligados (nível desenvolvimento, máquina `dell`, deploy key "DuiaOS dell"); Wise: `claude/diagnostico-do-wise` (#7) | idem | 🔗 DELL: `dpkg -l 'duiaos*' \| grep ^ii` e `duiaos-relatorios estado` |
 | Mac | — | — | — |
 
 ## 3. Em andamento (quem / branch / PR rascunho)

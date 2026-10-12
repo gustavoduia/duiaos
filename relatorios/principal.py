@@ -26,28 +26,37 @@ except ImportError:                                    # testes fora do sistema
     registro = None
 
 
-def _arquivos(pasta, nome):
-    return sorted((cfg.PASTA_ESTADO / pasta).glob("*.json")) if (cfg.PASTA_ESTADO / pasta).is_dir() else []
+def _arquivos(pasta, nome=""):
+    """Relatórios guardados (a pasta é só do root: sem sudo, a lista vem vazia)."""
+    try:
+        caminho = cfg.PASTA_ESTADO / pasta
+        return sorted(caminho.glob("*.json")) if caminho.is_dir() else []
+    except PermissionError:
+        return []
+
+
+def _data(t):
+    return datetime.fromtimestamp(t).strftime("%d/%m/%Y %H:%M")
 
 
 def estado():
+    """Funciona sem sudo: lê situacao.json (0644), que o serviço publica a cada coleta."""
     config = cfg.Config.carregar()
     print(f"Ajude a melhorar o DuiaOS: {cfg.NOMES_NIVEIS[config.nivel]}")
     if config.coleta:
         print(f"Envio: {config.transporte}" + (f" ({config.repositorio})" if config.transporte == "git" else ""))
     try:
-        dados = json.loads((cfg.PASTA_ESTADO / "estado.json").read_text())
-        print("Última coleta:", datetime.fromtimestamp(dados["coletado_ate"]).strftime("%d/%m/%Y %H:%M"))
-    except (OSError, ValueError, KeyError):
-        print("Última coleta: nenhuma")
-    try:
-        resultado = json.loads((cfg.PASTA_ESTADO / "ultimo-envio.json").read_text())
-        quando = datetime.fromtimestamp(resultado["t"]).strftime("%d/%m/%Y %H:%M")
-        print(f"Último envio: {quando} — " + (resultado.get("erro") or f"{resultado.get('enviados', 0)} relatório(s)"))
-    except (OSError, ValueError, KeyError):
+        situacao = json.loads((cfg.PASTA_ESTADO / "situacao.json").read_text())
+    except (OSError, ValueError):
+        situacao = {}
+    print("Última coleta:", _data(situacao["coleta"]) if situacao.get("coleta") else "nenhuma")
+    envio = situacao.get("envio") or {}
+    if envio.get("t"):
+        print(f"Último envio: {_data(envio['t'])} — " + (envio.get("erro") or f"{envio.get('enviados', 0)} relatório(s)"))
+    else:
         print("Último envio: nenhum")
-    print(f"Pendentes: {len(_arquivos('pendentes', ''))} · Enviados guardados: {len(_arquivos('enviados', ''))}")
-    print(f"Pasta: {cfg.PASTA_ESTADO} (sudo para ler)")
+    print(f"Pendentes: {situacao.get('pendentes', 0)} · Enviados guardados: {situacao.get('enviados', 0)}")
+    print(f"Relatórios em {cfg.PASTA_ESTADO} (para ler: sudo duiaos-relatorios ver)")
     return 0
 
 
@@ -55,6 +64,10 @@ def ver(argumentos):
     if argumentos:
         caminho = argumentos[0]
     else:
+        if not os.access(cfg.PASTA_ESTADO / "pendentes", os.R_OK | os.X_OK) and \
+                (cfg.PASTA_ESTADO / "pendentes").exists():
+            print("Os relatórios só podem ser lidos pelo administrador: sudo duiaos-relatorios ver", file=sys.stderr)
+            return 1
         todos = sorted(_arquivos("pendentes", "") + _arquivos("enviados", ""), key=lambda c: c.name)
         if not todos:
             print("Nenhum relatório guardado.")
@@ -103,7 +116,7 @@ def coletar_e_enviar():
     resultado = envio.enviar_pendentes(config)
     resultado["t"] = time.time()
     if config.coleta:
-        (cfg.PASTA_ESTADO / "ultimo-envio.json").write_text(json.dumps(resultado, ensure_ascii=False))
+        coleta.publicar_situacao(coleta=time.time(), envio=resultado)
     if registro and resultado.get("erro"):
         registro.aviso("relatorios.envio_falhou", f"Envio dos relatórios falhou: {resultado['erro']}",
                        componente="duiaos-relatorios")
@@ -140,6 +153,8 @@ def main(argv=None):
         for pasta in ("pendentes", "enviados"):
             for caminho in _arquivos(pasta, ""):
                 caminho.unlink(missing_ok=True)
+        from . import coleta
+        coleta.publicar_situacao()
         print("Relatórios guardados apagados.")
         return 0
     print(__doc__)

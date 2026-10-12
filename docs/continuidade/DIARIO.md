@@ -13,6 +13,11 @@ Formato: data · quem/conta · branches/PRs · o que foi feito · decisões · o
   "Ajude a melhorar o DuiaOS".
 - F1: `duiaos_registro` (todos os programas), coletor `duiaos-relatorios`, journal persistente, coredump,
   catálogo, envio Git, `ler-relatorios.py`. Testado com um systemd-journald real no ambiente do Claude.
+- Dell configurado (`configurar-relatorios.sh`; 1º erro: cópia da chave no /tmp com sticky bit — corrigido).
+  1º relatório chegou ao `duiaos-diagnosticos`. Ele mostrou: `zramswap.service` falha em todo boot (causa ainda
+  não visível → o relatório passa a levar as últimas linhas do serviço que falhou), `gkr-pam` na Tela de Entrada
+  (normal: o cofre abre logo depois), limite da 1ª coleta pulava registros (corrigido) e `estado` sem sudo
+  quebrava (situacao.json público).
 
 ## 12/10/2026 (noite) · Claude (conta do Gustavo) · duiaos #9, duiaos-websites #2
 - Gustavo publicou e aprovou o site e a documentação (duiaos-websites #1 na main, segredos criados).
