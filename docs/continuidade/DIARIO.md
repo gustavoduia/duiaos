@@ -3,6 +3,11 @@
 Uma entrada por sessão, a mais nova em cima. Só acrescentar; nunca apagar.
 Formato: data · quem/conta · branches/PRs · o que foi feito · decisões · o que ficou pendente.
 
+## 12/10/2026 (noite) · Claude (conta do Gustavo) · duiaos #9, duiaos-websites #2
+- Gustavo publicou e aprovou o site e a documentação (duiaos-websites #1 na main, segredos criados).
+- Revisão do histórico: faltam o teste no Dell e o merge de duiaos #9 e Wise #5 (risco da carinha antiga
+  continua); documentação ganhou avisos "Na próxima versão" (duiaos-websites #2).
+
 ## 12/10/2026 · Claude (conta do Gustavo) · duiaos #9, duiaos-wise #5
 - Três frentes numa atualização: medição de motores no Dell (Ollama mantido — ADR 036), clima (MET Norway) e
   agenda (local, .ics, CalDAV, Google, Microsoft) no Wise, W2 (duiaos-agente + aprovação), e o Wise usando o
