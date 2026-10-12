@@ -3,8 +3,9 @@ Description=IA do DuiaOS (modelo ativo e catálogo de modelos)
 Wants=ollama.service
 After=ollama.service
 
-# Aberto pelo D-Bus quando algum programa chama org.duiaos.IA1
-# (/usr/share/dbus-1/system-services/org.duiaos.IA1.service).
+# Sobe junto com o computador (ainda na Tela de Entrada) para já deixar o modelo
+# ativo na memória antes do login; o D-Bus também o abre se ele não estiver
+# rodando (/usr/share/dbus-1/system-services/org.duiaos.IA1.service).
 [Service]
 Type=dbus
 BusName=org.duiaos.IA1
@@ -28,3 +29,6 @@ ProtectControlGroups=yes
 RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
 IPAddressDeny=any
 IPAddressAllow=localhost
+
+[Install]
+WantedBy=multi-user.target

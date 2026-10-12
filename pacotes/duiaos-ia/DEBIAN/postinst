@@ -11,11 +11,13 @@ case "$1" in
       adduser --quiet --system --ingroup duiaos-ia --no-create-home --home /var/lib/duiaos-ia \
         --shell /usr/sbin/nologin --gecos "Serviço de IA do DuiaOS" duiaos-ia
     fi
+    # Sobe com o computador: o modelo ativo já fica na memória antes do login
+    systemctl enable duiaos-ia.service >/dev/null 2>&1 || true
     if [ -d /run/systemd/system ]; then
       systemctl daemon-reload || true
       systemctl reload dbus.service >/dev/null 2>&1 || true
-      # Versão nova do serviço: reinicia se ele estava rodando (o D-Bus o abre de novo quando preciso)
-      systemctl try-restart duiaos-ia.service >/dev/null 2>&1 || true
+      # Versão nova do serviço: reinicia (ou inicia) agora
+      systemctl restart duiaos-ia.service >/dev/null 2>&1 || true
     fi
     ;;
 esac
