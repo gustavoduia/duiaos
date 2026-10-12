@@ -52,6 +52,12 @@ XML = """
 """
 
 
+# Pedido típico do Wise com o começo da conversa já lido: a pergunta e o
+# resultado compacto de uma consulta (~150 pedaços) e a resposta (~100)
+LER_TIPICO = 150
+ESCREVER_TIPICO = 100
+PAUSA_ENTRE_MEDIDAS = float(os.environ.get("DUIAOS_IA_PAUSA_MEDIDA", "10"))
+
 # Texto da calibração: português comum, ~400 pedaços (como um pedido ao Wise)
 TEXTO_DE_MEDICAO = ("O DuiaOS é um sistema operacional brasileiro feito para ser simples. O Wise é o assistente "
                     "que ajuda a pessoa a usar o computador: responde dúvidas, consulta a memória, o disco, a rede "
@@ -236,9 +242,10 @@ class Servico:
                 if k in ("num_thread", "num_gpu") and isinstance(v, int) and 0 <= v <= 999}
 
     def calibrar(self, modelo):
-        """Mede o modelo com cada número de threads que faz sentido neste processador
-        e guarda o mais rápido para um pedido típico do Wise (ler ~400 pedaços e
-        escrever ~150). Leva cerca de um minuto, uma vez por modelo e computador."""
+        """Mede o modelo com cada opção que faz sentido neste computador (threads,
+        placa de vídeo integrada) e guarda a mais rápida para um pedido típico do
+        Wise (ler ~150 pedaços e escrever ~100). Leva de 1 a 3 minutos, uma vez por
+        modelo e computador."""
         if self._calibrando or self.tarefa:
             return
         threads = hardware.threads_candidatas(hardware.nucleos())
@@ -262,6 +269,10 @@ class Servico:
                     # trazendo o modelo do disco para a memória; a medida sai pior).
                     # 2ª rodada, com outro começo de texto para não reaproveitar nada: vale esta.
                     self.ollama.medir(modelo, manter, opcoes, "Aquecendo. " + TEXTO_DE_MEDICAO, palavras=8)
+                    # Pausa: notebooks aceleram o processador por pouco tempo e depois
+                    # esquentam e freiam; sem pausa, a opção medida por último sai prejudicada.
+                    # O uso real do Wise é em rajadas curtas, como depois da pausa.
+                    time.sleep(PAUSA_ENTRE_MEDIDAS)
                     m = self.ollama.medir(modelo, manter, opcoes, "Medindo. " + TEXTO_DE_MEDICAO)
                 except ErroOllama as erro:
                     print(f"duiaos-ia: calibração com {opcoes} falhou: {erro}", file=sys.stderr, flush=True)
@@ -276,7 +287,7 @@ class Servico:
                 escrever = m["escritos"] / m["escrever_s"] if m["escrever_s"] else 0
                 if ler and escrever:
                     medidas.append({"opcoes": opcoes, "ler_por_s": round(ler, 1), "escrever_por_s": round(escrever, 2),
-                                    "pedido_tipico_s": round(400 / ler + 150 / escrever, 1)})
+                                    "pedido_tipico_s": round(LER_TIPICO / ler + ESCREVER_TIPICO / escrever, 1)})
             GLib.idle_add(self._calibrado, modelo, medidas)
 
         threading.Thread(target=trabalho, daemon=True).start()

@@ -116,7 +116,8 @@ class TesteServico(unittest.TestCase):
         self.dbus = subprocess.Popen(["dbus-daemon", "--session", "--nofork", "--print-address=1"],
                                      stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
         endereco = self.dbus.stdout.readline().strip()
-        self.env = dict(os.environ, DBUS_SESSION_BUS_ADDRESS=endereco, DUIAOS_IA_BARRAMENTO="sessao")
+        self.env = dict(os.environ, DBUS_SESSION_BUS_ADDRESS=endereco, DUIAOS_IA_BARRAMENTO="sessao",
+                        DUIAOS_IA_PAUSA_MEDIDA="0")
         self.servico = subprocess.Popen(
             [sys.executable, str(PASTA_IA / "servico.py"), "--sessao", "--sem-polkit",
              "--pasta", self.pasta, "--ollama", f"http://127.0.0.1:{self.http.server_port}",
