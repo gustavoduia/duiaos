@@ -99,7 +99,7 @@ Qt6/QML, Python) e serão confirmadas por ADR antes de implementar.
 | 1. Experiência | Janela do Wise, notificações, integração com a interface | QML (PySide6), acionado pela Barra de Recursos, pela Ilha e por atalho |
 | 2. Percepção | Palavra de ativação, fala↔texto, captura sob demanda | Candidatos locais: openWakeWord, whisper.cpp ou Vosk, Piper (TTS) |
 | 3. Orquestração | Intenção, plano, estado e fila de tarefas | Serviço de usuário `duiaos-wise` (Python, `systemd --user`) |
-| 4. Gateway de modelos | Unificar provedores, roteamento, fallback, custo | Adaptadores OpenAI, Anthropic, Gemini e modelos locais (Ollama) |
+| 4. IA do sistema (gateway de modelos) | Recurso do sistema operacional, não do Wise: motores, chaves, consentimento, roteamento, fallback, custo — para qualquer programa | Serviço do sistema `duiaos-ia` com API D-Bus; adaptadores Gemini, OpenAI, Anthropic e locais (Ollama) — ADR 029 |
 | 5. Registro de ferramentas | Ferramentas tipadas com escopo e risco | Esquemas JSON com nível de risco, efeitos e verificação |
 | 6. Conectores | Serviços externos | GitHub, CalDAV/Google Agenda, IMAP/Microsoft Graph, Cloudflare, AWS, Azure, GCP, Oracle |
 | 7. Agentes locais | Operações no computador | Serviço privilegiado mínimo `duiaos-agente` via D-Bus + polkit; pacotes via PackageKit |
@@ -152,6 +152,28 @@ pelo usuário; N4 desativado.
   possível.
 - Acesso remoto (SSH) desligado por padrão.
 
+### 3.6 A IA é do sistema operacional (ADR 029)
+
+A IA é um **recurso universal do DuiaOS**, como a rede ou o som: pertence ao
+sistema, não a um aplicativo. Qualquer programa, recurso ou componente do
+sistema pode usá-la pela mesma porta, sem trazer motor, chave ou
+configuração próprios. Exceção: aplicativos que são uma IA ou que trazem a
+sua IA embarcada.
+
+- **Serviço de IA do sistema** (`duiaos-ia`): reúne os motores (locais e na
+  nuvem), as chaves no cofre do sistema, o consentimento para a nuvem, a
+  escolha do motor por tarefa, a reserva quando um falha e o controle de
+  custo. Os programas falam com ele por D-Bus.
+- **Central de IA** (dentro da Central de Configurações, junto do Painel de
+  Tecnologias): o único lugar onde a pessoa escolhe motores, cola chaves,
+  autoriza a nuvem e vê o uso. Garante independência dos motores.
+- **O Wise é um cliente** desse serviço, como qualquer outro programa. As
+  configurações dele ficam só no que é dele (comportamento, integração com o
+  sistema).
+- **Transição:** na W1 o gateway e as configurações de IA ficam dentro do
+  Wise, para testar rápido. O gateway do Wise já é escrito como o futuro
+  serviço e migra para o `duiaos-ia` antes da W4.
+
 ---
 
 ## 4. Roadmap consolidado
@@ -180,7 +202,7 @@ documento de visão vira a **Trilha Wise**. As duas avançam intercaladas.
 | W1 Wise textual (MVP) | Janela do Wise, gateway com 1 provedor (desenho multi-provedor), ferramentas de leitura, plano → aprovação → execução → verificação, auditoria, cancelamento | Responde e executa ferramentas simples com logs e resultados verificáveis |
 | W2 Operações locais seguras | Diagnóstico de recursos, consulta e aplicação de atualizações, instalar/remover com aprovação | Ações comuns testadas, auditadas e com tratamento de falha |
 | W3 Voz e notificações | Palavra de ativação local, fala↔texto, indicador de microfone, modo silencioso | Ativar, interromper, falar e ouvir de forma confiável |
-| W4 Painel de Tecnologias | Provedores de IA, contas, permissões, cofre de credenciais, custos | Conectar/desconectar e entender os acessos concedidos |
+| W4 Central de IA e Painel de Tecnologias | Serviço `duiaos-ia` (IA do sistema, API D-Bus para qualquer programa); Central de IA com motores, chaves, consentimento e custos; contas e permissões; Wise passa a ser cliente | Qualquer programa usa a IA do sistema; trocar de motor sem mexer nos programas |
 | W5 Produtividade | Agenda, e-mail, tarefas, notas, rascunhos | Fluxos ponta a ponta sem envio/alteração fora da política |
 | W6 Desenvolvimento e nuvem | GitHub, ambientes isolados, nuvens em modo leitura | Leitura e preparação confiáveis; produção exige aprovação |
 | W7 Visão | Webcam e tela sob demanda, OCR | Usuário sabe quando a câmera/tela é usada |

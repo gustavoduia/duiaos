@@ -182,6 +182,10 @@ class Sistema(QObject):
 
 def main():
     app = QGuiApplication(sys.argv)
+    # A integração layer-shell vale só para este painel: sem isto, os programas
+    # abertos daqui (Wise, aplicativos Qt) herdariam a variável e virariam
+    # "painéis" sem barra de título, sem botões e sem redimensionar.
+    os.environ.pop("QT_WAYLAND_SHELL_INTEGRATION", None)
     app.setApplicationName("duiaos-barra-de-recursos")
 
     configuracao = Configuracao()
