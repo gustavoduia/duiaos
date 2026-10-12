@@ -3,40 +3,51 @@
 > Atualize este arquivo no FIM de cada bloco de trabalho, no mesmo PR. Ele é o que a próxima sessão (de
 > qualquer conta) lê para continuar. Escreva fatos verificáveis: branch, PR, commit, o que está instalado onde.
 
-Atualizado em: 12/10/2026 (17h55) · por: Claude (conta do Gustavo) · sessão session_01LzmCWyGMx1FKt4d1cuh5R8
+Atualizado em: 12/10/2026 (18h30) · por: Claude (conta do Gustavo) · sessão session_01LzmCWyGMx1FKt4d1cuh5R8
+**Bloco fechado.** Nenhum PR aberto em nenhum dos quatro repositórios. O próximo chat começa daqui.
 
 ## 1. O que está na main e o que está pendente
-- **duiaos main**: PRs #1–#5 e **#9** (duiaos-ollama, duiaos-ia, Central de IA, duiaos-agente, acessibilidade,
-  medição de motores, continuidade; ADRs 030–039), merge em 12/10 (17h30). #6–#8 fechados.
-- **duiaos-wise main**: #1, #2 e **#5** (carinha de robô, aprovação, clima, agenda, uso do computador).
-  **#7** aberto (diagnóstico W17 + correções W18; substitui o #6, fechado quando a base foi apagada).
-- **duiaos-websites main**: #1 e #2 (publicados). **#4** aberto (irmão do Wise #7; substitui o #3).
-- **duiaos #10** (`claude/logs-do-sistema`): logs do sistema F1 (ADR 040), pronto para teste no Dell.
-  Irmãos: duiaos-websites #5 (documentação) e duiaos-diagnosticos #1 (README/CLAUDE.md do repositório de dados).
+- **duiaos main**: PRs #1–#5, #9 (IA do sistema, duiaos-agente, acessibilidade, medição, continuidade; ADRs
+  030–039) e **#10** (registros do sistema e "Ajude a melhorar o DuiaOS", ADR 040). #6–#8 fechados sem merge.
+- **duiaos-wise main**: #1, #2, #5 (robô, aprovação, clima, agenda, uso do computador), #7 (W17/W18) e **#8**
+  (W19: o Wise no registro do sistema). #3, #4 e #6 fechados sem merge.
+- **duiaos-websites main**: #1, #2, #4, #5, #6 — site e documentação publicados automaticamente.
+- **duiaos-diagnosticos main**: #1 (README/CLAUDE.md) + relatórios enviados pelo Dell (`maquinas/dell/`).
+- **Versão publicada (ISO/apt estável)**: ainda a 0.2.0 (12/10 02h17). Tudo acima está no canal `teste` e na
+  main, à espera da 0.3.0.
 
 ## 2. O que está instalado em cada máquina
 | Máquina | duiaos | duiaos-wise | Como conferir |
 | --- | --- | --- | --- |
-| Dell | branch `claude/logs-do-sistema` (#10) instalada; relatórios ligados (nível desenvolvimento, máquina `dell`, deploy key "DuiaOS dell") | `claude/diagnostico-do-wise` (#7, testado em 12/10) | 🔗 DELL: `dpkg -l 'duiaos*' \| grep ^ii` e `duiaos-relatorios estado` |
-| Mac | — | — | — |
+| Dell | pacotes de `f75b9bc` (branch do #10, igual ao conteúdo da main); relatórios ligados: nível desenvolvimento, máquina `dell`, deploy key "DuiaOS dell (relatórios, escrita)" no `duiaos-diagnosticos`, chave em `/etc/duiaos/relatorios/` | branch do #8 (igual à main), testado em 12/10 18h20 | 🔗 DELL: `dpkg -l 'duiaos*' \| grep ^ii` e `duiaos-relatorios estado` |
+| Mac | — (só repositórios e `gh`) | — | — |
+- Ao atualizar o Dell pela main: `git checkout main && git pull` nos dois repositórios + `instalar-local.sh`.
+- Deploy key antiga "Wise dell (escrita)" pode existir no `duiaos-diagnosticos` (do script do Wise que saiu na
+  W19): se existir, remover no GitHub (Settings › Deploy keys) e apagar `~/.ssh/duiaos-diagnosticos` no Dell.
 
 ## 3. Em andamento (quem / branch / PR rascunho)
-- Nenhuma frente em desenvolvimento: #10 aguarda o teste no Dell. Depois: o Wise passa a usar o `duiaos_registro`
-  (PR no duiaos-wise, depois do merge do Wise #7).
+- Nenhuma frente aberta.
 
-## 4. Próximos passos
-1. Gustavo: merge de Wise #7 e site #4; testar o #10 no Dell (instalar-local + `ferramentas/configurar-relatorios.sh`
-   no Mac) e fazer o merge de #10, site #5 e diagnosticos #1.
-2. Logs F1 no Wise: diário técnico → `duiaos_registro` (eventos `wise.*`; conversas só no nível desenvolvimento);
-   "Não ficou bom" → evento + `duiaos-relatorios enviar`; sai `wise/envio_diagnostico.py` e o
-   `configurar-diagnostico.sh` (não rodar).
-3. Logs F2: eventos de uso agregados + tela de consentimento na 1ª entrada e nas Configurações (polkit).
-4. Logs F3: `/api/relatorios` no Worker do site (sem credencial no computador) gravando em lotes no
+## 4. Próximos passos (em ordem sugerida)
+1. **Desempenho do Wise** (visto nos relatórios de 12/10 18h20): aquecimento de ~49 s depois do boot e ~38 s
+   para responder a um pedido simples com 25 ferramentas (uma rodada de ~22 s). Medir com os relatórios e
+   atacar (menos ferramentas por pedido, instruções mais curtas, aquecimento antes do login).
+2. **Reclamação de 12/10** (Wise): pergunta sobre instalar um aplicativo que não existe no apt (Microsoft 365)
+   teve resposta ruim — o Wise deve explicar alternativas (versão web, equivalentes livres). Detalhe no
+   `duiaos-diagnosticos` (`ler-relatorios.py --componente duiaos-wise --eventos`).
+3. **Logs F2**: eventos de uso agregados (`uso.*`, só lista conhecida) + tela "Ajude a melhorar o DuiaOS" na
+   1ª entrada (sem opção marcada) e nas Configurações (polkit para mudar o nível).
+4. **Logs F3**: `/api/relatorios` no Worker do site (sem credencial no computador) gravando em lotes no
    `duiaos-diagnosticos`; resumo semanal das falhas como issue.
-5. Lançar a 0.3.0 e tirar os avisos "Na próxima versão"; decidir a distribuição do Wise.
-6. Google/Microsoft na agenda (duiaos-wise/docs/contas-de-agenda.md). Plano: W3 voz, W4 gateway da nuvem, P4.
+5. **Lançar a 0.3.0** (ISO + apt estável) e tirar os avisos "Na próxima versão" da documentação; decidir como o
+   Wise chega a quem baixa a ISO.
+6. Google/Microsoft na agenda (`duiaos-wise/docs/contas-de-agenda.md`); plano: W3 voz, W4 gateway da nuvem no
+   duiaos-ia, P4 instalador próprio (BitLocker).
 
 ## 5. Decisões recentes (detalhe nos ADRs)
+- 12/10 (noite): F1 dos logs entregue e testada no Dell (biblioteca `duiaos_registro` em todos os programas,
+  coletor `duiaos-relatorios`, journal persistente, coredump, catálogo; Wise W19). PR empilhado: antes do
+  merge do PR de baixo, mudar a base do de cima para a main (o `--delete-branch` fecha o de cima).
 - 12/10 (tarde): **logs do sistema** padronizados como nas distribuições (journald + falhas estilo apport/
   coredump + perfil estilo Ubuntu Insights + uso agregado estilo eos-metrics), centralizados no repositório
   privado `duiaos-diagnosticos` para TODO o sistema (não só o Wise). Consentimento: pergunta na 1ª entrada,
@@ -64,7 +75,10 @@ Atualizado em: 12/10/2026 (17h55) · por: Claude (conta do Gustavo) · sessão s
 - Chave do repositório apt vence em 2036. Distribuição pública do Wise não decidida.
 - Placas NVIDIA: sem CUDA no duiaos-ollama. `intel-opencl-icd` não existe no Debian 13.
 - Programas de terceiros que não mandam as "opcoes" fazem o Ollama recarregar o modelo.
-- Wise com 23 ferramentas: aquecimento após o boot mais longo (estimado ~20 s; medir).
+- Wise com 25 ferramentas: aquecimento ~49 s após o boot e respostas de ~38 s (medido em 12/10; próximo passo 1).
+- `zramswap.service` falhou em 5 boots antes de 12/10 17h29; o relatório agora traz as últimas linhas do
+  serviço que falha — conferir se voltar a aparecer.
+- `gkr-pam: unable to locate daemon control file` na Tela de Entrada: normal (o cofre abre logo depois).
 - Risco das ações na tela avaliado por palavras (pode falhar); Flatpak fora do agente.
 
 ## 8. Ambiente do Claude (dicas para a próxima sessão)
@@ -73,3 +87,7 @@ Atualizado em: 12/10/2026 (17h55) · por: Claude (conta do Gustavo) · sessão s
 - AT-SPI de verdade: Xvfb + dbus-run-session + `QT_LINUX_ACCESSIBILITY_ALWAYS_ON=1`.
 - CalDAV de teste: Radicale com HTTPS (`SSL_CERT_FILE`, `no_proxy=127.0.0.1`).
 - Rede: open-meteo bloqueado; api.met.no, nominatim, huggingface, GitHub, npm e PyPI liberados.
+- journald de verdade para testes: `/usr/lib/systemd/systemd-journald &` (cria /run/systemd/journal/socket);
+  para reiniciar use `kill $(pidof systemd-journald)` (nunca `pkill -f`, que mata o próprio shell).
+- Ler relatórios sem sujar uma branch: `git -C ../duiaos-diagnosticos archive origin/main | tar -x -C /tmp/x`.
+- `api.github.com/meta` bloqueado; repositórios novos entram na sessão com `add_repo`.

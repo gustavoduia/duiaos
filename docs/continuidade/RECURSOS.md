@@ -30,7 +30,7 @@ Regras:
 | Recurso | Onde | Conferência | Desde | Situação |
 | --- | --- | --- | --- | --- |
 | Tela de Entrada e Tela de Bloqueio com o mesmo visual | `shell/comum/TelaDeAcesso.qml` | `shell/comum/TelaDeAcesso.qml::visual único da Tela de Entrada e da Tela de Bloqueio` | ADR 026 | main |
-| Tela de Entrada cancela a sessão do greetd depois de um erro | `shell/entrada/main.py` | `shell/entrada/main.py::cancel_session` | PR #8 | PR #9 |
+| Tela de Entrada cancela a sessão do greetd depois de um erro | `shell/entrada/main.py` | `shell/entrada/main.py::cancel_session` | PR #8 | main |
 | Tela de Bloqueio reaberta se fechar, swaylock de reserva | `shell/bloqueio/bloquear` | `shell/bloqueio/bloquear::swaylock` | ADR 026 | main |
 | Barra de Recursos (símbolo, data e hora, Wi-Fi, volume, bateria, botão Wise) | `shell/barra-de-recursos/` | `shell/barra-de-recursos/BarraDeRecursos.qml::component BotaoWise` | P3 | main |
 | Ícone do Wise perto da bateria (apagado quando ele descansa) | `shell/barra-de-recursos/BarraDeRecursos.qml` | `shell/barra-de-recursos/BarraDeRecursos.qml::duiaos-wise.svg` | PR #5 | main |
@@ -40,36 +40,36 @@ Regras:
 | Menu de Energia (inclui Reiniciar no Windows com dual boot) | `shell/comum/MenuDeEnergia.qml`, `shell/menu-de-energia/` | `shell/comum/MenuDeEnergia.qml::Reiniciar no Windows` | P3 | main |
 | Atalhos Super+Espaço, Super+W, Super+L, Ctrl+Alt+Delete | `shell/sessao/rc.xml` | `shell/sessao/rc.xml::W-w` | P3 | main |
 | Wise iniciado com a sessão e reaberto se fechar | `shell/sessao/autostart` | `shell/sessao/autostart::duiaos-wise --fundo` | PR #5 | main |
-| Acessibilidade ligada na sessão (AT-SPI), grim e wtype | `shell/sessao/`, `shell/pacotes.list` | `shell/sessao/environment::QT_LINUX_ACCESSIBILITY_ALWAYS_ON=1`, `shell/pacotes.list::wtype` | ADR 035 | PR #9 |
+| Acessibilidade ligada na sessão (AT-SPI), grim e wtype | `shell/sessao/`, `shell/pacotes.list` | `shell/sessao/environment::QT_LINUX_ACCESSIBILITY_ALWAYS_ON=1`, `shell/pacotes.list::wtype` | ADR 035 | main |
 
 ## IA do sistema
 
 | Recurso | Onde | Conferência | Desde | Situação |
 | --- | --- | --- | --- | --- |
-| Pacote duiaos-ollama (release oficial, sha256, sem CUDA, placa integrada) | `pacotes/duiaos-ollama/` | `pacotes/duiaos-ollama/raiz/usr/lib/systemd/system/ollama.service::OLLAMA_IGPU_ENABLE=1` | ADR 030 | PR #9 |
-| Serviço duiaos-ia (D-Bus org.duiaos.IA1, polkit com dono) | `ia/servico.py`, `pacotes/duiaos-ia/` | `pacotes/duiaos-ia/raiz/usr/share/polkit-1/actions/org.duiaos.ia.policy::org.freedesktop.policykit.owner` | ADR 031 | PR #9 |
-| Modelo ativo carregado no boot, antes do login | `pacotes/duiaos-ia/raiz/usr/lib/systemd/system/duiaos-ia.service` | `pacotes/duiaos-ia/raiz/usr/lib/systemd/system/duiaos-ia.service::WantedBy=multi-user.target` | ADR 032 | PR #9 |
-| Calibração por computador (threads, placa) publicada em "opcoes" | `ia/servico.py`, `ia/hardware.py` | `ia/servico.py::def calibrar`, `ia/hardware.py::def threads_candidatas` | ADR 033 | PR #9 |
-| Central de IA (modelo ativo, catálogo, download em tempo real) | `apps/central-de-ia/` | `apps/central-de-ia/CentralDeIA.qml::Um só modelo ativo para o sistema inteiro` | ADR 031 | PR #9 |
-| Termos: motor (Ollama) × modelo | `ia/`, `apps/central-de-ia/` | `ia/catalogo.json::qwen3.5:4b` | PR #8 | PR #9 |
-| Medição de motores (Ollama × llama-server × MTP × OpenVINO) | `ferramentas/medir-motores.py` | `ferramentas/medir-motores.py::--placa` | 12/10 | PR #9 |
+| Pacote duiaos-ollama (release oficial, sha256, sem CUDA, placa integrada) | `pacotes/duiaos-ollama/` | `pacotes/duiaos-ollama/raiz/usr/lib/systemd/system/ollama.service::OLLAMA_IGPU_ENABLE=1` | ADR 030 | main |
+| Serviço duiaos-ia (D-Bus org.duiaos.IA1, polkit com dono) | `ia/servico.py`, `pacotes/duiaos-ia/` | `pacotes/duiaos-ia/raiz/usr/share/polkit-1/actions/org.duiaos.ia.policy::org.freedesktop.policykit.owner` | ADR 031 | main |
+| Modelo ativo carregado no boot, antes do login | `pacotes/duiaos-ia/raiz/usr/lib/systemd/system/duiaos-ia.service` | `pacotes/duiaos-ia/raiz/usr/lib/systemd/system/duiaos-ia.service::WantedBy=multi-user.target` | ADR 032 | main |
+| Calibração por computador (threads, placa) publicada em "opcoes" | `ia/servico.py`, `ia/hardware.py` | `ia/servico.py::def calibrar`, `ia/hardware.py::def threads_candidatas` | ADR 033 | main |
+| Central de IA (modelo ativo, catálogo, download em tempo real) | `apps/central-de-ia/` | `apps/central-de-ia/CentralDeIA.qml::Um só modelo ativo para o sistema inteiro` | ADR 031 | main |
+| Termos: motor (Ollama) × modelo | `ia/`, `apps/central-de-ia/` | `ia/catalogo.json::qwen3.5:4b` | PR #8 | main |
+| Medição de motores (Ollama × llama-server × MTP × OpenVINO) | `ferramentas/medir-motores.py` | `ferramentas/medir-motores.py::--placa` | 12/10 | main |
 
 ## Agente do sistema
 
 | Recurso | Onde | Conferência | Desde | Situação |
 | --- | --- | --- | --- | --- |
-| duiaos-agente: Preparar (simula) e Executar (polkit + mesmo impacto) | `agente/`, `pacotes/duiaos-agente/` | `agente/agente.py::org.duiaos.Agente1`, `agente/plano.py::PROTEGIDOS_FIXOS` | ADR 034 | PR #9 |
-| Sem senha só para a sessão local ativa de administrador | `pacotes/duiaos-agente/raiz/usr/share/polkit-1/rules.d/50-duiaos-agente.rules` | `pacotes/duiaos-agente/raiz/usr/share/polkit-1/rules.d/50-duiaos-agente.rules::isInGroup("sudo")` | ADR 034 | PR #9 |
+| duiaos-agente: Preparar (simula) e Executar (polkit + mesmo impacto) | `agente/`, `pacotes/duiaos-agente/` | `agente/agente.py::org.duiaos.Agente1`, `agente/plano.py::PROTEGIDOS_FIXOS` | ADR 034 | main |
+| Sem senha só para a sessão local ativa de administrador | `pacotes/duiaos-agente/raiz/usr/share/polkit-1/rules.d/50-duiaos-agente.rules` | `pacotes/duiaos-agente/raiz/usr/share/polkit-1/rules.d/50-duiaos-agente.rules::isInGroup("sudo")` | ADR 034 | main |
 
 ## Registros do sistema
 
 | Recurso | Onde | Conferência | Desde | Situação |
 | --- | --- | --- | --- | --- |
-| Registro único no journal com campos padronizados (`duiaos_registro`) | `relatorios/duiaos_registro/` | `relatorios/duiaos_registro/__init__.py::DUIAOS_ASSINATURA`, `relatorios/duiaos_registro/journal.py::struct.pack("<Q"` | ADR 040 | PR #10 |
-| Falhas registradas em todos os programas do DuiaOS | `shell/*/main.py`, `apps/central-de-ia/main.py`, `ia/`, `agente/` | `shell/barra-de-recursos/main.py::duiaos_registro.ligar`, `ia/servico.py::duiaos_registro.ligar("duiaos-ia")` | ADR 040 | PR #10 |
-| Coletor `duiaos-relatorios`: níveis, anonimização, perfil, falhas agrupadas, envio Git | `relatorios/`, `pacotes/duiaos-relatorios/` | `relatorios/coleta.py::def assinatura_nativa`, `relatorios/duiaos_registro/privacidade.py::def anonimizar` | ADR 040 | PR #10 |
-| Journal persistente, systemd-coredump e catálogo | `pacotes/duiaos-relatorios/raiz/usr/lib/systemd/` | `pacotes/duiaos-relatorios/raiz/usr/lib/systemd/journald.conf.d/50-duiaos.conf::Storage=persistent`, `pacotes/duiaos-relatorios/raiz/usr/lib/systemd/catalog/duiaos.catalog::0b0f983a3fad41bb9a9730053146311a` | ADR 040 | PR #10 |
-| Leitura dos relatórios pelo Claude | `ferramentas/ler-relatorios.py` | `ferramentas/ler-relatorios.py::def falhas_agrupadas` | ADR 040 | PR #10 |
+| Registro único no journal com campos padronizados (`duiaos_registro`) | `relatorios/duiaos_registro/` | `relatorios/duiaos_registro/__init__.py::DUIAOS_ASSINATURA`, `relatorios/duiaos_registro/journal.py::struct.pack("<Q"` | ADR 040 | main |
+| Falhas registradas em todos os programas do DuiaOS | `shell/*/main.py`, `apps/central-de-ia/main.py`, `ia/`, `agente/` | `shell/barra-de-recursos/main.py::duiaos_registro.ligar`, `ia/servico.py::duiaos_registro.ligar("duiaos-ia")` | ADR 040 | main |
+| Coletor `duiaos-relatorios`: níveis, anonimização, perfil, falhas agrupadas, envio Git | `relatorios/`, `pacotes/duiaos-relatorios/` | `relatorios/coleta.py::def assinatura_nativa`, `relatorios/duiaos_registro/privacidade.py::def anonimizar` | ADR 040 | main |
+| Journal persistente, systemd-coredump e catálogo | `pacotes/duiaos-relatorios/raiz/usr/lib/systemd/` | `pacotes/duiaos-relatorios/raiz/usr/lib/systemd/journald.conf.d/50-duiaos.conf::Storage=persistent`, `pacotes/duiaos-relatorios/raiz/usr/lib/systemd/catalog/duiaos.catalog::0b0f983a3fad41bb9a9730053146311a` | ADR 040 | main |
+| Leitura dos relatórios pelo Claude | `ferramentas/ler-relatorios.py` | `ferramentas/ler-relatorios.py::def falhas_agrupadas` | ADR 040 | main |
 
 ## Site e documentação
 
@@ -78,10 +78,10 @@ Moraram aqui até 12/10 e foram para o repositório `duiaos-websites` (ADR 039),
 
 | Recurso | Onde | Conferência | Desde | Situação |
 | --- | --- | --- | --- | --- |
-| PR irmão exigido quando algo visível muda | `.github/workflows/documentacao-irma.yml` | `.github/workflows/documentacao-irma.yml::Documentação: não precisa` | ADR 039 | PR #9 |
+| PR irmão exigido quando algo visível muda | `.github/workflows/documentacao-irma.yml` | `.github/workflows/documentacao-irma.yml::Documentação: não precisa` | ADR 039 | main |
 
 ## Processo
 
 | Recurso | Onde | Conferência | Desde | Situação |
 | --- | --- | --- | --- | --- |
-| Continuidade à prova de troca de sessão e de conta | `CLAUDE.md`, `docs/continuidade/` | `CLAUDE.md::docs/continuidade/ESTADO.md`, `ferramentas/conferir-recursos.py::RECURSOS.md` | 12/10 | PR #9 |
+| Continuidade à prova de troca de sessão e de conta | `CLAUDE.md`, `docs/continuidade/` | `CLAUDE.md::docs/continuidade/ESTADO.md`, `ferramentas/conferir-recursos.py::RECURSOS.md` | 12/10 | main |

@@ -3,6 +3,18 @@
 Uma entrada por sessão, a mais nova em cima. Só acrescentar; nunca apagar.
 Formato: data · quem/conta · branches/PRs · o que foi feito · decisões · o que ficou pendente.
 
+## 12/10/2026 (18h30) · Claude (conta do Gustavo) · fechamento do bloco
+- Merge de duiaos #10, Wise #8, site #5/#6 e diagnosticos #1. F1 dos logs completa e testada no Dell: a falha de
+  teste, um defeito real do próprio coletor (corrigido) e uma reclamação do Wise chegaram ao
+  `duiaos-diagnosticos` com rastro e linha do tempo.
+- Resumo do dia inteiro (11–12/10), para quem chega agora: P3 (Tela de Entrada/Bloqueio, boot, papel de parede,
+  Menu de Energia) → P3b (pacotes .deb e apt assinado) → Wise W1 e presença → IA do sistema (Ollama empacotado,
+  duiaos-ia, Central de IA, resposta rápida) → medição de motores (Ollama mantido) → Wise W2 com duiaos-agente,
+  clima, agenda, uso do computador → continuidade no Git para várias contas → documentação para usuários e site
+  no Cloudflare (duiaos-websites) → diagnóstico do Wise e correções do log real → registros do sistema e "Ajude a
+  melhorar o DuiaOS" (ADR 040) com o Wise integrado. Detalhes em `docs/decisoes.md` (ADRs 001–040) e nas
+  entradas abaixo.
+
 ## 12/10/2026 (noite) · Claude (conta do Gustavo) · duiaos #10, duiaos-websites #5, duiaos-diagnosticos #1
 - Merge de duiaos #9, Wise #5 e site #2. O `--delete-branch` apagou as bases de Wise #6 e site #3, que o GitHub
   fechou: refeitos sobre a main como Wise #7 e site #4. Lição: PR empilhado → mudar a base para a main
