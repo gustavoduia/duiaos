@@ -200,6 +200,24 @@ jobs:
 
       - name: Baixar o código
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # tags: a versão dos pacotes parte da última tag
+
+      - name: Versão dos pacotes e chave do repositório apt
+        env:
+          CHAVE_PRIVADA: ${{ secrets.DUIAOS_APT_CHAVE }}
+        run: |
+          bash pacotes/versao.sh | tee -a "${GITHUB_ENV}"
+          # Só a chave PÚBLICA vai para a ISO (o sistema confere as atualizações com ela).
+          if [ -n "${CHAVE_PRIVADA}" ]; then
+            GNUPGHOME="$(mktemp -d)"
+            export GNUPGHOME
+            printf '%s\n' "${CHAVE_PRIVADA}" | gpg --batch --quiet --import
+            gpg --batch --export > pacotes/chave.gpg
+            rm -rf "${GNUPGHOME}"
+          else
+            echo "::warning::Sem o segredo DUIAOS_APT_CHAVE: a ISO sai sem o repositório de atualizações."
+          fi
 
       - name: Preparar emulação (se a arquitetura não for a desta máquina)
         run: |
@@ -225,6 +243,8 @@ jobs:
             -v "${PWD}:/work" -w /work \
             -e ARCH="${ARCH}" \
             -e DUIAOS_VERSION="${DUIAOS_VERSION}" \
+            -e VERSAO_DEB="${VERSAO_DEB}" \
+            -e SUITE="${SUITE}" \
             debian:trixie \
             bash build/build.sh
 

@@ -1,0 +1,11 @@
+Package: duiaos-desktop
+Version: @VERSAO_DEB@
+Architecture: all
+Maintainer: DuiaOS <53358870+gustavoduia@users.noreply.github.com>
+Section: metapackages
+Priority: optional
+Depends: duiaos-identidade (= @VERSAO_DEB@), duiaos-shell (= @VERSAO_DEB@)
+Homepage: https://github.com/gustavoduia/duiaos-fontes-abertas
+Description: DuiaOS — sistema completo (metapacote)
+ Instala e mantém atualizados todos os componentes próprios do DuiaOS.
+ Para atualizar o DuiaOS: sudo apt update && sudo apt full-upgrade

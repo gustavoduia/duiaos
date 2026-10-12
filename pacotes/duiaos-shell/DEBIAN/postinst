@@ -1,0 +1,36 @@
+#!/bin/sh
+# =============================================================================
+# DuiaOS — duiaos-shell: liga a Tela de Entrada depois de instalar/atualizar.
+# Antes ficava no hook 0700 da ISO.
+# =============================================================================
+set -e
+
+# Arquivos copiados à mão por versões antigas (ISO ou atualizar-sistema.sh),
+# fora de qualquer pacote: em /etc eles esconderiam os do pacote.
+for ANTIGO in /etc/systemd/system/duiaos-reiniciar-no-windows.service \
+              /etc/systemd/system/greetd.service.d/duiaos.conf \
+              /etc/polkit-1/rules.d/50-duiaos-reiniciar-no-windows.rules; do
+  if [ -e "${ANTIGO}" ] && ! dpkg-query -S "${ANTIGO}" >/dev/null 2>&1; then
+    rm -f "${ANTIGO}"
+  fi
+done
+rmdir /etc/systemd/system/greetd.service.d 2>/dev/null || true
+
+case "$1" in
+  configure)
+    # O greetd abre a Tela de Entrada como _greetd; o grupo video dá acesso à tela.
+    if id _greetd >/dev/null 2>&1; then
+      usermod -aG video _greetd
+    fi
+    if [ -d /run/systemd/system ]; then
+      systemctl daemon-reload || true
+    fi
+    systemctl enable greetd.service >/dev/null 2>&1 || true
+    # Primeira instalação: o computador passa a ligar na tela gráfica.
+    if [ -z "${2:-}" ]; then
+      systemctl set-default graphical.target >/dev/null 2>&1 || true
+    fi
+    ;;
+esac
+
+exit 0

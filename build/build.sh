@@ -9,6 +9,8 @@
 #   ARCH            amd64 ou arm64 (padrão: a arquitetura da máquina)
 #   DUIAOS_VERSION  versão que aparece no sistema (padrão: 0.0.0-dev)
 #   WORK_DIR        pasta de trabalho do live-build (padrão: /tmp/duiaos-build-ARCH)
+#   VERSAO_DEB      versão dos pacotes do DuiaOS (pacotes/versao.sh; padrão: 0.0.0+local)
+#   SUITE           canal do repositório apt gravado no sistema: estavel ou teste
 #
 # Resultado: out/duiaos-VERSÃO-ARCH.iso, o .sha256 e a lista de pacotes (.packages).
 # =============================================================================
@@ -82,28 +84,18 @@ if [ -d "${ROOT}/build/arch/${ARCH}" ]; then
   cp -a "${ROOT}/build/arch/${ARCH}/." config/
 fi
 
-# Interface gráfica (pasta shell/): código em /usr/share/duiaos/shell,
-# configuração do labwc em /etc/xdg/labwc, sessão "DuiaOS" para gerenciadores
-# de login e a lista de pacotes da interface (shell/pacotes.list).
-INCLUDES="config/includes.chroot_after_packages"
-install -d "${INCLUDES}/usr/share/duiaos" "${INCLUDES}/etc/xdg/labwc" "${INCLUDES}/usr/share/wayland-sessions"
-rm -rf "${INCLUDES}/usr/share/duiaos/shell"
-cp -a "${ROOT}/shell" "${INCLUDES}/usr/share/duiaos/shell"
-find "${INCLUDES}/usr/share/duiaos/shell" -name '__pycache__' -prune -exec rm -rf {} +
-install -m 0644 "${ROOT}/shell/sessao/autostart" "${ROOT}/shell/sessao/environment" \
-  "${ROOT}/shell/sessao/rc.xml" "${INCLUDES}/etc/xdg/labwc/"
-install -m 0644 "${ROOT}/shell/sessao/duiaos.desktop" "${INCLUDES}/usr/share/wayland-sessions/"
-install -m 0644 "${ROOT}/shell/pacotes.list" config/package-lists/duiaos-interface.list.chroot
+# Código próprio do DuiaOS: os pacotes .deb (duiaos-identidade, duiaos-shell e
+# duiaos-desktop) são gerados aqui, do mesmo commit, e instalados na ISO pelo
+# live-build (config/packages.chroot). O sistema instalado recebe as
+# atualizações seguintes pelo repositório apt do DuiaOS (ADR 023).
+# Variáveis vindas do workflow: VERSAO_DEB, SUITE e, se houver, a chave
+# pública em pacotes/chave.gpg (exportada do segredo DUIAOS_APT_CHAVE).
+log "Gerando os pacotes do DuiaOS"
+CHAVE="${ROOT}/pacotes/chave.gpg"
+[ -s "${CHAVE}" ] || CHAVE=""
+VERSAO_DEB="${VERSAO_DEB:-0.0.0+local}" VERSAO_SISTEMA="${VERSION}" SUITE="${SUITE:-teste}" \
+  CHAVE_PUBLICA="${CHAVE}" bash "${ROOT}/pacotes/construir.sh" config/packages.chroot
 
-# Licença e avisos de terceiros dentro do sistema (fonte: pasta publico/).
-LICENCA_DIR="config/includes.chroot_after_packages/usr/share/duiaos/licenca"
-install -d "${LICENCA_DIR}"
-install -m 0644 "${ROOT}/publico/EULA.md" "${ROOT}/publico/LICENCAS-DE-TERCEIROS.md" \
-  "${ROOT}/publico/TRADEMARKS.md" "${LICENCA_DIR}/"
-
-# Coloca a versão nos hooks (ex.: /etc/os-release).
-find config/hooks -name '*.hook.*' -type f -exec \
-  sed -i -e "s|@DUIAOS_VERSION@|${VERSION}|g" -e "s|@DUIAOS_CODENAME@|${CODENAME}|g" {} +
 chmod +x config/hooks/normal/*.hook.* 2>/dev/null || true
 
 log "Gerando a ISO (isso leva de 10 a 30 minutos)"

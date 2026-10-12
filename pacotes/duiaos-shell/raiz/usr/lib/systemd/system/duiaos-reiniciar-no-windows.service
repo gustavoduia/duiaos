@@ -4,7 +4,7 @@ Documentation=file:/usr/lib/duiaos/reiniciar-no-windows
 
 # Iniciado pela interface (Menu de Energia, Tela de Entrada e Tela de Bloqueio).
 # O polkit libera este serviço para quem está no computador:
-# /etc/polkit-1/rules.d/50-duiaos-reiniciar-no-windows.rules
+# /usr/share/polkit-1/rules.d/50-duiaos-reiniciar-no-windows.rules
 [Service]
 Type=oneshot
 ExecStart=/usr/lib/duiaos/reiniciar-no-windows

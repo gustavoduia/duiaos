@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="240" height="176" viewBox="0 0 240 176">
   <!-- Logotipo do menu de boot do sistema instalado (GRUB).
-       PNG: build/config/includes.chroot_after_packages/usr/share/grub/themes/duiaos/logo.png -->
+       PNG: pacotes/duiaos-identidade/raiz/usr/share/grub/themes/duiaos/logo.png -->
   <rect width="240" height="176" fill="#F7F9FC"/>
   <svg x="72" y="0" width="96" height="96" viewBox="12 8 104 104">
     <path d="M58 100H28V20H58A40 40 0 0 1 95.59 73.68" fill="none" stroke="#1A3A73" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>

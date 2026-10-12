@@ -1,0 +1,20 @@
+#!/bin/sh
+# =============================================================================
+# DuiaOS — liga o repositório de atualizações do DuiaOS no apt.
+#
+# Copia o modelo do pacote duiaos-identidade (canal "estavel" nas versões
+# lançadas, "teste" nas de desenvolvimento) para /etc/apt/sources.list.d.
+# Chamado pelo pos-instalacao e pelo próprio pacote; pode ser usado à mão:
+#   sudo /usr/lib/duiaos/configurar-repositorio
+# =============================================================================
+set -e
+
+MODELO=/usr/share/duiaos/apt/duiaos.sources
+DESTINO=/etc/apt/sources.list.d/duiaos.sources
+
+if [ ! -r "${MODELO}" ] || [ ! -r /usr/share/keyrings/duiaos.gpg ]; then
+  echo "Este DuiaOS foi gerado sem o repositório de atualizações; nada a fazer."
+  exit 0
+fi
+install -m 0644 "${MODELO}" "${DESTINO}"
+echo "Repositório do DuiaOS ligado: ${DESTINO}"

@@ -1,8 +1,8 @@
 # Interface do DuiaOS (shell)
 
 Qt6/QML + Python (PySide6) sobre o compositor labwc (ADRs 002 e 003).
-Na ISO, esta pasta é instalada em `/usr/share/duiaos/shell` e os arquivos de
-`sessao/` vão para `/etc/xdg/labwc` (veja `build/build.sh`).
+Esta pasta vira o pacote `duiaos-shell` (veja `pacotes/README.md`): fica em
+`/usr/share/duiaos/shell` e os arquivos de `sessao/` vão para `/etc/xdg/labwc`.
 
 | Pasta | Componente |
 | --- | --- |

@@ -2,7 +2,7 @@
 
 Scripts para o dia a dia. **Rodam na janela do Terminal do Mac**, na pasta
 `~/Projetos/duiaos`; os que mexem no Dell entram nele sozinhos por SSH.
-Exceção: `atualizar-sistema.sh` roda na sessão SSH já conectada ao Dell.
+Exceção: `pacotes/instalar-local.sh` roda na sessão SSH já conectada ao Dell.
 Todos podem ser rodados de novo sem estragar nada.
 
 | Script | O que faz |
@@ -15,11 +15,9 @@ Todos podem ser rodados de novo sem estragar nada.
 | `configurar-runners.sh mac\|dell` | Instala/refaz o runner da máquina e organiza `~/Projetos` |
 | `configurar-acesso-dell.sh` | Chave somente leitura para o Dell fazer `git pull` (repositório privado) |
 | `criar-repo-publico.sh` | Cria o `duiaos-fontes-abertas`, cadastra o token e sincroniza |
-| `atualizar-sistema.sh` | **Roda no Dell**: aplica o código do repositório ao DuiaOS já instalado, sem reinstalar |
+| `criar-chave-apt.sh` | Cria a chave que assina o repositório apt (uma vez só) |
 
-No Dell, o teste da instalação é `sudo /usr/lib/duiaos/verificar-instalacao`
-(ou, em instalações antigas,
-`sudo bash ~/Projetos/duiaos/build/config/includes.chroot_after_packages/usr/lib/duiaos/verificar-instalacao`).
+No Dell, o teste da instalação é `sudo /usr/lib/duiaos/verificar-instalacao`.
 
 ## Fases do build (ADR 025)
 
@@ -82,21 +80,26 @@ Acompanhar: `gh run watch NUMERO` (Ctrl+C sai sem cancelar) · situação:
 
 O Claude nunca envia nada direto para a `main`.
 
-## Testar sem reinstalar (Dell)
+## Atualizar o Dell (repositório apt, ADR 028)
 
-Aplica uma mudança (por exemplo, a branch de um pull request) ao DuiaOS já
-instalado no Dell, sem gerar ISO nem reinstalar.
+O código próprio do DuiaOS chega em pacotes `.deb` (pasta `pacotes/`). Cada
+envio para a `main` publica uma versão nova no canal `teste`; cada tag, no
+`estavel`.
 
-🔗 **DELL (sessão SSH)**
+🔗 **DELL (sessão SSH)** — atualizar para a última versão da `main`:
 ```bash
-cd ~/Projetos/duiaos && git fetch && git checkout BRANCH && git pull
-sudo bash ferramentas/atualizar-sistema.sh
-sudo reboot
+sudo apt update && sudo apt full-upgrade
 ```
 
-Depois do merge, volte para a `main` (`git checkout main && git pull`). A
-reinstalação pela ISO continua sendo o teste completo antes de lançar uma
-versão.
+🔗 **DELL (sessão SSH)** — testar a branch de um pull request antes do merge:
+```bash
+cd ~/Projetos/duiaos && git fetch --tags && git checkout BRANCH && git pull
+bash pacotes/instalar-local.sh
+```
+
+Depois do merge, volte para a `main` (`git checkout main && git pull`) e o
+próximo `apt full-upgrade` traz a versão publicada. A reinstalação pela ISO
+continua sendo o teste completo antes de lançar uma versão.
 
 ## Lançar uma versão
 
@@ -109,6 +112,7 @@ bash ferramentas/lancar-versao.sh 0.1.0
 | Nome | Tipo | Valor |
 | --- | --- | --- |
 | `DUIAOS_TOKEN_PUBLICO` | Segredo | Token fine-grained com Contents: Read and write só no `duiaos-fontes-abertas` (renovar anualmente) |
+| `DUIAOS_APT_CHAVE` | Segredo | Chave privada que assina o repositório apt (`criar-chave-apt.sh`; cópia em `~/Projetos/duiaos-chaves`) |
 | `DUIAOS_AMD64_EM` | Variável (opcional) | Força a máquina padrão da amd64 (`github` ou `dell`) |
 | `DUIAOS_ARM64_EM` | Variável (opcional) | Força a máquina padrão da arm64 (`github`, `mac` ou `dell`) |
 | `DUIAOS_REPO_PUBLICO` | Variável (opcional) | Outro repositório público; ausente = `gustavoduia/duiaos-fontes-abertas` |

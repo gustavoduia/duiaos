@@ -1,0 +1,110 @@
+# DuiaOS — gera os pacotes .deb do código próprio e os publica no repositório
+# apt do DuiaOS (ADR 023 e 028).
+#
+# Repositório apt: branch gh-pages do repositório público, pasta apt/,
+# servido pelo GitHub Pages em https://gustavoduia.github.io/duiaos-fontes-abertas/apt
+#   - envio para a main  -> canal "teste"   (versão X.Y.Z+gitDATA.SHA)
+#   - tag vX.Y.Z         -> canais "estavel" e "teste" (versão X.Y.Z)
+#
+# Segredos: DUIAOS_APT_CHAVE (chave privada de assinatura, criada por
+# ferramentas/criar-chave-apt.sh) e DUIAOS_TOKEN_PUBLICO (escrita no
+# repositório público).
+name: Pacotes e repositório apt
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Uma publicação por vez (todas mexem na mesma branch gh-pages)
+concurrency:
+  group: repositorio-apt
+  cancel-in-progress: false
+
+env:
+  REPO_PUBLICO: ${{ vars.DUIAOS_REPO_PUBLICO || 'gustavoduia/duiaos-fontes-abertas' }}
+  # Só a main e as tags publicam; disparado à mão numa branch, só gera os pacotes.
+  PUBLICAR: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') }}
+
+jobs:
+  pacotes:
+    name: Gerar e publicar os pacotes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # tags: a versão parte da última tag
+
+      - name: Ferramentas
+        run: |
+          command -v apt-ftparchive >/dev/null || sudo apt-get install -y -qq apt-utils
+
+      - name: Versão
+        run: bash pacotes/versao.sh | tee -a "${GITHUB_ENV}"
+
+      - name: Chave de assinatura
+        env:
+          CHAVE_PRIVADA: ${{ secrets.DUIAOS_APT_CHAVE }}
+        run: |
+          if [ -z "${CHAVE_PRIVADA}" ]; then
+            if [ "${PUBLICAR}" = "true" ]; then
+              echo "Falta o segredo DUIAOS_APT_CHAVE. Rode no Mac: bash ferramentas/criar-chave-apt.sh" >&2
+              exit 1
+            fi
+            echo "::warning::Sem o segredo DUIAOS_APT_CHAVE: pacotes sem o repositório de atualizações."
+            exit 0
+          fi
+          printf '%s\n' "${CHAVE_PRIVADA}" | gpg --batch --quiet --import
+          gpg --batch --export > pacotes/chave.gpg
+
+      - name: Gerar os pacotes
+        run: |
+          CHAVE=""
+          [ -s pacotes/chave.gpg ] && CHAVE="${PWD}/pacotes/chave.gpg"
+          CHAVE_PUBLICA="${CHAVE}" bash pacotes/construir.sh saida
+
+      - name: Guardar os pacotes no GitHub (30 dias)
+        uses: actions/upload-artifact@v4
+        with:
+          name: pacotes-${{ env.VERSAO_DEB }}
+          path: saida/*.deb
+          retention-days: 30
+
+      - name: Publicar no repositório apt
+        if: env.PUBLICAR == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.DUIAOS_TOKEN_PUBLICO }}
+        run: |
+          if [ -z "${GH_TOKEN}" ]; then
+            echo "Falta o segredo DUIAOS_TOKEN_PUBLICO (veja ferramentas/README.md)." >&2
+            exit 1
+          fi
+          URL="https://x-access-token:${GH_TOKEN}@github.com/${REPO_PUBLICO}.git"
+          if git ls-remote --exit-code --heads "${URL}" gh-pages >/dev/null; then
+            git clone -q --depth 1 --branch gh-pages "${URL}" site
+          else
+            # Primeira publicação: cria a branch gh-pages vazia
+            git init -q site
+            git -C site checkout -q --orphan gh-pages
+            git -C site remote add origin "${URL}"
+          fi
+          touch site/.nojekyll
+          bash pacotes/publicar.sh site/apt "${SUITE}" saida/*.deb
+          if [ "${SUITE}" = "estavel" ]; then
+            bash pacotes/publicar.sh site/apt teste saida/*.deb
+          fi
+          cp pacotes/site/index.html site/index.html
+          cd site
+          # Histórico de um commit só: os .deb antigos não ficam acumulando no repositório.
+          git checkout -q --orphan publicacao
+          git add -A
+          git -c user.name="DuiaOS" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -q -m "Repositório apt do DuiaOS: ${VERSAO_DEB} (${SUITE})"
+          git push -q -f origin publicacao:gh-pages
+          echo "Publicado: https://${REPO_PUBLICO%%/*}.github.io/${REPO_PUBLICO#*/}/apt (canal ${SUITE}, versão ${VERSAO_DEB})"

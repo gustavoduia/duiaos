@@ -1,0 +1,8 @@
+#!/bin/sh
+# DuiaOS — duiaos-shell: depois de remover, o greetd volta à configuração do
+# Debian (login em modo texto no terminal 7).
+set -e
+if [ -d /run/systemd/system ]; then
+  systemctl daemon-reload || true
+fi
+exit 0
