@@ -42,7 +42,10 @@ inteiro** (ADR 030), e cuida do catálogo de modelos. Vai para o pacote
   `ollama.service`): os dois recarregariam o modelo.
 - Instruções fixas no começo do pedido são lidas uma vez só se o programa
   "aquecer" o modelo com elas e começar toda conversa do mesmo jeito (o Wise
-  faz isso). `duiaos-ia medir` mostra os tempos neste computador.
+  faz isso). `duiaos-ia diagnostico` mostra os tempos neste computador.
+- Calibração (ADR 033): na 1ª vez de cada modelo, o serviço mede threads e
+  placa de vídeo integrada e publica as opções mais rápidas em `opcoes`.
+  Programas devem mandar exatamente essas opções em cada pedido.
 
 ## 1º login
 

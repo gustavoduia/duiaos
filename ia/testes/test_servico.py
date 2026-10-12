@@ -29,6 +29,8 @@ class OllamaFalso(BaseHTTPRequestHandler):
     instalados = set()
     carregados = set()
     pedidos_carregar = []
+    opcoes_carregar = []
+    medicoes = []
     pausa = 0.05
 
     def log_message(self, *_):
@@ -66,8 +68,15 @@ class OllamaFalso(BaseHTTPRequestHandler):
     def do_POST(self):
         corpo = self._corpo()
         nome = corpo["model"]
+        if self.path == "/api/generate" and corpo.get("prompt"):   # medição (calibração)
+            OllamaFalso.medicoes.append(corpo.get("options", {}))
+            self.carregados.add(nome)
+            self._json({"done": True, "load_duration": 10**9, "prompt_eval_count": 400,
+                        "prompt_eval_duration": 4 * 10**9, "eval_count": 32, "eval_duration": 4 * 10**9})
+            return
         if self.path == "/api/generate":            # carregar/descarregar da memória
             OllamaFalso.pedidos_carregar.append((nome, corpo.get("keep_alive")))
+            OllamaFalso.opcoes_carregar.append(corpo.get("options"))
             if corpo.get("keep_alive") == 0:
                 self.carregados.discard(nome)
             elif nome in self.instalados:
@@ -98,6 +107,8 @@ class TesteServico(unittest.TestCase):
         OllamaFalso.instalados = set()
         OllamaFalso.carregados = set()
         OllamaFalso.pedidos_carregar = []
+        OllamaFalso.opcoes_carregar = []
+        OllamaFalso.medicoes = []
         OllamaFalso.pausa = 0.05
         self.http = ThreadingHTTPServer(("127.0.0.1", 0), OllamaFalso)
         threading.Thread(target=self.http.serve_forever, daemon=True).start()
@@ -207,6 +218,23 @@ class TesteServico(unittest.TestCase):
         while "phi4-mini:3.8b" not in OllamaFalso.carregados and time.monotonic() < limite:
             time.sleep(0.2)
         self.assertIn("phi4-mini:3.8b", OllamaFalso.carregados)
+
+    def test_calibra_uma_vez_e_usa_as_opcoes(self):
+        OllamaFalso.instalados = {"qwen3.5:4b"}
+        self.cli("garantir-padrao")
+        self.assertTrue(self.esperar(lambda e: e["opcoes"] and e["carregado"] and not e["calibrando"], segundos=20))
+        estado = self.estado()
+        self.assertIn("num_thread", estado["opcoes"])
+        self.assertEqual(estado["opcoes"]["num_gpu"], 0)      # sem placa no teste: processador
+        self.assertTrue(OllamaFalso.medicoes)
+        # Depois de medir, o modelo é carregado de novo com as opções escolhidas
+        self.assertEqual(OllamaFalso.opcoes_carregar[-1], estado["opcoes"])
+        guardado = json.loads(Path(self.pasta, "config.json").read_text())["calibracao"]["qwen3.5:4b"]
+        self.assertTrue(guardado["medidas"])
+        medicoes = len(OllamaFalso.medicoes)
+        self.cli("ativar", "qwen3.5:4b")               # já medido: não mede de novo
+        time.sleep(1)
+        self.assertEqual(len(OllamaFalso.medicoes), medicoes)
 
     def test_cancelar(self):
         OllamaFalso.pausa = 0.3

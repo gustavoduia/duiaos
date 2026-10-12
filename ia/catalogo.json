@@ -19,7 +19,7 @@
         {"id": "qwen3.5:0.8b", "tamanho": "0.8B", "download_gb": 1.3, "descricao": "Muito leve; para computadores modestos"},
         {"id": "qwen3.5:2b", "tamanho": "2B", "download_gb": 3.1, "descricao": "Leve e rápido"},
         {"id": "qwen3.5:4b", "tamanho": "4B", "download_gb": 4.0, "descricao": "Equilíbrio entre qualidade e velocidade (padrão do DuiaOS)"},
-        {"id": "qwen3.5:9b", "tamanho": "9B", "download_gb": 7.6, "descricao": "Respostas melhores; pede mais memória"},
+        {"id": "qwen3.5:9b", "tamanho": "9B", "download_gb": 7.6, "descricao": "Respostas melhores, mas cerca de 2x mais lento que o 4B sem placa de vídeo"},
         {"id": "qwen3.5:27b", "tamanho": "27B", "download_gb": 20.0, "descricao": "Grande; para computadores com muita memória"}
       ]
     },

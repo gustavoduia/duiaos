@@ -118,14 +118,44 @@ class Ollama:
         return {m.get("name") or m.get("model") for m in dados.get("models") or []
                 if isinstance(m.get("name") or m.get("model"), str)}
 
-    def carregar(self, nome, manter):
+    def carregar(self, nome, manter, opcoes=None):
         """Carrega o modelo na memória sem gerar nada. manter: -1 (sempre) ou
-        tempo sem uso até descarregar (ex.: "30m"). Leva de segundos a um minuto."""
+        tempo sem uso até descarregar (ex.: "30m"). opcoes: as mesmas que todos os
+        programas usam com este modelo (ex.: num_thread) — outras recarregariam."""
+        corpo = {"model": nome, "keep_alive": manter}
+        if opcoes:
+            corpo["options"] = dict(opcoes)
         try:
-            with self._pedir("POST", "/api/generate", {"model": nome, "keep_alive": manter}, tempo=300):
+            with self._pedir("POST", "/api/generate", corpo, tempo=300):
                 pass
         except OSError as erro:
             raise ErroOllama(f"Não consegui carregar {nome} na memória.") from erro
+
+    def medir(self, nome, manter, opcoes, texto, palavras=32):
+        """Lê um texto e escreve algumas palavras; devolve os números do Ollama:
+        {"carregar_s", "lidos", "ler_s", "escritos", "escrever_s"}."""
+        corpo = {"model": nome, "prompt": texto, "stream": False, "keep_alive": manter, "think": False,
+                 "options": {**(opcoes or {}), "num_predict": palavras, "temperature": 0, "seed": 1}}
+        try:
+            with self._pedir("POST", "/api/generate", corpo, tempo=900) as resposta:
+                r = json.load(resposta)
+        except (OSError, ValueError) as erro:
+            raise ErroOllama(f"A medição de {nome} falhou.") from erro
+        return {"carregar_s": r.get("load_duration", 0) / 1e9,
+                "lidos": r.get("prompt_eval_count", 0), "ler_s": r.get("prompt_eval_duration", 0) / 1e9,
+                "escritos": r.get("eval_count", 0), "escrever_s": r.get("eval_duration", 0) / 1e9}
+
+    def memoria_do_carregado(self, nome):
+        """(bytes na memória, bytes na placa de vídeo) do modelo carregado, ou None."""
+        try:
+            with self._pedir("GET", "/api/ps", tempo=3) as resposta:
+                dados = json.load(resposta)
+        except (OSError, ValueError):
+            return None
+        for m in dados.get("models") or []:
+            if (m.get("name") or m.get("model")) == nome:
+                return int(m.get("size") or 0), int(m.get("size_vram") or 0)
+        return None
 
     def descarregar(self, nome):
         """Tira o modelo da memória (libera a RAM para o próximo)."""

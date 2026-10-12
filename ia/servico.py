@@ -28,6 +28,7 @@ from gi.repository import Gio, GLib  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import catalogo as cat  # noqa: E402
+import hardware  # noqa: E402
 from motor_ollama import Cancelado, ErroOllama, Ollama  # noqa: E402
 
 NOME = "org.duiaos.IA1"
@@ -44,10 +45,18 @@ XML = """
     <method name="Remover"><arg name="modelo" type="s" direction="in"/></method>
     <method name="Cancelar"/>
     <method name="GarantirPadrao"/>
+    <method name="Calibrar"/>
     <signal name="Mudou"><arg name="json" type="s"/></signal>
   </interface>
 </node>
 """
+
+
+# Texto da calibração: português comum, ~400 pedaços (como um pedido ao Wise)
+TEXTO_DE_MEDICAO = ("O DuiaOS é um sistema operacional brasileiro feito para ser simples. O Wise é o assistente "
+                    "que ajuda a pessoa a usar o computador: responde dúvidas, consulta a memória, o disco, a rede "
+                    "e as atualizações, e explica tudo em poucas palavras. ") * 9 + \
+                   "Resuma o texto acima em uma frase curta."
 
 
 class Recusa(Exception):
@@ -74,6 +83,8 @@ class Servico:
         self._ollama_ok = False
         self._carregado = False       # modelo ativo já na memória (resposta sem espera)
         self._aquecendo = False
+        self._calibrando = ""         # modelo sendo medido neste computador
+        self.assinatura = hardware.assinatura()
         self.config = self._ler_config()
 
     # ------------------------------------------------------------ persistência
@@ -81,11 +92,13 @@ class Servico:
         try:
             dados = json.loads((self.pasta / "config.json").read_text())
             if isinstance(dados, dict):
+                calibracao = dados.get("calibracao")
                 return {"ativo": str(dados.get("ativo") or ""),
-                        "padrao_tratado": bool(dados.get("padrao_tratado"))}
+                        "padrao_tratado": bool(dados.get("padrao_tratado")),
+                        "calibracao": calibracao if isinstance(calibracao, dict) else {}}
         except (OSError, ValueError):
             pass
-        return {"ativo": "", "padrao_tratado": False}
+        return {"ativo": "", "padrao_tratado": False, "calibracao": {}}
 
     def _gravar(self, nome, dados):
         self.pasta.mkdir(parents=True, exist_ok=True)
@@ -116,12 +129,19 @@ class Servico:
             # Quanto tempo o modelo ativo fica na memória: os programas mandam o mesmo
             # "keep_alive" ao Ollama para não encurtar esse tempo
             "manter": self.manter_na_memoria(self.config["ativo"]) if self.config["ativo"] else "30m",
+            # Opções do Ollama medidas como as mais rápidas neste computador para o modelo
+            # ativo (ex.: {"num_thread": 3}). Todos os programas mandam as mesmas: opções
+            # diferentes fazem o Ollama recarregar o modelo
+            "opcoes": self.opcoes_do(self.config["ativo"]),
+            "calibrando": bool(self._calibrando),
             "instalados": sorted(m["id"] for _f, m, _l in cat.modelos(self.catalogo) if m["id"] in self._instalados),
             "atualizado": int(time.time()),
         }
 
     def estado_completo(self):
+        calibracao = self.config["calibracao"].get(self.config["ativo"]) if self.calibrado(self.config["ativo"]) else None
         return self.estado_publico() | {
+            "medidas": (calibracao or {}).get("medidas", []),
             "familias": cat.montar(self.catalogo, self._instalados, self.config["ativo"],
                                    self.memoria_gb),
         }
@@ -143,13 +163,15 @@ class Servico:
         if not self.tarefa:
             self._atualizar_instalados()
         ativo = self.config["ativo"]
-        if self._ollama_ok and ativo in self._instalados and not self._aquecendo:
+        if self._ollama_ok and ativo in self._instalados and not self._aquecendo and not self._calibrando:
             try:
                 self._carregado = ativo in self.ollama.carregados()
             except ErroOllama:
                 self._carregado = False
             if not self._carregado and self.manter_na_memoria(ativo) == -1:
                 self.aquecer()
+            elif self._carregado and not self.tarefa and not self.calibrado(ativo):
+                self.calibrar(ativo)        # ficou para depois (havia um download)
         if (self._instalados, self._ollama_ok, self._carregado) != antes:
             self.mudou(recarregar=False)
         return True
@@ -168,11 +190,12 @@ class Servico:
         """Carrega o modelo ativo na memória em segundo plano (e tira o anterior),
         para a primeira pergunta não esperar o carregamento."""
         ativo = self.config["ativo"]
-        if not ativo or self._aquecendo:
-            return
+        if not ativo or self._aquecendo or self._calibrando:
+            return                      # a calibração recarrega o ativo quando terminar
         self._aquecendo = True
         self._carregado = False
         manter = self.manter_na_memoria(ativo)
+        opcoes = self.opcoes_do(ativo)
 
         def trabalho():
             ok = False
@@ -180,7 +203,7 @@ class Servico:
                 if anterior and anterior != ativo:
                     self.ollama.descarregar(anterior)
                 if self.ollama.esperar(60):
-                    self.ollama.carregar(ativo, manter)
+                    self.ollama.carregar(ativo, manter, opcoes)
                     ok = True
             except ErroOllama as erro:
                 print(f"duiaos-ia: {erro}", file=sys.stderr, flush=True)
@@ -193,8 +216,96 @@ class Servico:
         self._carregado = ok and modelo == self.config["ativo"]
         if modelo != self.config["ativo"]:          # trocaram o ativo enquanto carregava
             self.aquecer(modelo)
+        elif ok and not self.calibrado(modelo):
+            self.calibrar(modelo)                   # 1ª vez deste modelo neste computador
         self.mudou(recarregar=False)
         return False
+
+    # ------------------------------------------------------------ calibração
+    def calibrado(self, modelo):
+        dados = self.config["calibracao"].get(modelo)
+        return isinstance(dados, dict) and dados.get("assinatura") == self.assinatura
+
+    def opcoes_do(self, modelo):
+        """Opções do Ollama para o modelo neste computador. Antes de medir: só o
+        processador (num_gpu 0), como o Ollama faz por padrão com placa integrada."""
+        if not modelo or not self.calibrado(modelo):
+            return {"num_gpu": 0}
+        opcoes = self.config["calibracao"][modelo].get("opcoes") or {}
+        return {k: v for k, v in opcoes.items()
+                if k in ("num_thread", "num_gpu") and isinstance(v, int) and 0 <= v <= 999}
+
+    def calibrar(self, modelo):
+        """Mede o modelo com cada número de threads que faz sentido neste processador
+        e guarda o mais rápido para um pedido típico do Wise (ler ~400 pedaços e
+        escrever ~150). Leva cerca de um minuto, uma vez por modelo e computador."""
+        if self._calibrando or self.tarefa:
+            return
+        threads = hardware.threads_candidatas(hardware.nucleos())
+        candidatas = [{"num_gpu": 0, "num_thread": n} for n in threads]
+        # Placa de vídeo integrada (ex.: Intel Iris Xe) pelo Vulkan: ajuda a ler o
+        # pedido, mas divide a memória com o sistema; só é medida quando o modelo
+        # usa até 40% da RAM (o Ollama pode precisar de uma cópia para a placa)
+        info = cat.procurar(self.catalogo, modelo)
+        if hardware.placas_de_video() and info and \
+                cat.memoria_necessaria_gb(info["download_gb"]) <= self.memoria_gb * 0.4:
+            candidatas.append({"num_gpu": 999, "num_thread": threads[0]})
+        self._calibrando = modelo
+        manter = self.manter_na_memoria(modelo)
+        self.mudou(recarregar=False)
+
+        def trabalho():
+            medidas = []
+            for opcoes in candidatas:
+                try:
+                    m = self.ollama.medir(modelo, manter, opcoes, TEXTO_DE_MEDICAO)
+                except ErroOllama as erro:
+                    print(f"duiaos-ia: calibração com {opcoes} falhou: {erro}", file=sys.stderr, flush=True)
+                    continue
+                if opcoes["num_gpu"]:
+                    memoria = self.ollama.memoria_do_carregado(modelo)
+                    # O Ollama conta parte da memória como "de vídeo" mesmo só no processador;
+                    # a placa só conta se recebeu a maior parte do modelo
+                    if not memoria or memoria[1] < memoria[0] * 0.5:
+                        continue              # o Ollama não usou a placa: igual ao processador
+                ler = m["lidos"] / m["ler_s"] if m["ler_s"] else 0
+                escrever = m["escritos"] / m["escrever_s"] if m["escrever_s"] else 0
+                if ler and escrever:
+                    medidas.append({"opcoes": opcoes, "ler_por_s": round(ler, 1), "escrever_por_s": round(escrever, 2),
+                                    "pedido_tipico_s": round(400 / ler + 150 / escrever, 1)})
+            GLib.idle_add(self._calibrado, modelo, medidas)
+
+        threading.Thread(target=trabalho, daemon=True).start()
+
+    def _calibrado(self, modelo, medidas):
+        self._calibrando = ""
+        if medidas:
+            melhor = min(medidas, key=lambda m: m["pedido_tipico_s"])
+            self.config["calibracao"][modelo] = {"assinatura": self.assinatura, "quando": int(time.time()),
+                                                 "opcoes": melhor["opcoes"], "medidas": medidas}
+            print(f"duiaos-ia: {modelo} calibrado: {medidas}", flush=True)
+        else:
+            # Sem medida (Ollama ocupado ou fora): marca com as opções padrão para não insistir
+            self.config["calibracao"][modelo] = {"assinatura": self.assinatura, "quando": int(time.time()),
+                                                 "opcoes": {"num_gpu": 0}, "medidas": []}
+        # Recarrega o ativo com as opções escolhidas (a última medida pode ter usado outras)
+        if self.config["ativo"]:
+            self._carregado = False
+            self.aquecer()
+        self.mudou(recarregar=False)
+        return False
+
+    def recalibrar(self):
+        ativo = self.config["ativo"]
+        if not ativo:
+            raise Recusa("Invalido", "Nenhum modelo ativo para medir.")
+        if self._calibrando:
+            raise Recusa("Ocupado", "A medição já está em andamento.")
+        self.config["calibracao"].pop(ativo, None)
+        self._exigir_ollama()
+        if ativo not in self._instalados:
+            raise Recusa("NaoInstalado", f"{ativo} não está baixado.")
+        self.calibrar(ativo)
 
     # ------------------------------------------------------------ autorização
     def autorizado(self, remetente):
@@ -387,6 +498,8 @@ class Servico:
                 self.cancelar()
             elif metodo == "GarantirPadrao":
                 self.garantir_padrao()
+            elif metodo == "Calibrar":
+                self.recalibrar()
             else:
                 raise Recusa("Invalido", f"Método desconhecido: {metodo}")
             invocacao.return_value(None)

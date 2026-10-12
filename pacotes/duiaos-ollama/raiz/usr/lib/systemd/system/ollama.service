@@ -22,6 +22,10 @@ Environment=OLLAMA_MAX_LOADED_MODELS=1
 Environment=OLLAMA_NUM_PARALLEL=1
 Environment=OLLAMA_CONTEXT_LENGTH=8192
 Environment=OLLAMA_KEEP_ALIVE=30m
+# Deixa o Ollama ver a placa de vídeo integrada (ex.: Intel Iris Xe, pelo Vulkan).
+# Usar ou não é decidido por modelo e por computador: o duiaos-ia mede os dois
+# jeitos e manda "num_gpu" em cada pedido (0 = só o processador).
+Environment=OLLAMA_IGPU_ENABLE=1
 Restart=always
 RestartSec=3
 # Endurecimento: só escreve na própria pasta

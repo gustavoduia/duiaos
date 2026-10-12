@@ -229,7 +229,9 @@ ApplicationWindow {
                             font { family: janela.fonteTitulo; pixelSize: 22; weight: Font.ExtraBold }
                         }
                         Text {
-                            text: janela.modeloAtivo
+                            text: janela.estado.calibrando
+                                  ? "Medindo a velocidade deste computador para ajustar a IA (cerca de 1 minuto)…"
+                                  : janela.modeloAtivo
                                   ? janela.modeloAtivo.descricao + " · licença " + janela.modeloAtivo.licenca.nome
                                   : "Escolha um modelo abaixo para ligar a IA do sistema."
                             color: Qt.rgba(1, 1, 1, 0.82)
