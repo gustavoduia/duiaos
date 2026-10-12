@@ -1,15 +1,24 @@
 # DuiaOS — programas iniciados junto com a sessão gráfica (labwc).
-# Instalação para teste: cp shell/sessao/autostart ~/.config/labwc/autostart
-DUIAOS="$HOME/Projetos/duiaos"
+# Instalado em /etc/xdg/labwc/autostart. DUIAOS_SHELL vem de iniciar-sessao
+# (padrão /usr/share/duiaos/shell).
+DUIAOS_SHELL="${DUIAOS_SHELL:-/usr/share/duiaos/shell}"
+PAPEL_DE_PAREDE=/usr/share/duiaos/papel-de-parede/orbita.jpg
 
-# Fundo da tela (Azul névoa; o papel de parede próprio vem depois)
-swaybg -c '#E8F0FE' >/dev/null 2>&1 &
+# Papel de parede
+if [ -f "${PAPEL_DE_PAREDE}" ]; then
+  swaybg -i "${PAPEL_DE_PAREDE}" -m fill >/dev/null 2>&1 &
+else
+  swaybg -c '#E8F0FE' >/dev/null 2>&1 &
+fi
 
-# Barra de Recursos do DuiaOS
-python3 "$DUIAOS/shell/barra-de-recursos/main.py" >/tmp/duiaos-barra-de-recursos.log 2>&1 &
+# Barra de Recursos e Ilha de Aplicativos
+python3 "${DUIAOS_SHELL}/barra-de-recursos/main.py" >/tmp/duiaos-barra-de-recursos.log 2>&1 &
+python3 "${DUIAOS_SHELL}/ilha-de-aplicativos/main.py" >/tmp/duiaos-ilha-de-aplicativos.log 2>&1 &
 
-# Ilha de Aplicativos do DuiaOS
-python3 "$DUIAOS/shell/ilha-de-aplicativos/main.py" >/tmp/duiaos-ilha-de-aplicativos.log 2>&1 &
-
-# Terminal para desenvolvimento
-foot >/dev/null 2>&1 &
+# Tela de Bloqueio: após 10 minutos sem uso, antes de suspender e
+# quando o sistema pede (loginctl lock-session)
+BLOQUEAR="${DUIAOS_SHELL}/bloqueio/bloquear"
+swayidle -w \
+  timeout 600 "${BLOQUEAR}" \
+  before-sleep "${BLOQUEAR}" \
+  lock "${BLOQUEAR}" >/dev/null 2>&1 &

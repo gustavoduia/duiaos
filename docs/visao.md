@@ -69,11 +69,11 @@ desenvolvedores.
 | Instalação no SSD (instalador provisório Debian), dual boot com Windows | Pronto; BitLocker em correção |
 | Wi-Fi, áudio (PipeWire/SOF), Bluetooth, zram, relógio por NTP | Pronto |
 | Teclado ABNT2 e português no sistema instalado e na sessão gráfica | Pronto |
-| Sessão gráfica: labwc + Qt6/QML + Python (PySide6) | Pronto (início manual com `labwc`) |
+| Sessão gráfica: labwc + Qt6/QML + Python (PySide6) | Pronto (abre pela Tela de Entrada) |
 | **Barra de Recursos** (posição configurável) | Pronto |
 | **Ilha de Aplicativos** (fixados, abertos, foco) | Pronto |
 | **Central de Aplicativos** (busca, fixar, Super+Espaço) | Pronto |
-| Tela de login, animação de boot, papel de parede, menu de energia | Próximo |
+| **Tela de Entrada** e **Tela de Bloqueio** (mesmo visual), animação de boot, papel de parede, Menu de Energia com "Reiniciar no Windows" | Pronto (a testar no Dell) |
 | Wise, Painel de Tecnologias, agentes | Projeto (este documento) |
 
 ---
@@ -165,7 +165,7 @@ documento de visão vira a **Trilha Wise**. As duas avançam intercaladas.
 | P0 Concepção e identidade | Nome, logotipo, paleta, decisões D1–D11 | Concluída |
 | P1 Ambiente e automação | Repositório, GitHub Actions, ISOs x86_64/ARM64 | Concluída (v0.0.1) |
 | P2 Base instalável | Instalador provisório, Wi-Fi, áudio, dual boot, pt-BR | Concluída (v0.1.0 a publicar) |
-| P3 Sessão gráfica | Barra de Recursos, Ilha, Central ✔ · login, animação de boot, papel de parede, menu de energia | Em andamento |
+| P3 Sessão gráfica | Barra de Recursos, Ilha, Central ✔ · Tela de Entrada e de Bloqueio, animação de boot, papel de parede, Menu de Energia ✔ (a testar no Dell) | Em teste |
 | P3b Pacotes e repositório APT | Código próprio em `.deb` (`duiaos-shell`, `duiaos-identidade`, metapacote `duiaos-desktop`), repositório APT assinado, ISO montada a partir dele (ADR 023) | Planejada |
 | P4 Instalador próprio | Calamares com identidade DuiaOS, detecção de BitLocker | Planejada |
 | P5 Central de Configurações | Rede, tela, som, aparência, usuários — e abriga o Painel de Tecnologias | Planejada |

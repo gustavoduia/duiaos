@@ -1,0 +1,25 @@
+#!/bin/sh
+# =============================================================================
+# DuiaOS — abre a Tela de Entrada.
+#
+# Chamado pelo greetd (/etc/greetd/config.toml) como o usuário _greetd.
+# O cage é um compositor Wayland de tela única: mostra só a Tela de Entrada,
+# em tela cheia, e fecha junto com ela. Depois disso o greetd abre a sessão.
+# =============================================================================
+PASTA="$(cd "$(dirname "$0")" && pwd)"
+
+# Teclado igual ao do sistema (/etc/default/keyboard; padrão ABNT2)
+if [ -r /etc/default/keyboard ]; then
+  # shellcheck source=/dev/null
+  . /etc/default/keyboard
+fi
+export XKB_DEFAULT_MODEL="${XKBMODEL:-abnt2}"
+export XKB_DEFAULT_LAYOUT="${XKBLAYOUT:-br}"
+export XKB_DEFAULT_VARIANT="${XKBVARIANT:-}"
+export XKB_DEFAULT_OPTIONS="${XKBOPTIONS:-}"
+
+export LANG="${LANG:-pt_BR.UTF-8}"
+export QT_QPA_PLATFORM=wayland
+
+# -s: permite trocar de terminal (Ctrl+Alt+F1...); -d: sem bordas de janela
+exec cage -s -d -- python3 "${PASTA}/main.py"

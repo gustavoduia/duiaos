@@ -13,6 +13,11 @@ código-fonte de cada um.
 | GRUB | GPL-3.0 | Pacote do Debian; o tema visual é do DuiaOS |
 | debian-installer | GPL-2.0 e outras | Configurado por arquivo de respostas (preseed) |
 | labwc (compositor Wayland) | GPL-2.0 | Sem modificações; executado como processo separado |
+| greetd (gerenciador de login) | GPL-3.0 | Sem modificações; executado como processo separado |
+| cage (compositor da Tela de Entrada) | MIT | Sem modificações; executado como processo separado |
+| Plymouth (animação de boot) | GPL-2.0 | Pacote do Debian; o tema visual é do DuiaOS |
+| swayidle e swaylock | MIT | Sem modificações; executados como processos separados |
+| python-pamela | MIT | Biblioteca usada pela Tela de Bloqueio para conferir a senha |
 | Qt 6 e LayerShellQt | LGPL-3.0 | Bibliotecas usadas de forma dinâmica |
 | PySide6 | LGPL-3.0 | Biblioteca usada de forma dinâmica |
 | Inter, Manrope, JetBrains Mono | SIL Open Font License 1.1 | Fontes tipográficas |

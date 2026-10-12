@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=DuiaOS
+Comment=Sessão gráfica do DuiaOS
+Exec=/usr/share/duiaos/shell/sessao/iniciar-sessao
+Type=Application
+DesktopNames=DuiaOS;wlroots

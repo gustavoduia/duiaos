@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=DuiaOS
+Description=Animação de boot do DuiaOS: o símbolo Órbita com o ponto em movimento.
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/duiaos
+ScriptFile=/usr/share/plymouth/themes/duiaos/duiaos.script

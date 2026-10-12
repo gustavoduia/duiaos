@@ -74,13 +74,26 @@ lb config \
   --iso-publisher "DuiaOS; https://github.com/gustavoduia/duiaos-fontes-abertas" \
   --iso-volume "${VOLUME}" \
   --memtest none \
-  --bootappend-live "boot=live components hostname=duiaos username=duia locales=pt_BR.UTF-8 keyboard-layouts=br timezone=America/Sao_Paulo"
+  --bootappend-live "boot=live components quiet splash hostname=duiaos username=duia locales=pt_BR.UTF-8 keyboard-layouts=br timezone=America/Sao_Paulo"
 
 log "Copiando a configuração do DuiaOS"
 cp -a "${ROOT}/build/config/." config/
 if [ -d "${ROOT}/build/arch/${ARCH}" ]; then
   cp -a "${ROOT}/build/arch/${ARCH}/." config/
 fi
+
+# Interface gráfica (pasta shell/): código em /usr/share/duiaos/shell,
+# configuração do labwc em /etc/xdg/labwc, sessão "DuiaOS" para gerenciadores
+# de login e a lista de pacotes da interface (shell/pacotes.list).
+INCLUDES="config/includes.chroot_after_packages"
+install -d "${INCLUDES}/usr/share/duiaos" "${INCLUDES}/etc/xdg/labwc" "${INCLUDES}/usr/share/wayland-sessions"
+rm -rf "${INCLUDES}/usr/share/duiaos/shell"
+cp -a "${ROOT}/shell" "${INCLUDES}/usr/share/duiaos/shell"
+find "${INCLUDES}/usr/share/duiaos/shell" -name '__pycache__' -prune -exec rm -rf {} +
+install -m 0644 "${ROOT}/shell/sessao/autostart" "${ROOT}/shell/sessao/environment" \
+  "${ROOT}/shell/sessao/rc.xml" "${INCLUDES}/etc/xdg/labwc/"
+install -m 0644 "${ROOT}/shell/sessao/duiaos.desktop" "${INCLUDES}/usr/share/wayland-sessions/"
+install -m 0644 "${ROOT}/shell/pacotes.list" config/package-lists/duiaos-interface.list.chroot
 
 # Licença e avisos de terceiros dentro do sistema (fonte: pasta publico/).
 LICENCA_DIR="config/includes.chroot_after_packages/usr/share/duiaos/licenca"

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """DuiaOS — Barra de Recursos (relógio, Wi-Fi, volume e bateria).
 
+Um clique no símbolo do DuiaOS abre o Menu de Energia.
+
 A interface fica em BarraDeRecursos.qml; este arquivo inicia o Qt e fornece
 ao QML as informações do sistema e a posição escolhida pelo usuário.
 
@@ -62,7 +64,7 @@ except OSError:
 os.environ.setdefault("QT_QPA_PLATFORM", "wayland")
 os.environ["QT_WAYLAND_SHELL_INTEGRATION"] = "layer-shell"
 
-from PySide6.QtCore import QFileSystemWatcher, QObject, Property, QTimer, Signal  # noqa: E402
+from PySide6.QtCore import QFileSystemWatcher, QObject, Property, QTimer, Signal, Slot  # noqa: E402
 from PySide6.QtGui import QGuiApplication  # noqa: E402
 from PySide6.QtQml import QQmlApplicationEngine  # noqa: E402
 
@@ -152,6 +154,13 @@ class Sistema(QObject):
         self._wifi, self._volume, self._mudo = wifi, volume, mudo
         self._bateria, self._carregando = bateria, carregando
         self.mudou.emit()
+
+    @Slot()
+    def abrirMenuDeEnergia(self):
+        """Abre (ou fecha, se já estiver aberto) o Menu de Energia."""
+        menu = Path(__file__).resolve().parents[1] / "menu-de-energia" / "main.py"
+        subprocess.Popen([sys.executable, str(menu)], stdout=subprocess.DEVNULL,
+                         stderr=subprocess.DEVNULL, start_new_session=True)
 
     wifi = Property(str, lambda self: self._wifi, notify=mudou)
     volume = Property(int, lambda self: self._volume, notify=mudou)

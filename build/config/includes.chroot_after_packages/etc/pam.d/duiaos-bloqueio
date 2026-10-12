@@ -1,0 +1,4 @@
+#%PAM-1.0
+# DuiaOS — Tela de Bloqueio: confere a senha de quem já está na sessão.
+@include common-auth
+@include common-account
