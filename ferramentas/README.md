@@ -112,6 +112,7 @@ bash ferramentas/lancar-versao.sh 0.1.0
 | Nome | Tipo | Valor |
 | --- | --- | --- |
 | `DUIAOS_TOKEN_PUBLICO` | Segredo | Token fine-grained com Contents: Read and write só no `duiaos-fontes-abertas` (renovar anualmente) |
+| `DUIAOS_TOKEN_WISE` | Segredo | Token fine-grained com Contents: **Read-only** só no `duiaos-wise` (renovar anualmente). O build gera o pacote do Wise para a ISO e o apt (ADR 042); sem ele, lançamentos falham e builds de teste saem sem o Wise |
 | `DUIAOS_APT_CHAVE` | Segredo | Chave privada que assina o repositório apt (`criar-chave-apt.sh`; cópia em `~/Projetos/duiaos-chaves`) |
 | `DUIAOS_AMD64_EM` | Variável (opcional) | Força a máquina padrão da amd64 (`github` ou `dell`) |
 | `DUIAOS_ARM64_EM` | Variável (opcional) | Força a máquina padrão da arm64 (`github`, `mac` ou `dell`) |

@@ -65,6 +65,8 @@ jobs:
           gpg --batch --export > pacotes/chave.gpg
 
       - name: Gerar os pacotes
+        env:
+          DUIAOS_TOKEN_WISE: ${{ secrets.DUIAOS_TOKEN_WISE }}
         run: |
           CHAVE=""
           [ -s pacotes/chave.gpg ] && CHAVE="${PWD}/pacotes/chave.gpg"
@@ -74,6 +76,8 @@ jobs:
           # publicar.sh mantém a cópia já publicada da mesma versão.
           bash pacotes/duiaos-ollama/construir.sh amd64 saida
           bash pacotes/duiaos-ollama/construir.sh arm64 saida
+          # Wise (ADR 042): parte nativa do sistema, do repositório privado duiaos-wise
+          bash pacotes/trazer-wise.sh saida
 
       - name: Guardar os pacotes no GitHub (30 dias)
         uses: actions/upload-artifact@v4

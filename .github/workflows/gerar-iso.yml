@@ -145,6 +145,7 @@ jobs:
       GH_TOKEN: ${{ secrets.DUIAOS_TOKEN_PUBLICO }}
       VERSAO: ${{ needs.plano.outputs.versao }}
     steps:
+      - uses: actions/checkout@v4      # notas-de-versao/
       - name: Criar o rascunho no repositório público
         run: |
           if [ -z "${GH_TOKEN}" ]; then
@@ -155,12 +156,21 @@ jobs:
             echo "O release ${GITHUB_REF_NAME} já existe; os arquivos serão substituídos."
             exit 0
           fi
-          cat > notas.md <<EOF
-          DuiaOS ${VERSAO} (Zoinho), baseado no Debian 13 (trixie).
+          # Novidades (notas-de-versao/X.Y.Z.md): as linhas "- ..." viram a lista do site.
+          # Os arquivos vão numa tabela, para não aparecerem como novidades.
+          NOVIDADES="notas-de-versao/${VERSAO}.md"
+          if [ ! -s "${NOVIDADES}" ]; then
+            echo "Falta ${NOVIDADES}." >&2; exit 1
+          fi
+          { cat "${NOVIDADES}"; echo; } > notas.md
+          cat >> notas.md <<EOF
+          ## Arquivos
 
-          - \`duiaos-${VERSAO}-amd64.iso\`: computadores comuns (Intel/AMD, x86_64).
-          - \`duiaos-${VERSAO}-arm64.iso\`: computadores ARM64.
-          - \`.sha256\`: conferência do download. \`.packages\`: lista de pacotes e versões.
+          | Arquivo | Para |
+          | --- | --- |
+          | \`duiaos-${VERSAO}-amd64.iso\` | Computadores comuns (Intel/AMD, x86_64) |
+          | \`duiaos-${VERSAO}-arm64.iso\` | Computadores ARM64 |
+          | \`.sha256\` / \`.packages\` | Conferência do download / lista de pacotes e versões |
 
           Uso regido pelo [EULA](https://github.com/${REPO_PUBLICO}/blob/main/EULA.md).
           Licenças de terceiros e código-fonte: [LICENCAS-DE-TERCEIROS.md](https://github.com/${REPO_PUBLICO}/blob/main/LICENCAS-DE-TERCEIROS.md).
@@ -218,6 +228,13 @@ jobs:
           else
             echo "::warning::Sem o segredo DUIAOS_APT_CHAVE: a ISO sai sem o repositório de atualizações."
           fi
+
+      - name: Wise (repositório privado; ADR 042)
+        env:
+          DUIAOS_TOKEN_WISE: ${{ secrets.DUIAOS_TOKEN_WISE }}
+          VERSAO_SISTEMA: ${{ env.VERSAO_SISTEMA }}
+        # Gerado aqui fora: o token não entra no container da ISO. build.sh instala o .deb na ISO.
+        run: bash pacotes/trazer-wise.sh pacotes/externos
 
       - name: Preparar emulação (se a arquitetura não for a desta máquina)
         run: |

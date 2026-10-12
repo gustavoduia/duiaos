@@ -25,6 +25,9 @@ Regras:
 | Dual boot: "Reiniciar no Windows" pelo firmware | `pacotes/duiaos-identidade/raiz/usr/lib/duiaos/reiniciar-no-windows` | `shell/comum/sistema.py::Reiniciar no Windows` | ADR 009 | main |
 | Identidade: GRUB, Plymouth (Órbita), papel de parede Órbita | `branding/`, `pacotes/duiaos-identidade/raiz/usr/share/` | `pacotes/duiaos-identidade/raiz/usr/share/plymouth/themes/duiaos/duiaos.plymouth::duiaos` | P3 | main |
 
+| Wise instalado com o sistema (ISO e apt), do repositório privado | `pacotes/trazer-wise.sh`, `build/build.sh`, `.github/workflows/` | `pacotes/trazer-wise.sh::DUIAOS_TOKEN_WISE`, `build/build.sh::pacotes/externos/duiaos-wise_`, `pacotes/duiaos-desktop/DEBIAN/control::Recommends: duiaos-wise` | ADR 042 | PR #12 |
+| Lançamento com notas de versão e a mesma tag no Wise | `ferramentas/lancar-versao.sh`, `notas-de-versao/` | `ferramentas/lancar-versao.sh::WISE_TEM_TAG`, `.github/workflows/gerar-iso.yml::notas-de-versao/` | ADR 042 | PR #12 |
+
 ## Interface (shell)
 
 | Recurso | Onde | Conferência | Desde | Situação |

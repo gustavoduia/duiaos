@@ -25,3 +25,4 @@ pacotes/chave.gpg
 /saida/
 # Downloads guardados pelo build (release do Ollama)
 .cache/
+pacotes/externos/
