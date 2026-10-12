@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """DuiaOS — Barra de Recursos (relógio, Wi-Fi, volume e bateria).
 
-Um clique no símbolo do DuiaOS abre o Menu de Energia.
+Um clique no símbolo do DuiaOS abre o Menu de Energia; o botão "Wise"
+(só aparece com o Wise instalado) abre e fecha a janela do Wise.
 
 A interface fica em BarraDeRecursos.qml; este arquivo inicia o Qt e fornece
 ao QML as informações do sistema e a posição escolhida pelo usuário.
@@ -18,6 +19,9 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "comum"))
+import sistema as comum  # noqa: E402
 
 POSICOES = ("topo", "base", "esquerda", "direita")
 PASTA_CONFIG = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "duiaos"
@@ -118,6 +122,7 @@ class Sistema(QObject):
         self._mudo = False
         self._bateria = -1
         self._carregando = False
+        self._wise = comum.wise_instalado()
         self._timer = QTimer(self, interval=5000, timeout=self.atualizar)
         self._timer.start()
         self.atualizar()
@@ -153,7 +158,12 @@ class Sistema(QObject):
 
         self._wifi, self._volume, self._mudo = wifi, volume, mudo
         self._bateria, self._carregando = bateria, carregando
+        self._wise = comum.wise_instalado()   # o Wise pode ser instalado com a sessão aberta
         self.mudou.emit()
+
+    @Slot()
+    def abrirWise(self):
+        comum.alternar_wise()
 
     @Slot()
     def abrirMenuDeEnergia(self):
@@ -167,6 +177,7 @@ class Sistema(QObject):
     mudo = Property(bool, lambda self: self._mudo, notify=mudou)
     bateria = Property(int, lambda self: self._bateria, notify=mudou)
     carregando = Property(bool, lambda self: self._carregando, notify=mudou)
+    wise = Property(bool, lambda self: self._wise, notify=mudou)
 
 
 def main():

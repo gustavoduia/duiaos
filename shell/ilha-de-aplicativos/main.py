@@ -11,6 +11,8 @@ o sinal SIGUSR1 a este programa).
 
 A interface fica em IlhaDeAplicativos.qml.
 Aplicativos fixados: ~/.config/duiaos/ilha-de-aplicativos.conf
+O Wise (duiaos-wise.desktop), quando instalado, é sempre o primeiro da Ilha
+e não pode ser desafixado.
 Janelas abertas: comando wlrctl (protocolo wlr-foreign-toplevel do labwc).
 """
 import configparser
@@ -26,6 +28,7 @@ from pathlib import Path
 PASTA_CONFIG = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "duiaos"
 ARQUIVO_CONFIG = PASTA_CONFIG / "ilha-de-aplicativos.conf"
 FIXADOS_PADRAO = ["foot.desktop"]
+WISE_DESKTOP = "duiaos-wise.desktop"
 PASTAS_APLICATIVOS = [
     Path.home() / ".local/share/applications",
     Path("/usr/local/share/applications"),
@@ -227,7 +230,10 @@ class Ilha(QObject):
         # Editores recriam o arquivo: volta a vigiá-lo
         if ARQUIVO_CONFIG.exists() and str(ARQUIVO_CONFIG) not in self._vigia.files():
             self._vigia.addPath(str(ARQUIVO_CONFIG))
-        self._ids_fixados = ler_fixados()
+        ids = [i for i in ler_fixados() if i != WISE_DESKTOP]
+        if ler_desktop(WISE_DESKTOP):
+            ids.insert(0, WISE_DESKTOP)   # o Wise vem sempre primeiro
+        self._ids_fixados = ids
         self._fixados = [d for d in (ler_desktop(i) for i in self._ids_fixados) if d]
         self.montar()
         self.buscar(self._consulta)
@@ -314,7 +320,9 @@ class Ilha(QObject):
 
     @Slot(str)
     def alternarFixado(self, id_desktop):
-        fixados = list(self._ids_fixados)
+        if id_desktop == WISE_DESKTOP:
+            return   # o Wise fica sempre na Ilha
+        fixados = [i for i in self._ids_fixados if i != WISE_DESKTOP]
         if id_desktop in fixados:
             fixados.remove(id_desktop)
         else:

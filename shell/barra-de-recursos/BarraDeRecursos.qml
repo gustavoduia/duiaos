@@ -1,6 +1,7 @@
 // DuiaOS — Barra de Recursos.
 // Mostra o símbolo do DuiaOS, data e hora, Wi-Fi, volume e bateria.
-// Um clique no símbolo abre o Menu de Energia.
+// Um clique no símbolo abre o Menu de Energia; o botão "Wise" (só com o
+// Wise instalado) abre e fecha a janela do Wise.
 // A posição (topo, base, esquerda ou direita) vem de configuracao.posicao.
 import QtQuick
 import QtQuick.Window
@@ -97,6 +98,29 @@ Window {
         onClicked: sistema.abrirMenuDeEnergia()
     }
 
+    // Botão do Wise: pílula com o nome, na cor primária
+    component BotaoWise: Rectangle {
+        visible: sistema.wise
+        width: barra.horizontal ? textoWise.implicitWidth + 22 : 52
+        height: 24
+        radius: 12
+        color: areaWise.pressed ? barra.corAzulNoite : (areaWise.containsMouse ? "#255BC7" : barra.corAzulDuia)
+        Text {
+            id: textoWise
+            anchors.centerIn: parent
+            text: "Wise"
+            font { family: barra.fonte; pixelSize: 13; weight: Font.DemiBold }
+            color: "white"
+        }
+        MouseArea {
+            id: areaWise
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: sistema.abrirWise()
+        }
+    }
+
     component Rotulo: Text {
         font { family: barra.fonte; pixelSize: 13 }
         color: barra.corTexto
@@ -109,8 +133,12 @@ Window {
         visible: barra.horizontal
 
         Simbolo {
+            id: simboloHorizontal
             anchors { left: parent.left; leftMargin: 14; verticalCenter: parent.verticalCenter }
             BotaoEnergia {}
+        }
+        BotaoWise {
+            anchors { left: simboloHorizontal.right; leftMargin: 14; verticalCenter: parent.verticalCenter }
         }
         Rotulo {
             anchors.centerIn: parent
@@ -145,6 +173,9 @@ Window {
         Simbolo {
             anchors { top: parent.top; topMargin: 14; horizontalCenter: parent.horizontalCenter }
             BotaoEnergia {}
+        }
+        BotaoWise {
+            anchors { top: parent.top; topMargin: 112; horizontalCenter: parent.horizontalCenter }
         }
         Column {
             anchors { top: parent.top; topMargin: 52; horizontalCenter: parent.horizontalCenter }
