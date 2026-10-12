@@ -231,6 +231,12 @@ class Entrada(QObject):
 
 def main():
     app = QGuiApplication(sys.argv)
+    # Registros e falhas no journal do sistema (duiaos_registro, ADR 040)
+    try:
+        import duiaos_registro
+        duiaos_registro.ligar("duiaos-entrada", qt=True)
+    except ImportError:
+        pass
     app.setApplicationName("duiaos-entrada")
     entrada = Entrada(app)
     engine = QQmlApplicationEngine()

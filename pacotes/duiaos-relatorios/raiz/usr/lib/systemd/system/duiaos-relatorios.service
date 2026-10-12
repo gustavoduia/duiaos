@@ -1,0 +1,30 @@
+[Unit]
+Description=DuiaOS — Ajude a melhorar o DuiaOS (coleta e envio dos relatórios)
+Documentation=https://github.com/gustavoduia/duiaos-fontes-abertas
+Wants=network-online.target
+After=network-online.target
+# Sem escolha da pessoa (arquivo ausente) não roda: nada é coletado
+ConditionPathExists=/etc/duiaos/relatorios.conf
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/duiaos-relatorios coletar
+StateDirectory=duiaos-relatorios
+StateDirectoryMode=0700
+UMask=0077
+Environment=HOME=/var/lib/duiaos-relatorios
+# Lê o journal de todo o sistema; escreve só no próprio estado
+SupplementaryGroups=systemd-journal
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec=10min
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6

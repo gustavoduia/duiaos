@@ -1,0 +1,17 @@
+#!/bin/sh
+# DuiaOS — duiaos-relatorios: journal guardado no disco, catálogo de mensagens e o agendamento da coleta.
+set -e
+if [ "$1" = "configure" ]; then
+  # Journal persistente (a pasta é o que liga o "Storage=auto"; o drop-in deixa explícito)
+  mkdir -p /var/log/journal
+  systemd-tmpfiles --create --prefix /var/log/journal >/dev/null 2>&1 || true
+  journalctl --update-catalog >/dev/null 2>&1 || true
+  systemctl enable duiaos-relatorios.timer >/dev/null 2>&1 || true
+  if [ -d /run/systemd/system ]; then
+    systemctl daemon-reload || true
+    systemctl restart systemd-journald.service >/dev/null 2>&1 || true
+    journalctl --flush >/dev/null 2>&1 || true
+    systemctl start duiaos-relatorios.timer >/dev/null 2>&1 || true
+  fi
+fi
+exit 0

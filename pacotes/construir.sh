@@ -6,6 +6,7 @@
 #   duiaos-shell       interface gráfica (pasta shell/) e Tela de Entrada
 #   duiaos-ia          IA do sistema: serviço org.duiaos.IA1, comando e Central de IA
 #   duiaos-agente      agente do sistema: ações aprovadas (org.duiaos.Agente1, ADR 034)
+#   duiaos-relatorios  registros do sistema e "Ajude a melhorar o DuiaOS" (ADR 040)
 #   duiaos-desktop     metapacote: instala e mantém todos os acima
 #   (o duiaos-ollama, por arquitetura, tem o próprio duiaos-ollama/construir.sh)
 #
@@ -137,6 +138,15 @@ AG="${TRABALHO}/duiaos-agente"
 install -d "${AG}/usr/share/duiaos/agente"
 install -m 0644 "${RAIZ}"/agente/*.py "${AG}/usr/share/duiaos/agente/"
 fechar duiaos-agente
+
+# ---------------------------------------------------------- duiaos-relatorios
+preparar duiaos-relatorios
+RL="${TRABALHO}/duiaos-relatorios"
+install -d "${RL}/usr/lib/python3/dist-packages/duiaos_relatorios" \
+  "${RL}/usr/lib/python3/dist-packages/duiaos_registro"
+install -m 0644 "${RAIZ}"/relatorios/*.py "${RL}/usr/lib/python3/dist-packages/duiaos_relatorios/"
+install -m 0644 "${RAIZ}"/relatorios/duiaos_registro/*.py "${RL}/usr/lib/python3/dist-packages/duiaos_registro/"
+fechar duiaos-relatorios
 
 # ------------------------------------------------------------- duiaos-desktop
 preparar duiaos-desktop

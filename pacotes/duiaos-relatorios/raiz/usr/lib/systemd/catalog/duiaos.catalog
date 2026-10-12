@@ -1,0 +1,25 @@
+# DuiaOS — catálogo de mensagens do journal (journalctl -x mostra a explicação). ADR 040.
+
+-- 0b0f983a3fad41bb9a9730053146311a
+Subject: Falha no programa @SYSLOG_IDENTIFIER@
+Defined-By: DuiaOS
+Support: https://duiaos.gustavoduia.workers.dev/suporte/
+
+O programa @SYSLOG_IDENTIFIER@ encontrou um erro que não esperava. O rastro completo está no campo
+DUIAOS_RASTRO, e falhas iguais (em qualquer computador) têm a mesma DUIAOS_ASSINATURA.
+
+Se "Ajude a melhorar o DuiaOS" estiver ligado, esta falha vai no próximo relatório.
+Para ver: journalctl -x -t @SYSLOG_IDENTIFIER@ -p err
+
+-- 91f4f6d28d1b4bb5a2e734752a3a5805
+Subject: Relatórios do DuiaOS enviados
+Defined-By: DuiaOS
+
+O serviço duiaos-relatorios enviou relatórios de "Ajude a melhorar o DuiaOS".
+Para conferir o que foi enviado: sudo duiaos-relatorios ver
+
+-- 3d4c21837a954343884b8922b6e95950
+Subject: Nível de "Ajude a melhorar o DuiaOS" mudou
+Defined-By: DuiaOS
+
+A pessoa (ou o administrador) mudou o que pode sair do computador. Veja com: duiaos-relatorios estado

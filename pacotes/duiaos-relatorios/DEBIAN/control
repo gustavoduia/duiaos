@@ -1,0 +1,22 @@
+Package: duiaos-relatorios
+Version: @VERSAO_DEB@
+Architecture: all
+Maintainer: DuiaOS <53358870+gustavoduia@users.noreply.github.com>
+Section: admin
+Priority: optional
+Depends: python3, systemd, systemd-coredump
+Recommends: git, openssh-client, pciutils
+Homepage: https://github.com/gustavoduia/duiaos-fontes-abertas
+Description: DuiaOS — registros do sistema e "Ajude a melhorar o DuiaOS"
+ Padroniza os registros do DuiaOS: tudo vai para o journal do systemd
+ (guardado no disco), com campos comuns a todos os programas (biblioteca
+ duiaos_registro), e as falhas de programas viram registros com o rastro
+ completo (Python pelo duiaos_registro; os demais pelo systemd-coredump).
+ .
+ O serviço duiaos-relatorios junta erros, falhas e informações do computador
+ em relatórios e, só no nível escolhido pela pessoa em "Ajude a melhorar o
+ DuiaOS", os envia para o desenvolvimento. Sem escolha, nada sai do
+ computador. Os relatórios ficam em /var/lib/duiaos-relatorios para conferir.
+ .
+ Software proprietário. Uso regido pelo EULA:
+ /usr/share/duiaos/licenca/EULA.md

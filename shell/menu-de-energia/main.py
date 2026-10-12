@@ -62,6 +62,12 @@ def main():
     import signal
     signal.signal(signal.SIGTERM, lambda *_: QGuiApplication.quit())
     app = QGuiApplication(sys.argv)
+    # Registros e falhas no journal do sistema (duiaos_registro, ADR 040)
+    try:
+        import duiaos_registro
+        duiaos_registro.ligar("duiaos-menu-de-energia", qt=True)
+    except ImportError:
+        pass
     # Devolve o controle ao Python de tempos em tempos para ele tratar o SIGTERM.
     vigia_sinal = QTimer(interval=200)
     vigia_sinal.timeout.connect(lambda: None)
