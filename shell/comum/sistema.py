@@ -10,8 +10,8 @@ from pathlib import Path
 PASTA_SHELL = Path(__file__).resolve().parents[1]
 RAIZ_REPOSITORIO = PASTA_SHELL.parent
 
-# Instalado: /usr/share/duiaos/...; no repositório (desenvolvimento): build/config/...
-_INCLUDES = RAIZ_REPOSITORIO / "build/config/includes.chroot_after_packages"
+# Instalado: /usr/share/duiaos/...; no repositório (desenvolvimento): pacotes/duiaos-identidade/raiz/...
+_INCLUDES = RAIZ_REPOSITORIO / "pacotes/duiaos-identidade/raiz"
 PAPEIS_DE_PAREDE = [
     Path("/usr/share/duiaos/papel-de-parede/orbita.jpg"),
     _INCLUDES / "usr/share/duiaos/papel-de-parede/orbita.jpg",

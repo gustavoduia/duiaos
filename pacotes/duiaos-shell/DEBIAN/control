@@ -1,0 +1,15 @@
+Package: duiaos-shell
+Version: @VERSAO_DEB@
+Architecture: all
+Maintainer: DuiaOS <53358870+gustavoduia@users.noreply.github.com>
+Section: x11
+Priority: optional
+Depends: duiaos-identidade (= @VERSAO_DEB@), python3, @DEPENDENCIAS_SHELL@
+Homepage: https://github.com/gustavoduia/duiaos-fontes-abertas
+Description: DuiaOS — interface gráfica
+ Tela de Entrada e Tela de Bloqueio, Barra de Recursos, Ilha de Aplicativos,
+ Central de Aplicativos, Menu de Energia e a sessão gráfica do DuiaOS
+ (labwc + Qt6/QML + Python).
+ .
+ Software proprietário. Uso regido pelo EULA:
+ /usr/share/duiaos/licenca/EULA.md

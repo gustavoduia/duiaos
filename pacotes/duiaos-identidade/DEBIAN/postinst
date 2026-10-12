@@ -1,0 +1,103 @@
+#!/bin/sh
+# =============================================================================
+# DuiaOS — duiaos-identidade: ajustes depois de instalar ou atualizar.
+# Antes ficava nos hooks da ISO (0500 e parte do 0510); agora vale também
+# para quem atualiza pelo apt.
+# O repositório apt NÃO é ligado aqui: na geração da ISO o live-build faria
+# "apt update" nele. Quem liga é o pos-instalacao (sistema instalado pela ISO)
+# ou /usr/lib/duiaos/configurar-repositorio, à mão.
+# =============================================================================
+set -e
+
+VERSAO="@VERSAO_SISTEMA@"
+CODINOME="zoinho"
+URL="https://github.com/gustavoduia/duiaos-fontes-abertas"
+ESTADO=/var/lib/duiaos
+
+em_chroot() { systemd-detect-virt --quiet --chroot 2>/dev/null; }
+
+identidade() {
+  # O dpkg-divert guarda o arquivo do Debian com o sufixo .debian; assim uma
+  # atualização do base-files não apaga a identidade do DuiaOS.
+  # (sem --rename: os arquivos são do base-files, um pacote essencial)
+  for ARQUIVO in /usr/lib/os-release /etc/issue /etc/issue.net /etc/motd; do
+    if [ "$(dpkg-divert --truename "${ARQUIVO}")" = "${ARQUIVO}" ]; then
+      [ -e "${ARQUIVO}" ] && cp -a "${ARQUIVO}" "${ARQUIVO}.debian"
+      dpkg-divert --quiet --package duiaos-identidade --no-rename \
+        --divert "${ARQUIVO}.debian" --add "${ARQUIVO}"
+    fi
+  done
+
+  cat > /usr/lib/os-release <<FIM
+PRETTY_NAME="DuiaOS ${VERSAO} (Zoinho)"
+NAME="DuiaOS"
+VERSION_ID="${VERSAO}"
+VERSION="${VERSAO} (Zoinho)"
+VERSION_CODENAME=${CODINOME}
+ID=duiaos
+ID_LIKE=debian
+DEBIAN_CODENAME=trixie
+HOME_URL="${URL}"
+SUPPORT_URL="${URL}/issues"
+BUG_REPORT_URL="${URL}/issues"
+FIM
+  ln -sf ../usr/lib/os-release /etc/os-release
+
+  # Tela de login em modo texto ("\n" e "\l" são códigos do agetty)
+  printf 'DuiaOS %s (Zoinho) \\n \\l\n\n' "${VERSAO}" > /etc/issue
+  printf 'DuiaOS %s (Zoinho)\n' "${VERSAO}" > /etc/issue.net
+  cat > /etc/motd <<FIM
+
+Bem-vindo ao DuiaOS ${VERSAO} (Zoinho).
+
+O uso do DuiaOS é regido pelo Contrato de Licença de Usuário Final,
+em /usr/share/duiaos/licenca/EULA.md. Os componentes de software livre
+incluídos mantêm as suas licenças (/usr/share/doc/*/copyright e
+/usr/share/duiaos/licenca/LICENCAS-DE-TERCEIROS.md).
+FIM
+}
+
+teclado() {
+  # Unidade antiga em /etc/systemd/system esconderia a do pacote
+  if [ -e /etc/systemd/system/duiaos-teclado.service ] \
+     && ! dpkg-query -S /etc/systemd/system/duiaos-teclado.service >/dev/null 2>&1; then
+    rm -f /etc/systemd/system/duiaos-teclado.service \
+      /etc/systemd/system/multi-user.target.wants/duiaos-teclado.service
+  fi
+  # Teclado ABNT2 só na primeira instalação (depois, vale a escolha da pessoa)
+  if [ -z "${2:-}" ] || [ ! -e /etc/default/keyboard ]; then
+    /usr/lib/duiaos/configurar-teclado
+  fi
+  systemctl enable duiaos-teclado.service >/dev/null 2>&1 || true
+}
+
+animacao_de_boot() {
+  # Refaz a imagem de inicialização só quando o tema mudou
+  plymouth-set-default-theme duiaos
+  install -d "${ESTADO}"
+  SOMA="$(cat /usr/share/plymouth/themes/duiaos/* | md5sum | cut -d' ' -f1)"
+  if [ "$(cat "${ESTADO}/plymouth.md5" 2>/dev/null)" != "${SOMA}" ]; then
+    if ! em_chroot && command -v update-initramfs >/dev/null 2>&1; then
+      update-initramfs -u
+    fi
+    # Na geração da ISO (chroot), o live-build refaz a imagem logo depois.
+    echo "${SOMA}" > "${ESTADO}/plymouth.md5"
+  fi
+}
+
+menu_de_boot() {
+  if ! em_chroot && [ -e /boot/grub/grub.cfg ] && command -v update-grub >/dev/null 2>&1; then
+    update-grub || echo "Aviso: update-grub falhou; rode-o à mão." >&2
+  fi
+}
+
+case "$1" in
+  configure)
+    identidade
+    teclado "$@"
+    animacao_de_boot
+    menu_de_boot
+    ;;
+esac
+
+exit 0

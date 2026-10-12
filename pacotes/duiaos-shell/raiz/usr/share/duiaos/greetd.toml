@@ -1,7 +1,7 @@
-# DuiaOS — gerenciador de login (greetd).
+# DuiaOS — modelo da configuração do gerenciador de login (greetd).
+# /usr/lib/duiaos/preparar-entrada copia este modelo para /run/duiaos/greetd.toml
+# a cada início do greetd (e, no modo live, acrescenta a entrada automática).
 # Mostra a Tela de Entrada; depois da senha correta, abre a sessão do DuiaOS.
-# No modo live, /usr/lib/duiaos/preparar-entrada acrescenta a entrada
-# automática do usuário live (veja greetd.service.d/duiaos.conf).
 
 [terminal]
 # Terminal virtual da tela gráfica

@@ -1,0 +1,24 @@
+#!/bin/sh
+# DuiaOS — duiaos-identidade: desfaz a identidade ao remover o pacote.
+set -e
+
+case "$1" in
+  remove|purge)
+    for ARQUIVO in /usr/lib/os-release /etc/issue /etc/issue.net /etc/motd; do
+      if dpkg-divert --listpackage "${ARQUIVO}" 2>/dev/null | grep -qx duiaos-identidade; then
+        dpkg-divert --quiet --package duiaos-identidade --no-rename --remove "${ARQUIVO}"
+        # Devolve o arquivo original do Debian
+        if [ -e "${ARQUIVO}.debian" ]; then
+          mv -f "${ARQUIVO}.debian" "${ARQUIVO}"
+        fi
+      fi
+    done
+    ;;
+esac
+
+if [ "$1" = "purge" ]; then
+  rm -f /etc/apt/sources.list.d/duiaos.sources
+  rm -rf /var/lib/duiaos
+fi
+
+exit 0

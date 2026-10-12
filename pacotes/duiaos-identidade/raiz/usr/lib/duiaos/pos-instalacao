@@ -38,5 +38,9 @@ setupcon --force --save-only || true
 ssh-keygen -A
 systemctl disable ssh.service || true
 
-# 5. Atualiza a imagem de inicialização com o teclado e o idioma novos.
+# 5. Repositório de atualizações do DuiaOS (pacotes duiaos-*): a partir de
+#    agora o sistema se atualiza com: sudo apt update && sudo apt full-upgrade
+/usr/lib/duiaos/configurar-repositorio
+
+# 6. Atualiza a imagem de inicialização com o teclado e o idioma novos.
 update-initramfs -u

@@ -137,6 +137,17 @@ for P in labwc foot swaybg wlrctl qml6-module-org-kde-layershell python3-pyside6
   dpkg -s "${P}" >/dev/null 2>&1 || FALTAM="${FALTAM} ${P}"
 done
 [ -z "${FALTAM}" ] && ok "Pacotes da interface instalados" || aviso "Pacotes da interface faltando:${FALTAM}"
+VERSAO_PACOTES="$(dpkg-query -W -f='${Version}' duiaos-desktop 2>/dev/null || true)"
+if [ -n "${VERSAO_PACOTES}" ]; then
+  ok "Pacotes do DuiaOS instalados (duiaos-desktop ${VERSAO_PACOTES})"
+else
+  falha "Pacote duiaos-desktop não instalado"
+fi
+if [ -r /etc/apt/sources.list.d/duiaos.sources ] && [ -s /usr/share/keyrings/duiaos.gpg ]; then
+  ok "Repositório de atualizações do DuiaOS ligado (canal $(sed -n 's/^Suites:[[:space:]]*//p' /etc/apt/sources.list.d/duiaos.sources))"
+else
+  aviso "Repositório de atualizações do DuiaOS desligado (ligar: sudo /usr/lib/duiaos/configurar-repositorio)"
+fi
 if [ -r /usr/share/duiaos/licenca/EULA.md ]; then
   ok "EULA presente em /usr/share/duiaos/licenca"
 else
@@ -167,7 +178,7 @@ else
 fi
 [ -r /usr/share/duiaos/papel-de-parede/orbita.jpg ] && ok "Papel de parede instalado" \
   || falha "Papel de parede ausente"
-if [ -r /etc/polkit-1/rules.d/50-duiaos-reiniciar-no-windows.rules ] \
+if [ -r /usr/share/polkit-1/rules.d/50-duiaos-reiniciar-no-windows.rules ] \
    && systemctl cat duiaos-reiniciar-no-windows.service >/dev/null 2>&1; then
   if sh /usr/lib/duiaos/reiniciar-no-windows --verificar; then
     ok "\"Reiniciar no Windows\" disponível no Menu de Energia"

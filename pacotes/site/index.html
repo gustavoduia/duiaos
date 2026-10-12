@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Repositório do DuiaOS</title>
+<style>
+  :root { --fundo: #F7F9FC; --cartao: #FFFFFF; --azul: #2E6BE6; --noite: #1A3A73; --texto: #1F2933; --cinza: #5B6675; --borda: #DDE3EC; }
+  body { margin: 0; background: var(--fundo); color: var(--texto); font: 16px/1.6 Inter, system-ui, sans-serif; }
+  main { max-width: 720px; margin: 0 auto; padding: 48px 16px; }
+  h1 { color: var(--noite); font-family: Manrope, Inter, system-ui, sans-serif; margin: 0 0 8px; }
+  h1 span { color: var(--azul); font-weight: 500; }
+  p { color: var(--cinza); }
+  pre { background: var(--cartao); border: 1px solid var(--borda); border-radius: 12px; padding: 16px; overflow-x: auto; font: 14px/1.5 "JetBrains Mono", ui-monospace, monospace; }
+  a { color: var(--azul); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Duia<span>OS</span></h1>
+  <p>Repositório de atualizações do DuiaOS. Um DuiaOS instalado já vem com ele
+  configurado; para atualizar:</p>
+  <pre>sudo apt update && sudo apt full-upgrade</pre>
+  <p>Canais: <code>estavel</code> (versões lançadas) e <code>teste</code>
+  (desenvolvimento). Chave pública: <a href="apt/duiaos.asc">apt/duiaos.asc</a>.</p>
+  <p>Os pacotes do DuiaOS são software proprietário, de uso regido pelo
+  <a href="https://github.com/gustavoduia/duiaos-fontes-abertas/blob/main/EULA.md">EULA</a>.</p>
+</main>
+</body>
+</html>

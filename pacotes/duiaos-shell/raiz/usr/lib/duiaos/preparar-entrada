@@ -3,7 +3,8 @@
 # DuiaOS — prepara a configuração do greetd (Tela de Entrada).
 #
 # Executado pelo systemd antes do greetd (greetd.service.d/duiaos.conf).
-# Copia /etc/greetd/config.toml para /run/duiaos/greetd.toml e, no modo live
+# Copia o modelo /usr/share/duiaos/greetd.toml (pacote duiaos-shell) para
+# /run/duiaos/greetd.toml e, no modo live
 # (pendrive), acrescenta a entrada automática do usuário live: a pessoa vê
 # a área de trabalho do DuiaOS sem digitar senha. No sistema instalado,
 # a Tela de Entrada sempre pede a senha.
@@ -11,7 +12,7 @@
 set -e
 
 install -d -m 0755 /run/duiaos
-install -m 0644 /etc/greetd/config.toml /run/duiaos/greetd.toml
+install -m 0644 /usr/share/duiaos/greetd.toml /run/duiaos/greetd.toml
 
 if grep -qw 'boot=live' /proc/cmdline; then
   USUARIO="$(sed -n 's/.*\busername=\([^ ]*\).*/\1/p' /proc/cmdline)"

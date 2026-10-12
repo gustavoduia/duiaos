@@ -126,7 +126,8 @@ Guia completo: [ferramentas/README.md](ferramentas/README.md) (ADRs 020, 024 e 0
 
 | Pasta | Conteúdo |
 | --- | --- |
-| `build/` | Geração da ISO (live-build), instalador e ajustes do sistema |
+| `build/` | Geração da ISO (live-build) e instalador |
+| `pacotes/` | Pacotes `.deb` do código próprio e repositório apt (atualizações) |
 | `shell/` | Interface: Tela de Entrada e de Bloqueio, Barra de Recursos, Ilha e Central de Aplicativos, Menu de Energia, sessão |
 | `wise/` | O Wise (a criar) |
 | `apps/` | Aplicativos do DuiaOS, como a Central de Configurações |

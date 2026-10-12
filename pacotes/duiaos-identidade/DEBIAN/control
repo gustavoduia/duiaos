@@ -1,0 +1,15 @@
+Package: duiaos-identidade
+Version: @VERSAO_DEB@
+Architecture: all
+Maintainer: DuiaOS <53358870+gustavoduia@users.noreply.github.com>
+Section: misc
+Priority: optional
+Depends: base-files, plymouth, efibootmgr, console-setup, keyboard-configuration, kbd, systemd
+Homepage: https://github.com/gustavoduia/duiaos-fontes-abertas
+Description: DuiaOS — identidade e padrões do sistema
+ Nome e versão do sistema (os-release), animação de boot, tema do menu de
+ boot, papel de parede, teclado ABNT2, scripts do DuiaOS e o repositório de
+ atualizações do DuiaOS.
+ .
+ Software proprietário. Uso regido pelo EULA:
+ /usr/share/duiaos/licenca/EULA.md
