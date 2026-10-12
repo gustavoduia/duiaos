@@ -48,6 +48,8 @@ projeto. Ordem de leitura no início de toda sessão: `CLAUDE.md` → este arqui
 - `gustavoduia/duiaos-websites` (PRIVADO): site (`site/`, duiaos.gustavoduia.workers.dev) e documentação
   (`documentacao/`, duiaos-docs.gustavoduia.workers.dev); com domínio: duiaos.com.br e docs.duiaos.com.br.
   Mudança visível no sistema ou no Wise = PR irmão lá (ADR 039).
+- `gustavoduia/duiaos-diagnosticos` (PRIVADO): relatórios de "Ajude a melhorar o DuiaOS" de todos os
+  computadores (ADR 040). Dados pessoais: nada dele vai para repositórios públicos.
 - `gustavoduia/duiaos-wise` (PRIVADO): o Wise. O público só conhece `/usr/bin/duiaos-wise --alternar` e
   `duiaos-wise.desktop`; o Wise só lê `/var/lib/duiaos-ia/estado.json`. Dell acessa por deploy key
   (Host github-duiaos-wise).
@@ -89,12 +91,15 @@ projeto. Ordem de leitura no início de toda sessão: `CLAUDE.md` → este arqui
 
 ## Arquitetura técnica
 - ISO: live-build no GitHub Actions; instala os .deb do mesmo commit. `bash ferramentas/gerar-iso.sh`.
-- Pacotes (`pacotes/`): duiaos-identidade, duiaos-shell, duiaos-ia, duiaos-agente, duiaos-desktop (all) e
+- Pacotes (`pacotes/`): duiaos-identidade, duiaos-shell, duiaos-ia, duiaos-agente, duiaos-relatorios,
+  duiaos-desktop (all) e
   duiaos-ollama (por arquitetura). Arquivo novo do sistema vai em `pacotes/NOME/raiz/`.
 - Interface: labwc (Debian sem modificações — ADR 027) + Qt6/QML + Python (PySide6), LayerShellQt, wlrctl.
   Login: greetd + cage (ADR 026). Painéis layer-shell NÃO podem vazar QT_WAYLAND_SHELL_INTEGRATION para filhos.
 - IA: `ia/` (serviço Python + Gio, polkit com anotação owner), `apps/central-de-ia/`.
 - Agente: `agente/` (duiaos-agente, ADR 034).
+- Registros: `relatorios/` (biblioteca `duiaos_registro` usada por todos os programas + coletor
+  `duiaos-relatorios`; journal persistente; ADR 040).
 - Documentação técnica: `docs/visao.md`, `docs/decisoes.md` (ADRs), `pacotes/README.md`, `shell/README.md`,
   `ia/README.md`. Documentação para usuários e site: `duiaos-websites` (guia em `duiaos-websites/CLAUDE.md`).
 - Cloudflare (conta do Gustavo): Workers `duiaos` e `duiaos-docs`, D1 `duiaos-site`, KV `duiaos-site-cache`.

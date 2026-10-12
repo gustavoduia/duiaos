@@ -11,6 +11,7 @@ código próprio são `Architecture: all` (servem para x86_64 e ARM64); o
 | `duiaos-ollama` | Ollama, a IA local (ADR 030): `/usr/bin/ollama`, `/usr/lib/ollama` e o serviço `ollama.service` (usuário `ollama`, só em 127.0.0.1). Release oficial com sha256 conferido, sem as bibliotecas CUDA. Os modelos ficam em `/usr/share/ollama/.ollama/models` e não são apagados ao remover o pacote |
 | `duiaos-ia` | IA do sistema (ADRs 030 e 031): serviço `duiaos-ia` (D-Bus `org.duiaos.IA1`, polkit `org.duiaos.ia.gerenciar`), comando `duiaos-ia` e a Central de IA (`ia/` e `apps/central-de-ia/`) |
 | `duiaos-agente` | Agente do sistema (ADR 034): serviço `duiaos-agente` (D-Bus `org.duiaos.Agente1`, polkit `org.duiaos.agente.*`) que faz, com aprovação, só ações de uma lista fechada — atualizar, instalar e remover pelo apt (`agente/`) |
+| `duiaos-relatorios` | Registros do sistema e "Ajude a melhorar o DuiaOS" (ADR 040): biblioteca `duiaos_registro` e coletor `duiaos_relatorios` (`/usr/lib/python3/dist-packages`, código em `relatorios/`), comando e serviço `duiaos-relatorios` (+ timer), journal persistente, systemd-coredump, catálogo de mensagens |
 | `duiaos-desktop` | Metapacote: instala e mantém todos os acima |
 
 ## Arquivos desta pasta

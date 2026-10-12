@@ -61,6 +61,16 @@ Regras:
 | duiaos-agente: Preparar (simula) e Executar (polkit + mesmo impacto) | `agente/`, `pacotes/duiaos-agente/` | `agente/agente.py::org.duiaos.Agente1`, `agente/plano.py::PROTEGIDOS_FIXOS` | ADR 034 | PR #9 |
 | Sem senha só para a sessão local ativa de administrador | `pacotes/duiaos-agente/raiz/usr/share/polkit-1/rules.d/50-duiaos-agente.rules` | `pacotes/duiaos-agente/raiz/usr/share/polkit-1/rules.d/50-duiaos-agente.rules::isInGroup("sudo")` | ADR 034 | PR #9 |
 
+## Registros do sistema
+
+| Recurso | Onde | Conferência | Desde | Situação |
+| --- | --- | --- | --- | --- |
+| Registro único no journal com campos padronizados (`duiaos_registro`) | `relatorios/duiaos_registro/` | `relatorios/duiaos_registro/__init__.py::DUIAOS_ASSINATURA`, `relatorios/duiaos_registro/journal.py::struct.pack("<Q"` | ADR 040 | PR #10 |
+| Falhas registradas em todos os programas do DuiaOS | `shell/*/main.py`, `apps/central-de-ia/main.py`, `ia/`, `agente/` | `shell/barra-de-recursos/main.py::duiaos_registro.ligar`, `ia/servico.py::duiaos_registro.ligar("duiaos-ia")` | ADR 040 | PR #10 |
+| Coletor `duiaos-relatorios`: níveis, anonimização, perfil, falhas agrupadas, envio Git | `relatorios/`, `pacotes/duiaos-relatorios/` | `relatorios/coleta.py::def assinatura_nativa`, `relatorios/duiaos_registro/privacidade.py::def anonimizar` | ADR 040 | PR #10 |
+| Journal persistente, systemd-coredump e catálogo | `pacotes/duiaos-relatorios/raiz/usr/lib/systemd/` | `pacotes/duiaos-relatorios/raiz/usr/lib/systemd/journald.conf.d/50-duiaos.conf::Storage=persistent`, `pacotes/duiaos-relatorios/raiz/usr/lib/systemd/catalog/duiaos.catalog::0b0f983a3fad41bb9a9730053146311a` | ADR 040 | PR #10 |
+| Leitura dos relatórios pelo Claude | `ferramentas/ler-relatorios.py` | `ferramentas/ler-relatorios.py::def falhas_agrupadas` | ADR 040 | PR #10 |
+
 ## Site e documentação
 
 Moraram aqui até 12/10 e foram para o repositório `duiaos-websites` (ADR 039), com inventário próprio em

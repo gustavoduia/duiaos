@@ -6,8 +6,7 @@ A memória do projeto é este repositório, não o histórico de uma conversa. S
 1. Leia, nesta ordem: `docs/continuidade/CONTEXTO.md` → `docs/continuidade/ESTADO.md` →
    `docs/continuidade/RECURSOS.md` → as duas últimas entradas de `docs/continuidade/DIARIO.md`.
    Se a tarefa envolve o Wise, leia também `duiaos-wise/CLAUDE.md` e `duiaos-wise/docs/continuidade/`.
-   Falha do Wise relatada → diagnósticos no repositório privado `duiaos-diagnosticos` (seção "Quando o Gustavo
-   relatar uma falha do Wise" do `duiaos-wise/CLAUDE.md`). Nunca copie esses dados para este repositório.
+   Falha relatada (sistema ou Wise) → seção "Quando o Gustavo relatar uma falha" abaixo.
 2. Confira os PRs abertos (`gh api repos/gustavoduia/duiaos/pulls?state=open`) e compare com a seção 1 do
    ESTADO. Se houver PR aberto que o ESTADO não conhece, PARE e pergunte ao Gustavo.
 3. Escolha a base: a `main` atualizada; se houver PR aberto que reúne trabalho ainda sem merge, parta da branch
@@ -16,10 +15,20 @@ A memória do projeto é este repositório, não o histórico de uma conversa. S
 5. Abra o PR em rascunho logo no início (é o aviso de "em andamento" para as outras contas) e anote a frente
    na seção 3 do ESTADO.
 
+## Quando o Gustavo relatar uma falha (ADR 040)
+1. `add_repo` de `gustavoduia/duiaos-diagnosticos` (privado; leia o CLAUDE.md dele) e `git pull`.
+2. `python3 ferramentas/ler-relatorios.py ../duiaos-diagnosticos --horas 6 --maquina dell`; depois `--falha
+   ASSINATURA` (rastro) ou `--componente duiaos-wise --eventos` (linha do tempo). Relatório antigo → peça
+   🔗 DELL: `duiaos-relatorios enviar`.
+3. Corrija a causa na raiz, com teste do caso. Os dados são pessoais: nunca copie trechos para este repositório
+   público (commits, issues, testes) — descreva com as suas palavras.
+
 ## Antes de cada pull request
 - `python3 ferramentas/conferir-recursos.py` sem problemas.
-- Testes: `python3 -m unittest discover -s ia/testes -t .` e `-s agente/testes` (use `python3.12` se o 3.13 do
-  ambiente não tiver `gi`); `shellcheck` nos scripts mudados.
+- Testes: `python3 -m unittest discover -s ia/testes -t .`, `-s agente/testes` e `-s relatorios/testes` (use
+  `python3.12` se o 3.13 do ambiente não tiver `gi`); `shellcheck` nos scripts mudados.
+- Programa novo do DuiaOS: `duiaos_registro.ligar("duiaos-NOME")` no início (falhas no registro do sistema) e
+  eventos com `duiaos_registro.info/aviso/erro` (nunca `print` para registrar).
 - Recurso novo ou mudado → linha em `docs/continuidade/RECURSOS.md` com conferência.
 - Decisão nova → ADR em `docs/decisoes.md`.
 - Recurso visível para o usuário → **PR irmão** no `gustavoduia/duiaos-websites` (mesmo nome de branch) com a

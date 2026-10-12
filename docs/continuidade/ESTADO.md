@@ -3,7 +3,7 @@
 > Atualize este arquivo no FIM de cada bloco de trabalho, no mesmo PR. Ele é o que a próxima sessão (de
 > qualquer conta) lê para continuar. Escreva fatos verificáveis: branch, PR, commit, o que está instalado onde.
 
-Atualizado em: 12/10/2026 (19h20) · por: Claude (conta do Gustavo) · sessão session_01LzmCWyGMx1FKt4d1cuh5R8
+Atualizado em: 12/10/2026 (17h55) · por: Claude (conta do Gustavo) · sessão session_01LzmCWyGMx1FKt4d1cuh5R8
 
 ## 1. O que está na main e o que está pendente
 - **duiaos main**: PRs #1–#5 e **#9** (duiaos-ollama, duiaos-ia, Central de IA, duiaos-agente, acessibilidade,
@@ -11,7 +11,8 @@ Atualizado em: 12/10/2026 (19h20) · por: Claude (conta do Gustavo) · sessão s
 - **duiaos-wise main**: #1, #2 e **#5** (carinha de robô, aprovação, clima, agenda, uso do computador).
   **#7** aberto (diagnóstico W17 + correções W18; substitui o #6, fechado quando a base foi apagada).
 - **duiaos-websites main**: #1 e #2 (publicados). **#4** aberto (irmão do Wise #7; substitui o #3).
-- **duiaos #10** (`claude/logs-do-sistema`, rascunho): logs do sistema, F1.
+- **duiaos #10** (`claude/logs-do-sistema`): logs do sistema F1 (ADR 040), pronto para teste no Dell.
+  Irmãos: duiaos-websites #5 (documentação) e duiaos-diagnosticos #1 (README/CLAUDE.md do repositório de dados).
 
 ## 2. O que está instalado em cada máquina
 | Máquina | duiaos | duiaos-wise | Como conferir |
@@ -20,16 +21,20 @@ Atualizado em: 12/10/2026 (19h20) · por: Claude (conta do Gustavo) · sessão s
 | Mac | — | — | — |
 
 ## 3. Em andamento (quem / branch / PR rascunho)
-- Claude (conta do Gustavo): `claude/logs-do-sistema` (PR #10, rascunho) — logs do sistema F1: biblioteca
-  `duiaos-registro`, falhas, perfil, coletor `duiaos-relatorios` com envio ao `duiaos-diagnosticos`.
+- Nenhuma frente em desenvolvimento: #10 aguarda o teste no Dell. Depois: o Wise passa a usar o `duiaos_registro`
+  (PR no duiaos-wise, depois do merge do Wise #7).
 
 ## 4. Próximos passos
-1. Gustavo: testar no Dell as duas branches (instalar-local + reboot) e fazer o merge de duiaos #9 e Wise #5.
-2. Depois do merge de #9 e #5: lançar a versão 0.3.0 (ISO + apt) e retirar os avisos "Na próxima versão" da
-   documentação. O Wise ainda não entra na ISO (distribuição pública do Wise não decidida — pergunta abaixo).
-3. Google/Microsoft na agenda: Gustavo registra os aplicativos (duiaos-wise/docs/contas-de-agenda.md).
-4. Logs do sistema, F1 (decisão acima): PR novo a partir da main depois dos merges.
-5. Seguir o plano (docs/visao.md): W3 voz, W4 Central de IA completa (gateway da nuvem no duiaos-ia), P4 instalador.
+1. Gustavo: merge de Wise #7 e site #4; testar o #10 no Dell (instalar-local + `ferramentas/configurar-relatorios.sh`
+   no Mac) e fazer o merge de #10, site #5 e diagnosticos #1.
+2. Logs F1 no Wise: diário técnico → `duiaos_registro` (eventos `wise.*`; conversas só no nível desenvolvimento);
+   "Não ficou bom" → evento + `duiaos-relatorios enviar`; sai `wise/envio_diagnostico.py` e o
+   `configurar-diagnostico.sh` (não rodar).
+3. Logs F2: eventos de uso agregados + tela de consentimento na 1ª entrada e nas Configurações (polkit).
+4. Logs F3: `/api/relatorios` no Worker do site (sem credencial no computador) gravando em lotes no
+   `duiaos-diagnosticos`; resumo semanal das falhas como issue.
+5. Lançar a 0.3.0 e tirar os avisos "Na próxima versão"; decidir a distribuição do Wise.
+6. Google/Microsoft na agenda (duiaos-wise/docs/contas-de-agenda.md). Plano: W3 voz, W4 gateway da nuvem, P4.
 
 ## 5. Decisões recentes (detalhe nos ADRs)
 - 12/10 (tarde): **logs do sistema** padronizados como nas distribuições (journald + falhas estilo apport/
