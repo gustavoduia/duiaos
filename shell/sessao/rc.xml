@@ -16,6 +16,10 @@
     <keybind key="W-space">
       <action name="Execute" command="sh -c &quot;$DUIAOS_SHELL/ilha-de-aplicativos/alternar-central.sh&quot;" />
     </keybind>
+    <!-- Super + W: abre e fecha o Wise (se estiver instalado) -->
+    <keybind key="W-w">
+      <action name="Execute" command="sh -c &quot;[ -x /usr/bin/duiaos-wise ] &amp;&amp; /usr/bin/duiaos-wise --alternar&quot;" />
+    </keybind>
     <!-- Super + L: bloqueia a tela -->
     <keybind key="W-l">
       <action name="Execute" command="sh -c &quot;$DUIAOS_SHELL/bloqueio/bloquear&quot;" />

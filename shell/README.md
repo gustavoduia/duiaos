@@ -36,12 +36,22 @@ para desbloquear".
 | Atalho | Ação |
 | --- | --- |
 | Super + Espaço | Abre e fecha a Central de Aplicativos |
+| Super + W | Abre e fecha o Wise |
 | Super + L | Bloqueia a tela |
 | Ctrl + Alt + Delete | Menu de Energia |
 | Clique no símbolo da Barra | Menu de Energia |
 
 A tela também bloqueia sozinha após 10 minutos sem uso e antes de suspender
 (swayidle, em `sessao/autostart`).
+
+## Wise
+
+O Wise fica no repositório privado `duiaos-wise` (pacote `duiaos-wise`). A
+interface só conhece o contrato: o comando `/usr/bin/duiaos-wise` existe
+quando ele está instalado, e `duiaos-wise --alternar` abre ou fecha a janela.
+Com ele instalado aparecem o botão "Wise" na Barra de Recursos, o Wise como
+primeiro item fixo da Ilha de Aplicativos (`duiaos-wise.desktop`) e o atalho
+Super+W. Sem ele, nada disso aparece.
 
 ## Menu de Energia
 

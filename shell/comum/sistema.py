@@ -22,6 +22,23 @@ REINICIAR_NO_WINDOWS = [
 ]
 BLOQUEAR = PASTA_SHELL / "bloqueio" / "bloquear"
 
+# Wise (repositório privado duiaos-wise, pacote duiaos-wise). Contrato com a
+# interface: o comando abaixo existe quando o Wise está instalado, e
+# "duiaos-wise --alternar" abre ou fecha a janela do Wise.
+WISE = "/usr/bin/duiaos-wise"
+WISE_DESKTOP = "duiaos-wise.desktop"
+
+
+def wise_instalado():
+    return os.access(WISE, os.X_OK)
+
+
+def alternar_wise():
+    """Abre ou fecha a janela do Wise (se ele estiver instalado)."""
+    if wise_instalado():
+        subprocess.Popen([WISE, "--alternar"], stdout=subprocess.DEVNULL,
+                         stderr=subprocess.DEVNULL, start_new_session=True)
+
 
 def papel_de_parede():
     """Caminho (URL file://) do papel de parede padrão, ou '' se não existir."""
