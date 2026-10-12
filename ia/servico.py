@@ -243,12 +243,12 @@ class Servico:
             return
         threads = hardware.threads_candidatas(hardware.nucleos())
         candidatas = [{"num_gpu": 0, "num_thread": n} for n in threads]
-        # Placa de vídeo integrada (ex.: Intel Iris Xe) pelo Vulkan: ajuda a ler o
-        # pedido, mas divide a memória com o sistema; só é medida quando o modelo
-        # usa até 40% da RAM (o Ollama pode precisar de uma cópia para a placa)
+        # Placa de vídeo integrada (ex.: Intel Iris Xe) pelo Vulkan: pode ler o
+        # pedido mais rápido, mas divide a memória com o sistema; só é medida
+        # quando o modelo cabe na metade da RAM (o 4B cabe num computador de 16 GB)
         info = cat.procurar(self.catalogo, modelo)
         if hardware.placas_de_video() and info and \
-                cat.memoria_necessaria_gb(info["download_gb"]) <= self.memoria_gb * 0.4:
+                cat.memoria_necessaria_gb(info["download_gb"]) <= self.memoria_gb * cat.LIMITE_MANTER:
             candidatas.append({"num_gpu": 999, "num_thread": threads[0]})
         self._calibrando = modelo
         manter = self.manter_na_memoria(modelo)
@@ -258,7 +258,11 @@ class Servico:
             medidas = []
             for opcoes in candidatas:
                 try:
-                    m = self.ollama.medir(modelo, manter, opcoes, TEXTO_DE_MEDICAO)
+                    # 1ª rodada: carrega o modelo com estas opções (o processador ainda está
+                    # trazendo o modelo do disco para a memória; a medida sai pior).
+                    # 2ª rodada, com outro começo de texto para não reaproveitar nada: vale esta.
+                    self.ollama.medir(modelo, manter, opcoes, "Aquecendo. " + TEXTO_DE_MEDICAO, palavras=8)
+                    m = self.ollama.medir(modelo, manter, opcoes, "Medindo. " + TEXTO_DE_MEDICAO)
                 except ErroOllama as erro:
                     print(f"duiaos-ia: calibração com {opcoes} falhou: {erro}", file=sys.stderr, flush=True)
                     continue

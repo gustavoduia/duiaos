@@ -137,9 +137,10 @@ def diagnostico(conexao):
     print("Placa de vídeo: " + (", ".join(f"{p['fabricante']} ({p['dispositivo']})" for p in placas) or "nenhuma vista"))
     if os.geteuid() == 0:
         pentes = [l.strip() for l in _executar("dmidecode", "-t", "memory").splitlines()
-                  if re.match(r"\s*(Size|Configured Memory Speed|Locator):", l) and "No Module" not in l]
+                  if re.match(r"\s*(Size|Speed|Configured Memory Speed|Locator):", l) and "No Module" not in l]
         if pentes:
-            print("Pentes de memória (2 pentes iguais = canal duplo, até 2x mais rápido para escrever):")
+            print("Pentes de memória (2 pentes iguais = canal duplo; Speed = máximo do pente, "
+                  "Configured = em uso):")
             for linha in pentes:
                 print("   " + linha)
 
