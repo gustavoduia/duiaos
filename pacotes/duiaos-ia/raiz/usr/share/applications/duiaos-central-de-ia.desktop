@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Central de IA
+GenericName=Configurações de IA
+Comment=Escolha o modelo de IA do sistema e baixe outros modelos
+Exec=duiaos-central-de-ia
+Icon=duiaos-central-de-ia
+StartupWMClass=duiaos-central-de-ia
+Terminal=false
+Categories=Settings;System;
+Keywords=ia;inteligência artificial;modelo;ollama;qwen;gemma;llama;phi;

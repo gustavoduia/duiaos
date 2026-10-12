@@ -1,0 +1,11 @@
+#!/bin/sh
+# DuiaOS — duiaos-ia: o estado (/var/lib/duiaos-ia, modelo ativo) só sai no purge.
+# Os modelos baixados são do Ollama (/usr/share/ollama) e ficam.
+set -e
+if [ "$1" = "purge" ]; then
+  rm -rf /var/lib/duiaos-ia
+fi
+if [ -d /run/systemd/system ]; then
+  systemctl daemon-reload || true
+fi
+exit 0

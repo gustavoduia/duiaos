@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <!-- DuiaOS — Central de IA: brilho da IA dentro da órbita do DuiaOS -->
+  <defs>
+    <linearGradient id="fundo" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1A3A73"/>
+      <stop offset="1" stop-color="#2E6BE6"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="112" height="112" rx="28" fill="url(#fundo)"/>
+  <circle cx="64" cy="64" r="36" fill="none" stroke="#FFFFFF" stroke-opacity="0.28" stroke-width="5"/>
+  <path d="M64 34 C67 52 76 61 94 64 C76 67 67 76 64 94 C61 76 52 67 34 64 C52 61 61 52 64 34 Z" fill="#FFFFFF"/>
+  <path d="M88 30 C89 36 92 39 98 40 C92 41 89 44 88 50 C87 44 84 41 78 40 C84 39 87 36 88 30 Z" fill="#FFFFFF" fill-opacity="0.8"/>
+  <circle cx="89.5" cy="89.5" r="7" fill="#7CE0B5"/>
+</svg>

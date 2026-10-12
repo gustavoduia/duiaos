@@ -27,6 +27,12 @@ if [ -x /usr/bin/duiaos-wise ]; then
   ) &
 fi
 
+# IA do sistema (ADR 030): sem modelo ativo (1º login), ativa o modelo padrão
+# ou começa a baixá-lo; o Wise e a Central de IA mostram o progresso.
+if [ -x /usr/bin/duiaos-ia ]; then
+  /usr/bin/duiaos-ia garantir-padrao >/tmp/duiaos-ia.log 2>&1 &
+fi
+
 # Tela de Bloqueio: após 10 minutos sem uso, antes de suspender e
 # quando o sistema pede (loginctl lock-session)
 BLOQUEAR="${DUIAOS_SHELL}/bloqueio/bloquear"

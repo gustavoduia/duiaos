@@ -1,0 +1,30 @@
+[Unit]
+Description=IA do DuiaOS (modelo ativo e catálogo de modelos)
+Wants=ollama.service
+After=ollama.service
+
+# Aberto pelo D-Bus quando algum programa chama org.duiaos.IA1
+# (/usr/share/dbus-1/system-services/org.duiaos.IA1.service).
+[Service]
+Type=dbus
+BusName=org.duiaos.IA1
+ExecStart=/usr/bin/python3 /usr/share/duiaos/ia/servico.py
+User=duiaos-ia
+Group=duiaos-ia
+StateDirectory=duiaos-ia
+StateDirectoryMode=0755
+UMask=0022
+Restart=on-failure
+RestartSec=3
+# Endurecimento: só escreve no próprio estado e só fala com o Ollama local
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+IPAddressDeny=any
+IPAddressAllow=localhost

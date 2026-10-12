@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<!-- DuiaOS — quem pode mudar a IA do sistema. A pessoa sentada no computador
+     (sessão local ativa) pode, sem senha: a sessão do DuiaOS não tem um agente
+     de senha do polkit. De fora (SSH), só com sudo. -->
+<policyconfig>
+  <vendor>DuiaOS</vendor>
+  <action id="org.duiaos.ia.gerenciar">
+    <description>Gerenciar a IA do sistema</description>
+    <message>É preciso autorização para baixar, ativar ou remover modelos de IA</message>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>yes</allow_active>
+    </defaults>
+  </action>
+</policyconfig>

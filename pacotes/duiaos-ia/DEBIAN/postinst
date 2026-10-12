@@ -1,0 +1,23 @@
+#!/bin/sh
+# DuiaOS — duiaos-ia: usuário do serviço e recarga do D-Bus e do systemd.
+set -e
+
+case "$1" in
+  configure)
+    if ! getent group duiaos-ia >/dev/null; then
+      addgroup --quiet --system duiaos-ia
+    fi
+    if ! getent passwd duiaos-ia >/dev/null; then
+      adduser --quiet --system --ingroup duiaos-ia --no-create-home --home /var/lib/duiaos-ia \
+        --shell /usr/sbin/nologin --gecos "Serviço de IA do DuiaOS" duiaos-ia
+    fi
+    if [ -d /run/systemd/system ]; then
+      systemctl daemon-reload || true
+      systemctl reload dbus.service >/dev/null 2>&1 || true
+      # Versão nova do serviço: reinicia se ele estava rodando (o D-Bus o abre de novo quando preciso)
+      systemctl try-restart duiaos-ia.service >/dev/null 2>&1 || true
+    fi
+    ;;
+esac
+
+exit 0
