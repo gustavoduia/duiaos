@@ -39,6 +39,7 @@ import statistics
 import subprocess
 import sys
 import tarfile
+import threading
 import time
 import urllib.request
 from pathlib import Path
@@ -145,6 +146,14 @@ class Servicos:
 
     def __init__(self):
         self.parados = False
+        # Pede a senha agora e mantém o sudo válido até o fim (a medição passa de
+        # 15 min; sem isso, religar os serviços no fim pediria a senha de novo)
+        subprocess.run(["sudo", "-v"], check=True)
+        def manter():
+            while True:
+                time.sleep(60)
+                subprocess.run(["sudo", "-n", "-v"], capture_output=True, check=False)
+        threading.Thread(target=manter, daemon=True).start()
 
     def parar(self):
         dizer("==> Parando o Ollama e o duiaos-ia durante a medição (voltam no fim)")
@@ -376,6 +385,7 @@ def principal():
     dizer(f"==> Modelo: {modelo} · opções calibradas: {opcoes or 'nenhuma'} · threads: {threads}")
     dizer("    Deixe o notebook na tomada e sem outros programas pesados abertos.")
 
+    servicos = Servicos() if not a.sem_ollama else None
     # Downloads primeiro (com o Ollama ainda ligado)
     dizer("==> Preparando (downloads com sha256 conferido)")
     binario = llama_server()
@@ -410,9 +420,8 @@ def principal():
         rodar(f"Ollama (atual, {'placa' if na_placa else 'processador'})", None,
               medir_ollama, modelo, opcoes, a.repeticoes)
 
-    servicos = Servicos()
     try:
-        if not a.sem_ollama:
+        if servicos:
             servicos.parar()
         if blob:
             rodar("llama-server · arquivo do Ollama · processador", "ollama",
@@ -455,7 +464,8 @@ def principal():
                     rodar(f"OpenVINO · INT4 · processador + MTP ({n} por vez)", "openvino",
                           medir_openvino, python, pasta, "CPU", n, a.repeticoes, threads)
     finally:
-        servicos.voltar()
+        if servicos:
+            servicos.voltar()
 
     tabela(linhas, base_texto)
     arquivo = CACHE / f"resultado-{time.strftime('%Y%m%d-%H%M')}.json"
