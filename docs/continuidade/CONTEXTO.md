@@ -1,7 +1,8 @@
 # DuiaOS — Contexto permanente do projeto
 
 Muda pouco. Vale para qualquer pessoa ou conta do Claude que trabalhe no
-projeto. Ordem de leitura no início de toda sessão: `CLAUDE.md` → este arquivo
+projeto. Ordem de leitura no início de toda sessão: a **memória dos chats**
+(`duiaos-wise/docs/memoria-dos-chats/`, privada, todos os arquivos) → `CLAUDE.md` → este arquivo
 → `ESTADO.md` → `RECURSOS.md` (e, no Wise e no site, os equivalentes em
 `duiaos-wise/docs/continuidade/` e `duiaos-websites/docs/continuidade/`).
 
@@ -70,7 +71,8 @@ projeto. Ordem de leitura no início de toda sessão: `CLAUDE.md` → este arqui
 ## Produto
 - DuiaOS: SO baseado em Debian 13 trixie, x86_64 + ARM64. Codinome da 1.0: **Zoinho** (homenagem ao pai).
 - Público: **usuários finais**. Bonito, leve, simples, seguro.
-- IA nativa: assistente **Wise** (só após o login); a IA é do sistema operacional (ADR 029): serviço `duiaos-ia`
+- IA nativa: assistente **Wise** — "o cérebro do DuiaOS": vai embarcado e instalado com o sistema, na ISO e no
+  apt (decisão do Gustavo, ADR 042); nunca propor o DuiaOS sem ele. Aparece só após o login; a IA é do sistema operacional (ADR 029): serviço `duiaos-ia`
   + Central de IA; um só modelo ativo (ADR 030); o Wise é cliente. Motor: **Ollama** (mantido em 12/10 após
   medição; ADR 036).
 - Site e documentação para usuários: repositório privado `duiaos-websites` (ADRs 037–039).
