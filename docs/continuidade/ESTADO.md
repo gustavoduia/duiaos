@@ -4,33 +4,26 @@
 > commits, o que está instalado em cada máquina. Desde 13/10 é o estado de TODO o projeto (ADR 043): o Wise e o
 > site não têm mais arquivos de estado próprios.
 
-Atualizado em: 12/10/2026 (22h20) · por: Claude (conta do Gustavo) · sessão session_01CiC8yo8v1GpMMnY2gZUjqx
-**Chat encerrando com 3 PRs finais esperando merge do Gustavo** (seção 1) — os últimos: dali em diante, só `main`.
+Atualizado em: 13/10/2026 (07h50) · por: Claude (conta do Gustavo) · sessão session_01CiC8yo8v1GpMMnY2gZUjqx
+**Chat encerrado** (memória `2026-10-12_19h51_cinco-etapas-e-wise-na-iso.md`). Os cinco repositórios só têm a
+`main` (o fontes-abertas também a `gh-pages`) e nenhum PR aberto.
 
-## 1. O que está na main e o que falta entrar
-- **Na `main`** (12/10 18h30): duiaos até #11 (ADRs 001–040); Wise até #9 (W01–W19); site até #7;
-  diagnosticos com os relatórios do Dell; fontes-abertas com EULA, licenças, ISOs 0.2.0 e o apt.
-- **Falta entrar (PRs finais, merge pelo Gustavo, nesta ordem)**:
-  1. **duiaos #12** — F2/F3 de "Ajude a melhorar o DuiaOS" (ADR 041), Wise na ISO e no apt (ADR 042),
-     notas da 0.3.0, organização dos repositórios e só-`main` (ADR 043): REGRASINI/REGRASFIM, memórias em
-     `docs/continuidade/`, inventários e diários do Wise e do site aqui, `publico/` substituída pelo
-     `duiaos-fontes-abertas`, `ferramentas/organizar-repositorios.sh`.
-  2. **duiaos-wise #10** — W20 (aquecimento antes do login, agir sem anunciar, Wi-Fi/Bluetooth, aplicativos fora
-     do apt, uso agregado); sai o CLAUDE.md e `docs/continuidade/` (a conferência de recursos lê
-     `duiaos/docs/continuidade/RECURSOS-WISE.md`).
-  3. **duiaos-websites #8** — `/api/relatorios`, cron para o `duiaos-diagnosticos`, documentação de F2/F3 e do
-     W20 (conteúdo do antigo #9); sai o CLAUDE.md e `docs/continuidade/` (workflows clonam o `duiaos` para a
-     conferência).
-  Depois dos três: `bash ferramentas/organizar-repositorios.sh` (🍎 MAC) apaga todas as branches `claude/*` e
-  tira as instruções do `duiaos-diagnosticos` e o aviso de cópia do README do `duiaos-fontes-abertas`.
-- Fechados sem merge neste chat: duiaos #13 (memória, foi para o #12), Wise #11 (memória no repositório
-  errado), site #9 (foi para o #8) e site #10 (retirar avisos — virou pendência para depois da 0.3.0).
-- **Versão publicada**: 0.2.0 (12/10 02h17). A 0.3.0 está preparada e não lançada.
+## 1. O que está na main
+- **duiaos**:
+  - até #12 (ADRs 001–043: F2/F3 de "Ajude a melhorar o DuiaOS", Wise na ISO e no apt, organização);
+  - memórias dos 5 chats em `docs/continuidade/`, REGRASINI e REGRASFIM.
+- **duiaos-wise**: até #10 (W01–W20). Sem instruções (ficam no duiaos).
+- **duiaos-websites**: até #8 (`/api/relatorios`, cron, documentação de F2/F3 e W20). Sem instruções.
+- **duiaos-diagnosticos**: README e `maquinas/` (último relatório do Dell: 12/10 23h17).
+- **duiaos-fontes-abertas**: EULA, licenças, marca, `modificacoes/` (fonte do código aberto desde a ADR 043);
+  Releases até a v0.2.0; apt na `gh-pages`.
+- **Builds de 13/10**: pacotes no canal teste **sem o Wise**, porque falta o segredo `DUIAOS_TOKEN_WISE`.
+- **Versão publicada**: 0.2.0. A 0.3.0 está preparada e não lançada.
 
 ## 2. O que está instalado em cada máquina
 | Máquina | duiaos | duiaos-wise | Como conferir |
 | --- | --- | --- | --- |
-| Dell | pacotes de `f75b9bc` (igual à main de 12/10); relatórios no nível desenvolvimento, máquina `dell`, deploy key "DuiaOS dell (relatórios, escrita)" | main de 12/10 (#8) | 🔗 DELL: `dpkg -l 'duiaos*' \| grep ^ii` e `duiaos-relatorios estado` |
+| Dell | pacotes de `f75b9bc` (12/10, antes do W20 e do F2/F3; conferido no relatório de 12/10 23h17); relatórios no nível desenvolvimento, máquina `dell`, deploy key "DuiaOS dell (relatórios, escrita)" | main de 12/10 (#8) | 🔗 DELL: `dpkg -l 'duiaos*' \| grep ^ii` e `duiaos-relatorios estado` |
 | Mac | — (repositórios e `gh`) | — | — |
 - Deploy key antiga "Wise dell (escrita)" pode existir no `duiaos-diagnosticos`: se existir, remover.
 - Desde 13/10 o build precisa do `duiaos-fontes-abertas` clonado ao lado (`~/Projetos/duiaos-fontes-abertas`).
@@ -38,16 +31,12 @@ Atualizado em: 12/10/2026 (22h20) · por: Claude (conta do Gustavo) · sessão s
 ## 3. Em andamento
 - Nenhuma frente aberta (ver as pendências na memória do chat mais recente).
 
-## 4. Próximos passos (detalhes na memória mais recente)
-1. Gustavo: merges da seção 1 (ordem), `organizar-repositorios.sh`, segredos `DUIAOS_TOKEN_WISE` (duiaos) e
-   `GITHUB_DIAGNOSTICOS` (duiaos-websites).
-2. Teste no Dell (aquecimento antes do login, janela "Ajude a melhorar", Wi-Fi pelo Wise) e leitura dos
-   relatórios pelo Claude.
-3. Lançar a 0.3.0 (`lancar-versao.sh 0.3.0`) e, depois de publicada, retirar os avisos "Na próxima versão" da
-   documentação (direto na `main` do `duiaos-websites`).
-4. Explorador de arquivos, Configurações e painel de controle (nomes e escopo com o Gustavo).
-5. Antes da 1.0: Wise compilado (ADR 042), Google/Microsoft na agenda, W3 voz, W4 gateway da nuvem, P4
-   instalador próprio (BitLocker).
+## 4. Próximos passos (detalhes na seção 6 da memória mais recente)
+1. Claude: relatório de realinhamento a partir das 5 memórias (antes de qualquer código).
+2. Gustavo: segredos `DUIAOS_TOKEN_WISE` (duiaos) e `GITHUB_DIAGNOSTICOS` (duiaos-websites, não confirmado).
+3. Teste no Dell (W20, janela "Ajude a melhorar", Wi-Fi pelo Wise) e leitura dos relatórios.
+4. Lançar a 0.3.0; depois retirar os avisos "Na próxima versão" da documentação.
+5. Explorador de arquivos, Configurações e painel de controle (nomes e escopo com o Gustavo).
 
 ## 5. Decisões recentes (detalhe nos ADRs)
 - 13/10: **organização** (ADR 043): o `duiaos` é o repositório oficial e guarda toda instrução; só `main`, sem

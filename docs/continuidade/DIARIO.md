@@ -4,6 +4,12 @@ Uma entrada por sessão, a mais nova em cima. Só acrescentar; nunca apagar.
 Formato: data · quem/conta · branches/PRs · o que foi feito · decisões · o que ficou pendente.
 
 
+
+## 13/10/2026 (07h50) · Claude (conta do Gustavo) · encerramento do chat de 12/10 19h51
+- O Gustavo fez os merges finais (duiaos #12, Wise #10, site #8) e rodou `organizar-repositorios.sh`: só a `main`
+  nos cinco repositórios.
+- Memórias dos 4 chats antigos geradas pelo prompt deste chat. Falta o segredo `DUIAOS_TOKEN_WISE` (os builds
+  de 13/10 saíram sem o Wise); o Dell ainda está em `f75b9bc`. Próximo chat: relatório de realinhamento.
 ## 12/10/2026 (22h) · Claude (conta do Gustavo) · organização dos repositórios (ADR 043)
 - Gustavo: só a `main`, sem branches; o `duiaos` é o repositório oficial e guarda toda instrução; REGRASINI e
   REGRASFIM para iniciar e encerrar chats; memória única por chat em `docs/continuidade/`.

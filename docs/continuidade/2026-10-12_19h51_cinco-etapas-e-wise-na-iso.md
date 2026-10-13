@@ -1,6 +1,6 @@
 # Chat 2026-10-12 19h51 — Cinco etapas do plano, Wise na ISO e organização dos repositórios
 
-- Início / fim: 2026-10-12 19:51 — 2026-10-12 22:30 (Brasília) · conta do Gustavo · session_01CiC8yo8v1GpMMnY2gZUjqx
+- Início / fim: 2026-10-12 19:51 — 2026-10-13 07:50 (Brasília) · conta do Gustavo · session_01CiC8yo8v1GpMMnY2gZUjqx
 - Chat anterior: fechamento do bloco de 12/10 18h30 (session_01LzmCWyGMx1FKt4d1cuh5R8; sem arquivo de memória
   próprio — o histórico dele está em `DIARIO.md`, `DIARIO-WISE.md` e `DIARIO-WEBSITES.md`).
 
@@ -14,6 +14,9 @@
 4. **Só a `main`**: "Não é pra criar várias branchs… É pra trabalhar somente na Main." Desfazer as branches
    criadas, manter tudo na `main`, e registrar: **o repositório oficial do projeto é o `duiaos` e toda instrução
    fica exclusivamente nele**; nada de instruções nos outros repositórios. Criar `REGRASFIM.md` e `REGRASINI.md`.
+5. Um prompt para gerar a memória dos chats antigos (data e hora da mensagem mais antiga no nome). Ele rodou em
+   todos e avisou em 13/10 07h47: "já temos todo o histórico necessário". Depois: encerrar este chat pelo
+   `REGRASFIM.md`.
 
 ## 2. Visão e regras do produto ditas neste chat
 - **"O Wise é o cérebro do DuiaOS. Tem que ir embarcado no sistema de forma nativa e instalado junto com o
@@ -88,44 +91,56 @@
     bloqueado, o Gustavo aprova (modo de permissões manual); nunca criar branch para contornar.
 
 ## 6. Pendências (como fazer no próximo chat)
-1. **Merges finais (Gustavo, nesta ordem)**: duiaos #12 → duiaos-wise #10 → duiaos-websites #8.
-   - A ordem importa: a conferência do Wise e do site lê os inventários da `main` do `duiaos`.
-   - 🍎 MAC: `gh pr merge 12 --squash --delete-branch -R gustavoduia/duiaos`, depois o mesmo com `10` em
-     `gustavoduia/duiaos-wise` e `8` em `gustavoduia/duiaos-websites`.
-   - Em seguida, 🍎 MAC: `cd ~/Projetos/duiaos && git checkout main && git pull && bash ferramentas/organizar-repositorios.sh`.
-     Ele apaga todas as branches `claude/*` dos cinco repositórios, tira o `CLAUDE.md` e a regra de PR do
-     `duiaos-diagnosticos` e corrige o README do `duiaos-fontes-abertas`.
-   - Próximo chat: confirmar, com `gh api repos/gustavoduia/REPO/branches`, que só existe a `main` (e `gh-pages`
-     no fontes-abertas).
-2. **Segredos (Gustavo)**: tokens fine-grained em GitHub › Settings › Developer settings.
-   - "DuiaOS build — Wise": só o `duiaos-wise`, Contents Read-only. 🍎 MAC: `gh secret set DUIAOS_TOKEN_WISE -R gustavoduia/duiaos`.
-   - "Site — diagnósticos": só o `duiaos-diagnosticos`, Contents e Issues Read and write. 🍎 MAC:
-     `gh secret set GITHUB_DIAGNOSTICOS -R gustavoduia/duiaos-websites`.
-   - Próximo chat: conferir no workflow `Pacotes` que o `duiaos-wise_*.deb` foi gerado e, no
-     `duiaos-diagnosticos`, o primeiro commit "usuários: …" (depois de algum relatório chegar ao site).
-3. **Teste no Dell (Gustavo) e análise (Claude)**:
-   - 🔗 DELL: `cd ~/Projetos/duiaos-fontes-abertas 2>/dev/null || git clone https://github.com/gustavoduia/duiaos-fontes-abertas ~/Projetos/duiaos-fontes-abertas`.
-   - 🔗 DELL: `cd ~/Projetos/duiaos && git checkout main && git pull && bash pacotes/instalar-local.sh`, depois
-     `cd ~/Projetos/duiaos-wise && git checkout main && git pull && bash pacote/instalar-local.sh`.
-   - `sudo reboot`; entrar; fazer um pedido ao Wise e pedir "desliga o wifi" (e religar).
+
+**Já resolvido ao fim deste chat (conferido em 13/10 07h50):**
+- Merges finais feitos pelo Gustavo: duiaos #12, duiaos-wise #10 e duiaos-websites #8 (13/10 01h21).
+- `organizar-repositorios.sh` rodou: os cinco repositórios só têm a `main` (o fontes-abertas também a
+  `gh-pages`, do apt); nenhum PR aberto; o diagnosticos ficou só com README e `maquinas/`; o README do
+  fontes-abertas virou "fonte do código aberto".
+- Memórias dos chats antigos geradas e na `main`:
+  - `2026-10-09_16h41_fundacao-iso-shell-dualboot-licenca.md`
+  - `2026-10-11_18h12_licenca-runners-e-build-no-github.md`
+  - `2026-10-11_xxhxx_p3-pacotes-wise-ia-local.md`
+  - `2026-10-12_11h40_motores-wise-w2-site-e-logs.md`
+
+**Pendentes:**
+1. **Relatório de realinhamento (Claude — primeira tarefa do próximo chat; pedido do Gustavo neste chat).**
+   - Ler na íntegra todas as memórias (as 5 acima, do mais antigo ao mais novo) e os arquivos de referência.
+   - Entregar ao Gustavo um relatório completo do andamento do projeto e do que precisa ser realinhado.
+   - Cruzar o que cada chat decidiu com o que está no código e nos ADRs, procurando: decisões contraditórias,
+     pendências antigas esquecidas, decisões do Gustavo que não viraram código (como aconteceu com o Wise na
+     ISO), nomes e visão do produto.
+   - Não mudar código antes de o Gustavo ler o relatório e decidir.
+2. **Segredo `DUIAOS_TOKEN_WISE` (Gustavo) — ainda falta.** O build de 13/10 10h41 avisou "Sem o segredo
+   DUIAOS_TOKEN_WISE: pacotes e ISO de teste sem o Wise".
+   - Criar um token fine-grained "DuiaOS build — Wise": só o `duiaos-wise`, Contents Read-only.
+   - 🍎 MAC: `gh secret set DUIAOS_TOKEN_WISE -R gustavoduia/duiaos`, e depois
+     `gh workflow run pacotes.yml -R gustavoduia/duiaos --ref main`.
+   - O Claude confere no log do job a linha `Wise (main, …): …duiaos-wise_….deb` e o pacote em
+     `https://gustavoduia.github.io/duiaos-fontes-abertas/apt/dists/teste/main/binary-all/Packages`.
+3. **Segredo `GITHUB_DIAGNOSTICOS` (Gustavo) — não confirmado.**
+   - Token "Site — diagnósticos": só o `duiaos-diagnosticos`, Contents e Issues Read and write.
+   - 🍎 MAC: `gh secret set GITHUB_DIAGNOSTICOS -R gustavoduia/duiaos-websites` e rodar de novo o workflow `Site`.
+   - Conferir no log do workflow o passo "Segredo do Worker (relatórios)".
+4. **Teste no Dell (Gustavo) e análise (Claude) — ainda não feito.** O relatório das 23h17 de 12/10 mostra o Dell
+   com os pacotes de `f75b9bc`, ou seja, sem o W20 nem o F2/F3. Passos:
+   - 🔗 DELL, se não existir: `git clone https://github.com/gustavoduia/duiaos-fontes-abertas ~/Projetos/duiaos-fontes-abertas`.
+   - 🔗 DELL: `cd ~/Projetos/duiaos && git checkout main && git pull && git fetch --prune && bash pacotes/instalar-local.sh`.
+   - 🔗 DELL: `cd ~/Projetos/duiaos-wise && git checkout main && git pull && git fetch --prune && bash pacote/instalar-local.sh`.
+   - `sudo reboot`; entrar; fazer um pedido ao Wise; pedir "desliga o wifi" e religar.
    - 🔗 DELL: `journalctl -u duiaos-wise-aquecimento -b --no-pager | tail -5` e `duiaos-relatorios enviar`.
-   - O Claude lê: `python3 ferramentas/ler-relatorios.py ../duiaos-diagnosticos --horas 6 --componente duiaos-wise --eventos`.
-     Comparar com 49 s de aquecimento e 38 s no 1º pedido. Medir antes de afirmar ganho.
-   - Cuidado: o Dell está no nível desenvolvimento. Escolher uma opção na janela "Ajude a melhorar o DuiaOS"
-     tira o Dell desse nível.
-4. **Lançar a 0.3.0** (depois do teste): 🍎 MAC: `cd ~/Projetos/duiaos && git checkout main && git pull && bash ferramentas/lancar-versao.sh 0.3.0`.
-   - O script exige `~/Projetos/duiaos-wise` na `main` atualizada e cria a tag nos dois repositórios.
-   - Quando o Release aparecer publicado no `duiaos-fontes-abertas`: o Claude retira os avisos
-     `:::note[Na próxima versão]` das 17 páginas de `duiaos-websites/documentacao/src/content/docs/`, direto na
-     `main`. Script de uma linha: um regex que apaga os blocos `\n:::note\[Na próxima versão\]\n.*?\n:::\n`.
-   - Junto, o Claude atualiza a linha do aviso em `RECURSOS-WEBSITES.md`.
-5. **Próximos recursos pedidos pelo Gustavo**: explorador de arquivos, Configurações e painel de controle.
-   - Antes de começar, perguntar os nomes visíveis e se Configurações e painel de controle são um aplicativo só
-     (sugestão do Claude: um só, que recebe também a Central de IA e "Ajude a melhorar o DuiaOS").
-   - Depois: estudar como Ubuntu/GNOME, elementary e Windows fazem, propor um ADR e só então codificar
-     (QML/PySide6 em `apps/`, como a Central de IA).
-6. **Antes da 1.0**: Wise compilado (Nuitka; ADR 042 e `docs/visao.md`), Google/Microsoft na agenda, W3 voz, W4
-   gateway da nuvem, P4 instalador próprio (BitLocker).
+   - O Claude lê os relatórios (`ler-relatorios.py --componente duiaos-wise --eventos`) e compara com 49 s de
+     aquecimento e 38 s no 1º pedido.
+   - Cuidado: escolher uma opção na janela "Ajude a melhorar o DuiaOS" tira o Dell do nível desenvolvimento.
+5. **Lançar a 0.3.0** (depois de 2 e 4; ainda não lançada, a última é a v0.2.0):
+   - 🍎 MAC: `cd ~/Projetos/duiaos && git checkout main && git pull && bash ferramentas/lancar-versao.sh 0.3.0`.
+   - Com o Release publicado: o Claude retira os avisos `:::note[Na próxima versão]` das páginas de
+     `duiaos-websites/documentacao/src/content/docs/`, direto na `main`, e atualiza a linha em
+     `RECURSOS-WEBSITES.md`.
+6. **Explorador de arquivos, Configurações e painel de controle** (pedidos do Gustavo). Antes: nomes visíveis e se
+   Configurações e painel são um aplicativo só; o relatório de realinhamento pode mudar a ordem.
+7. **Antes da 1.0**: Wise compilado (Nuitka), Google/Microsoft na agenda, W3 voz, W4 gateway da nuvem, P4
+   instalador próprio (BitLocker).
 
 ## 7. Arquivos salvos em cada repositório
 - **duiaos** (PR #12; na `main` depois do merge):
@@ -157,15 +172,13 @@
   editado direto nele.
 
 ## 8. Orientação para o próximo chat
-- Leia `REGRASINI.md` e siga.
-- Comece pela pendência 1 e confira o que o Gustavo já fez:
-  - os merges: `gh api repos/gustavoduia/duiaos/pulls/12 --jq .merged_at`;
-  - as branches que sobraram;
-  - os segredos (o workflow `Pacotes` gerou o Wise?).
-- Não refaça nada que já está na `main`. Não crie branch. Se o envio à `main` for bloqueado, peça ao Gustavo para
-  aprovar.
+- Siga o `REGRASINI.md`: leia as 5 memórias em ordem (09/10 16h41 → 11/10 18h12 → 11/10 xxhxx → 12/10 11h40 →
+  esta) e todos os arquivos de referência de `docs/continuidade/`.
+- A memória `2026-10-11_xxhxx_…` não tem hora conhecida; pelo conteúdo, ela fica entre a de 11/10 18h12 e a de
+  12/10 11h40 (confirme pela leitura).
+- **A primeira tarefa é o relatório de realinhamento (pendência 1)**, antes de qualquer código. Depois, confira
+  com o Gustavo as pendências 2–5.
+- Só a `main`; nenhuma branch nem PR. Se o envio à `main` for bloqueado, peça a aprovação do Gustavo.
 - O Wise é parte do sistema: toda ISO e todo pacote do DuiaOS levam o Wise.
 - Nada de instruções fora do `duiaos`. Código aberto vai para o `duiaos-fontes-abertas`; logs ficam no
   `duiaos-diagnosticos`; site e documentação, no `duiaos-websites`; o Wise, no `duiaos-wise`.
-- Depois das pendências 1–4, pergunte ao Gustavo os nomes do explorador de arquivos e das Configurações, e se
-  Configurações e painel de controle são um aplicativo só.
