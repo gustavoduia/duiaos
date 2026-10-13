@@ -2,7 +2,7 @@
 
 Muda pouco. Vale para qualquer pessoa ou conta do Claude que trabalhe no
 projeto. Ordem de leitura no início de toda sessão: a **memória dos chats**
-(`duiaos-wise/docs/memoria-dos-chats/`, privada, todos os arquivos) → `CLAUDE.md` → este arquivo
+(`docs/memoria-dos-chats/` deste repositório, todos os arquivos) → `CLAUDE.md` → este arquivo
 → `ESTADO.md` → `RECURSOS.md` (e, no Wise e no site, os equivalentes em
 `duiaos-wise/docs/continuidade/` e `duiaos-websites/docs/continuidade/`).
 
