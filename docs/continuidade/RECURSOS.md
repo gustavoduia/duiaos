@@ -91,4 +91,5 @@ Moraram aqui até 12/10 e foram para o repositório `duiaos-websites` (ADR 039),
 
 | Recurso | Onde | Conferência | Desde | Situação |
 | --- | --- | --- | --- | --- |
+| Memória dos chats (um arquivo por chat, lida inteira antes de tudo; só no duiaos) | `docs/memoria-dos-chats/` | `docs/memoria-dos-chats/README.md::Ao começar um chat`, `docs/memoria-dos-chats/MODELO.md::Visão e regras do produto`, `CLAUDE.md::Memória dos chats primeiro` | 12/10 | PR #13 |
 | Continuidade à prova de troca de sessão e de conta | `CLAUDE.md`, `docs/continuidade/` | `CLAUDE.md::docs/continuidade/ESTADO.md`, `ferramentas/conferir-recursos.py::RECURSOS.md` | 12/10 | main |

@@ -3,6 +3,9 @@
 A memória do projeto é este repositório, não o histórico de uma conversa. Siga a ordem abaixo em TODA sessão.
 
 ## Ao começar (antes de mudar qualquer arquivo)
+0. **Memória dos chats primeiro** (`docs/memoria-dos-chats/` deste repositório): leia o README e TODOS os arquivos, do mais antigo ao mais novo (na `main` e na
+   branch `claude/memoria-dos-chats`, se ainda não tiver merge). Eles guardam o que o Gustavo decidiu e por quê.
+   Nada de decidir contra a visão do produto ou contra uma decisão registrada lá; em dúvida, pergunte.
 1. Leia, nesta ordem: `docs/continuidade/CONTEXTO.md` → `docs/continuidade/ESTADO.md` →
    `docs/continuidade/RECURSOS.md` → as duas últimas entradas de `docs/continuidade/DIARIO.md`.
    Se a tarefa envolve o Wise, leia também `duiaos-wise/CLAUDE.md` e `duiaos-wise/docs/continuidade/`.
@@ -36,6 +39,8 @@ A memória do projeto é este repositório, não o histórico de uma conversa. S
   descrição (`gustavoduia/duiaos-websites#N`) — o workflow `documentacao-irma.yml` confere.
 
 ## Ao terminar o bloco de trabalho
+- Escreva (ou atualize) o arquivo deste chat em `docs/memoria-dos-chats/` (pelo `MODELO.md`). Sem segredos,
+  dados pessoais nem código do Wise (este repositório é público por enquanto).
 - Atualize `docs/continuidade/ESTADO.md` (o que está na main, PRs, o que está instalado em cada máquina,
   próximos passos, perguntas) e acrescente a entrada no `docs/continuidade/DIARIO.md`.
 - Envie (push) tudo para a branch do PR. Nada pode ficar só no ambiente do Claude ou só no Project do claude.ai.
