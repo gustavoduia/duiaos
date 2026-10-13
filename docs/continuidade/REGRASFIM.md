@@ -37,3 +37,6 @@ chat saber como manter cada coisa no seu repositório (regras em `REGRASINI.md`,
   `git push origin main`. Nunca crie branch.
 - Nunca inclua senhas, tokens, chaves, dados pessoais nem código do Wise (o `duiaos` é público por enquanto).
 - Responda ao Gustavo com o nome do arquivo e um resumo de 3 linhas.
+
+## 6. Abrir um novo chat
+Escrever no final desse chat que está sendo fechado: "Para o próximo chat: “Continuar o DuiaOS. Para isso, leia o arquivo github.com/gustavoduia/duiaos/docs/continuidade/REGRASINI.md”.".
