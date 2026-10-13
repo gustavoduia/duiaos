@@ -25,6 +25,9 @@ Regras:
 | Dual boot: "Reiniciar no Windows" pelo firmware | `pacotes/duiaos-identidade/raiz/usr/lib/duiaos/reiniciar-no-windows` | `shell/comum/sistema.py::Reiniciar no Windows` | ADR 009 | main |
 | Identidade: GRUB, Plymouth (Órbita), papel de parede Órbita | `branding/`, `pacotes/duiaos-identidade/raiz/usr/share/` | `pacotes/duiaos-identidade/raiz/usr/share/plymouth/themes/duiaos/duiaos.plymouth::duiaos` | P3 | main |
 
+| Wise instalado com o sistema (ISO e apt), do repositório privado | `pacotes/trazer-wise.sh`, `build/build.sh`, `.github/workflows/` | `pacotes/trazer-wise.sh::DUIAOS_TOKEN_WISE`, `build/build.sh::pacotes/externos/duiaos-wise_`, `pacotes/duiaos-desktop/DEBIAN/control::Recommends: duiaos-wise` | ADR 042 | main |
+| Lançamento com notas de versão e a mesma tag no Wise | `ferramentas/lancar-versao.sh`, `notas-de-versao/` | `ferramentas/lancar-versao.sh::WISE_TEM_TAG`, `.github/workflows/gerar-iso.yml::notas-de-versao/` | ADR 042 | main |
+
 ## Interface (shell)
 
 | Recurso | Onde | Conferência | Desde | Situação |
@@ -69,6 +72,10 @@ Regras:
 | Falhas registradas em todos os programas do DuiaOS | `shell/*/main.py`, `apps/central-de-ia/main.py`, `ia/`, `agente/` | `shell/barra-de-recursos/main.py::duiaos_registro.ligar`, `ia/servico.py::duiaos_registro.ligar("duiaos-ia")` | ADR 040 | main |
 | Coletor `duiaos-relatorios`: níveis, anonimização, perfil, falhas agrupadas, envio Git | `relatorios/`, `pacotes/duiaos-relatorios/` | `relatorios/coleta.py::def assinatura_nativa`, `relatorios/duiaos_registro/privacidade.py::def anonimizar` | ADR 040 | main |
 | Journal persistente, systemd-coredump e catálogo | `pacotes/duiaos-relatorios/raiz/usr/lib/systemd/` | `pacotes/duiaos-relatorios/raiz/usr/lib/systemd/journald.conf.d/50-duiaos.conf::Storage=persistent`, `pacotes/duiaos-relatorios/raiz/usr/lib/systemd/catalog/duiaos.catalog::0b0f983a3fad41bb9a9730053146311a` | ADR 040 | main |
+| Uso agregado: lista conhecida, somado no computador (nível erros e uso) | `relatorios/uso.py`, `relatorios/coleta.py`, `shell/` | `relatorios/uso.py::def agregar`, `relatorios/coleta.py::def agregar_uso`, `shell/ilha-de-aplicativos/main.py::uso.aplicativo_aberto` | ADR 041 | main |
+| Janela "Ajude a melhorar o DuiaOS" (1ª entrada sem opção marcada; Central de Aplicativos) | `apps/ajude-a-melhorar/`, `shell/sessao/autostart` | `apps/ajude-a-melhorar/AjudeAMelhorar.qml::Nenhuma opção vem marcada`, `shell/sessao/autostart::--primeira-entrada` | ADR 041 | main |
+| Escolha pelo polkit (administrador sem senha; desenvolvimento só pelo terminal) | `pacotes/duiaos-relatorios/raiz/usr/share/polkit-1/`, `relatorios/principal.py` | `pacotes/duiaos-relatorios/raiz/usr/share/polkit-1/actions/org.duiaos.relatorios.policy::org.duiaos.relatorios.escolher`, `relatorios/principal.py::ESCOLHAS_DA_TELA` | ADR 041 | main |
+| Envio pelo site (HTTPS, sem credencial; padrão) | `relatorios/envio.py`, `relatorios/config.py` | `relatorios/envio.py::def enviar_https`, `relatorios/config.py::ENDERECO_PADRAO` | ADR 041 | main |
 | Leitura dos relatórios pelo Claude | `ferramentas/ler-relatorios.py` | `ferramentas/ler-relatorios.py::def falhas_agrupadas` | ADR 040 | main |
 
 ## Site e documentação
@@ -78,10 +85,12 @@ Moraram aqui até 12/10 e foram para o repositório `duiaos-websites` (ADR 039),
 
 | Recurso | Onde | Conferência | Desde | Situação |
 | --- | --- | --- | --- | --- |
-| PR irmão exigido quando algo visível muda | `.github/workflows/documentacao-irma.yml` | `.github/workflows/documentacao-irma.yml::Documentação: não precisa` | ADR 039 | main |
 
 ## Processo
 
 | Recurso | Onde | Conferência | Desde | Situação |
 | --- | --- | --- | --- | --- |
-| Continuidade à prova de troca de sessão e de conta | `CLAUDE.md`, `docs/continuidade/` | `CLAUDE.md::docs/continuidade/ESTADO.md`, `ferramentas/conferir-recursos.py::RECURSOS.md` | 12/10 | main |
+| Início e fim de chat (REGRASINI/REGRASFIM), memória única por chat em `docs/continuidade/`, toda instrução só no duiaos, só a main | `docs/continuidade/`, `CLAUDE.md` | `docs/continuidade/REGRASINI.md::Não há autorização para criar branches`, `docs/continuidade/REGRASFIM.md::Orientação para o próximo chat`, `CLAUDE.md::Toda instrução fica exclusivamente aqui` | ADR 043 | main |
+| Inventários do Wise e do site conferidos daqui | `ferramentas/conferir-recursos.py`, `docs/continuidade/RECURSOS-*.md` | `ferramentas/conferir-recursos.py::RECURSOS-WISE.md` | ADR 043 | main |
+| Código aberto, EULA e licenças lidos do duiaos-fontes-abertas | `pacotes/construir.sh`, `.github/workflows/` | `pacotes/construir.sh::FONTES_ABERTAS`, `.github/workflows/pacotes.yml::repository: gustavoduia/duiaos-fontes-abertas` | ADR 043 | main |
+| Continuidade à prova de troca de sessão e de conta | `CLAUDE.md`, `docs/continuidade/` | `CLAUDE.md::docs/continuidade/REGRASINI.md`, `ferramentas/conferir-recursos.py::RECURSOS.md` | 12/10 | main |

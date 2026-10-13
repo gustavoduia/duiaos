@@ -95,6 +95,16 @@ CHAVE="${ROOT}/pacotes/chave.gpg"
 [ -s "${CHAVE}" ] || CHAVE=""
 VERSAO_DEB="${VERSAO_DEB:-0.0.0+local}" VERSAO_SISTEMA="${VERSION}" SUITE="${SUITE:-teste}" \
   CHAVE_PUBLICA="${CHAVE}" bash "${ROOT}/pacotes/construir.sh" config/packages.chroot
+# Wise (ADR 042): o assistente vem instalado com o sistema. O .deb é gerado
+# antes, fora do container (pacotes/trazer-wise.sh, repositório privado).
+if compgen -G "${ROOT}/pacotes/externos/duiaos-wise_*.deb" >/dev/null; then
+  cp "${ROOT}"/pacotes/externos/duiaos-wise_*.deb config/packages.chroot/
+elif [ "${SUITE:-teste}" = "estavel" ]; then
+  echo "Lançamento sem o pacote do Wise (pacotes/externos). Veja o passo 'Wise' do workflow." >&2
+  exit 1
+else
+  echo "AVISO: ISO de teste sem o Wise (sem pacotes/externos/duiaos-wise_*.deb)." >&2
+fi
 # Ollama (IA local, ADR 030): pacote da arquitetura da ISO, feito do release
 # oficial sem CUDA. O modelo padrão não vai na ISO: é baixado no 1º login.
 bash "${ROOT}/pacotes/duiaos-ollama/construir.sh" "${ARCH}" config/packages.chroot \

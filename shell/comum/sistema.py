@@ -174,4 +174,9 @@ def executar_energia(acao):
         return False
     subprocess.Popen(comando, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                      start_new_session=True)
+    try:                                       # uso agregado (relatorios/uso.py); antes de desligar
+        import duiaos_registro
+        duiaos_registro.info("uso.menu_de_energia", "Menu de Energia", acao=acao)
+    except ImportError:
+        pass
     return True

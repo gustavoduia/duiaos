@@ -136,5 +136,5 @@ fi
 log "Pronto"
 echo "Runner:  ${RUNNER} (rótulo duiaos-${MAQUINA})"
 echo "ISOs:    ${ISOS}"
-echo "Público: ${PROJETOS}/duiaos-fontes-abertas (só leitura; edite em duiaos/publico/)"
+echo "Público: ${PROJETOS}/duiaos-fontes-abertas (EULA, licenças e código aberto: edite direto nele, na main)"
 echo "Confira em ${REPO_URL}/settings/actions/runners (deve aparecer como Idle)."

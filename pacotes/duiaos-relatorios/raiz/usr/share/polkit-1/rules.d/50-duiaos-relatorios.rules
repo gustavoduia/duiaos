@@ -8,3 +8,13 @@ polkit.addRule(function(action, subject) {
         return polkit.Result.YES;
     }
 });
+
+// "Ajude a melhorar o DuiaOS" (tela da 1ª entrada e o aplicativo): o administrador que está no computador
+// escolhe sem digitar a senha, como no duiaos-agente (ADR 034). Os outros precisam da senha de um
+// administrador; o helper só aceita desligado, erros ou erros_e_uso.
+polkit.addRule(function(action, subject) {
+    if (action.id == "org.duiaos.relatorios.escolher" &&
+        subject.local && subject.active && subject.isInGroup("sudo")) {
+        return polkit.Result.YES;
+    }
+});

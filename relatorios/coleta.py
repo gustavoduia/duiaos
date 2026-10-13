@@ -4,7 +4,7 @@ O que entra, por nível (ADR 040):
   erros            falhas de programas (Python pelo duiaos_registro; nativos pelo systemd-coredump),
                    serviços que falharam, erros (prioridade 0–3) de todo o sistema, avisos dos componentes
                    do DuiaOS, e o perfil do computador. Textos anonimizados.
-  erros_e_uso      o mesmo + eventos de uso agregados (fase 2).
+  erros_e_uso      o mesmo + uso agregado (relatorios/uso.py: lista conhecida, só contagens).
   desenvolvimento  tudo dos componentes do DuiaOS (inclusive informação), avisos de todo o sistema e os
                    eventos com conteúdo (ex.: conversas do Wise). Textos sem anonimizar (só sem segredos).
 Mensagens repetidas viram uma linha com o número de repetições; falhas iguais (mesma assinatura) são
@@ -25,6 +25,7 @@ from duiaos_registro.privacidade import anonimizar, limpar_segredos
 
 from . import config as cfg
 from . import perfil as perfil_mod
+from . import uso as uso_mod
 
 ID_COREDUMP = "fc2e22bc6ee647b6b90729ab34a250b1"          # systemd-coredump: "Process … dumped core"
 UNIDADES_DUIAOS = {"duiaos-ia.service", "duiaos-agente.service", "ollama.service", "greetd.service",
@@ -173,7 +174,7 @@ def montar(entradas, nivel, nomes=(), contexto=None):
     eventos, falhas, repetidos = [], {}, {}
     for e in entradas:
         tipo = classificar(e, nivel)
-        if tipo is None:
+        if tipo is None or tipo == "uso":       # uso nunca sai um a um: só somado (agregar_uso)
             continue
         r = compactar(e, tipo)
         if tipo == "servico_falhou" and contexto is not None:
@@ -204,6 +205,20 @@ def montar(entradas, nivel, nomes=(), contexto=None):
             repetidos[chave] = r
             eventos.append(r)
     return eventos, sorted(falhas.values(), key=lambda f: -f["contagem"])
+
+
+def agregar_uso(entradas, nivel):
+    """Contagens dos eventos de uso da lista conhecida (vazio abaixo de "erros_e_uso")."""
+    registros = []
+    for e in entradas:
+        if classificar(e, nivel) != "uso":
+            continue
+        try:
+            dados = json.loads(_texto(e.get("DUIAOS_DADOS")) or "{}")
+        except ValueError:
+            dados = {}
+        registros.append((_texto(e.get("DUIAOS_EVENTO")), dados))
+    return uso_mod.agregar(registros)
 
 
 def nomes_pessoais():
@@ -246,6 +261,7 @@ def coletar(config, pasta=None, journal=ler_journal, coletar_perfil=perfil_mod.c
     entradas, cursor = journal(estado.get("cursor"), inicio)
     nomes = nomes_pessoais() if nomes is None else nomes
     eventos, falhas = montar(entradas, config.nivel, nomes, contexto)
+    uso = agregar_uso(entradas, config.nivel)
 
     perfil = None
     atual = coletar_perfil()
@@ -254,7 +270,7 @@ def coletar(config, pasta=None, journal=ler_journal, coletar_perfil=perfil_mod.c
         perfil = atual if config.nivel == "desenvolvimento" else anonimizar(atual, nomes)
 
     estado.update(cursor=cursor, coletado_ate=agora)
-    if not eventos and not falhas and perfil is None:
+    if not eventos and not falhas and not uso and perfil is None:
         _salvar_estado(pasta, estado)
         return None
     relatorio = {
@@ -269,6 +285,8 @@ def coletar(config, pasta=None, journal=ler_journal, coletar_perfil=perfil_mod.c
                    "entradas_lidas": len(entradas)},
         "falhas": falhas, "eventos": eventos,
     }
+    if uso:
+        relatorio["uso"] = uso
     if perfil is not None:
         relatorio["perfil"] = perfil
         estado.update(perfil_resumo=resumo_perfil, perfil_em=agora)

@@ -16,9 +16,9 @@ Não há contribuições externas nem CLA público (ADR 021).
 
 ## Fluxo
 
-Toda mudança chega por pull request de uma branch (`claude/...` para o
-Claude). Só o titular faz o merge na `main` (ADR 022). Passo a passo em
-[ferramentas/README.md](ferramentas/README.md).
+Todo o trabalho é feito direto na branch `main`, sem branches nem pull
+requests (ADR 043). Instruções para quem desenvolve: [CLAUDE.md](CLAUDE.md) e
+[docs/continuidade/](docs/continuidade/).
 
 ## Regras para o código
 
@@ -28,8 +28,9 @@ Claude). Só o titular faz o merge na `main` (ADR 022). Passo a passo em
   próprio. Na dúvida, pergunte antes (ADR 019).
 - Verifique também a licença de **modelos e dados** (ex.: os modelos do
   openWakeWord são CC BY-NC-SA, de uso não comercial).
-- Alteração em código livre de terceiros vai para `publico/modificacoes/`,
-  sob a licença do original.
+- Alteração em código livre de terceiros vai para o repositório
+  [duiaos-fontes-abertas](https://github.com/gustavoduia/duiaos-fontes-abertas)
+  (`modificacoes/`), sob a licença do original.
 
 ## Problemas relatados por usuários
 

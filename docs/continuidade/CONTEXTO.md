@@ -1,9 +1,9 @@
 # DuiaOS — Contexto permanente do projeto
 
 Muda pouco. Vale para qualquer pessoa ou conta do Claude que trabalhe no
-projeto. Ordem de leitura no início de toda sessão: `CLAUDE.md` → este arquivo
-→ `ESTADO.md` → `RECURSOS.md` (e, no Wise e no site, os equivalentes em
-`duiaos-wise/docs/continuidade/` e `duiaos-websites/docs/continuidade/`).
+projeto. Início de chat: `REGRASINI.md` (todas as memórias dos chats, da mais antiga para a mais recente, e
+depois os arquivos de referência desta pasta). Fim de chat: `REGRASFIM.md`. Tudo fica neste repositório, o
+oficial do projeto (ADR 043).
 
 ## Pessoas e forma de trabalho
 - Dono: **Gustavo** (GitHub `gustavoduia`), fuso America/Sao_Paulo. Decide tudo e dá nome a todo componente
@@ -21,33 +21,37 @@ projeto. Ordem de leitura no início de toda sessão: `CLAUDE.md` → este arqui
   Scripts de `ferramentas/` rodam no Mac, exceto os que dizem "Onde rodar: 🔗 DELL"
   (`pacotes/instalar-local.sh`, `ferramentas/medir-motores.py` e, no Wise, `pacote/instalar-local.sh`).
   Não misturar máquinas num bloco. Depois de `sudo reboot` a sessão SSH cai: avisar para reconectar.
-- Fluxo (ADR 022): branch `claude/...` + pull request (`add_repo` com push). Merge só pelo Gustavo, por **squash**
-  (`gh pr merge N --squash --delete-branch`). Ninguém além dele envia para a `main`.
-- Atualizar o Dell: `sudo apt update && sudo apt full-upgrade` (canal teste). Testar branch antes do merge:
-  `bash pacotes/instalar-local.sh` (duiaos) e `bash pacote/instalar-local.sh` (Wise, que não está no apt).
+- Fluxo (ADR 043, substitui a 022): **só a branch `main`** em todos os repositórios; nada de branches nem PRs.
+  `git pull --rebase origin main` antes e `git push origin main` depois. Se o ambiente pedir aprovação para
+  enviar à `main`, o Gustavo aprova.
+- Atualizar o Dell: `sudo apt update && sudo apt full-upgrade` (canal teste) ou, para testar a `main` na hora,
+  `bash pacotes/instalar-local.sh` (duiaos) e `bash pacote/instalar-local.sh` (Wise).
 - SSH Mac→Dell por chave. `gh` no ambiente do Claude só via REST (GraphQL bloqueado).
 - Termos da IA (sempre assim): **motor** = Ollama; **modelo** = Qwen3.5 4B etc.; **modelo ativo** = o único em uso
   no sistema; **IA do sistema** = serviço `duiaos-ia`. Llama ≠ Ollama.
 
 ## Várias contas do Claude (decisão de 12/10/2026)
 - **A fonte da verdade é o Git**, não a memória de uma conta: tudo o que precisa sobreviver entre sessões e entre
-  contas fica em `docs/continuidade/` (duiaos, público) e `duiaos-wise/docs/continuidade/` (Wise, privado).
+  contas fica em `docs/continuidade/` deste repositório (memórias dos chats, estado, inventários, diários).
 - O Project "DuiaOS" do claude.ai é só um atalho da conta do Gustavo: os arquivos dele apontam para cá.
 - Para um segundo programador: convite de colaborador nos dois repositórios (o Wise é privado; antes, contrato de
   cessão de direitos + NDA — ADR 021), GitHub conectado na conta Claude dele; ele começa a sessão pedindo
   "Continuar o DuiaOS" e o Claude lê os arquivos na ordem acima.
-- Trabalho em paralelo: cada frente numa branch própria e com **PR em rascunho aberto logo no início** (é o aviso
-  de "isto está em andamento"); `ESTADO.md` diz quem está em qual frente. Nunca duas pessoas na mesma branch.
+- Trabalho em paralelo: todos na `main`, com commits pequenos e `git pull --rebase` antes de enviar;
+  `ESTADO.md` (seção "Em andamento") diz quem está em qual frente, para duas pessoas não mexerem no mesmo arquivo.
 - Commits identificam a conta/pessoa (autor do git + linha `Claude-Session`).
 
 ## Repositórios e fases (ADRs 018, 025 e 028)
 - `gustavoduia/duiaos`: código proprietário (LICENSE "todos os direitos reservados"). **Fase atual: PÚBLICO**.
   Fase final: volta a PRIVADO e o build passa a ser local. Não colocar aqui nada do código do Wise.
-- `gustavoduia/duiaos-fontes-abertas` (público): espelho de `publico/`, ISOs nos Releases e, na branch gh-pages,
-  o repositório apt (https://gustavoduia.github.io/duiaos-fontes-abertas/apt).
+- `gustavoduia/duiaos-fontes-abertas` (público): **o lugar do que não pode ser fechado** — código GPL-3 e outros
+  que exigem publicação, modificações em software livre de terceiros (`modificacoes/`), EULA, licenças de
+  terceiros e marca, editados direto na `main` dele (desde 13/10 não há mais cópia em `duiaos/publico/`). Também:
+  ISOs nos Releases e, na branch `gh-pages` (gerada pelo workflow de pacotes), o repositório apt
+  (https://gustavoduia.github.io/duiaos-fontes-abertas/apt). O build lê EULA e licenças dele.
 - `gustavoduia/duiaos-websites` (PRIVADO): site (`site/`, duiaos.gustavoduia.workers.dev) e documentação
   (`documentacao/`, duiaos-docs.gustavoduia.workers.dev); com domínio: duiaos.com.br e docs.duiaos.com.br.
-  Mudança visível no sistema ou no Wise = PR irmão lá (ADR 039).
+  Mudança visível no sistema ou no Wise = página da documentação lá, no mesmo chat (`GUIA-SITE-E-DOCUMENTACAO.md`).
 - `gustavoduia/duiaos-diagnosticos` (PRIVADO): relatórios de "Ajude a melhorar o DuiaOS" de todos os
   computadores (ADR 040). Dados pessoais: nada dele vai para repositórios públicos.
 - `gustavoduia/duiaos-wise` (PRIVADO): o Wise. O público só conhece `/usr/bin/duiaos-wise --alternar` e
@@ -70,7 +74,8 @@ projeto. Ordem de leitura no início de toda sessão: `CLAUDE.md` → este arqui
 ## Produto
 - DuiaOS: SO baseado em Debian 13 trixie, x86_64 + ARM64. Codinome da 1.0: **Zoinho** (homenagem ao pai).
 - Público: **usuários finais**. Bonito, leve, simples, seguro.
-- IA nativa: assistente **Wise** (só após o login); a IA é do sistema operacional (ADR 029): serviço `duiaos-ia`
+- IA nativa: assistente **Wise** — "o cérebro do DuiaOS": vai embarcado e instalado com o sistema, na ISO e no
+  apt (decisão do Gustavo, ADR 042); nunca propor o DuiaOS sem ele. Aparece só após o login; a IA é do sistema operacional (ADR 029): serviço `duiaos-ia`
   + Central de IA; um só modelo ativo (ADR 030); o Wise é cliente. Motor: **Ollama** (mantido em 12/10 após
   medição; ADR 036).
 - Site e documentação para usuários: repositório privado `duiaos-websites` (ADRs 037–039).
@@ -83,7 +88,7 @@ projeto. Ordem de leitura no início de toda sessão: `CLAUDE.md` → este arqui
 
 ## Licença (decisão de 11/10/2026)
 - Tudo o que o DuiaOS desenvolve é **proprietário**, mesmo com o repositório visível. Aberto só o obrigatório
-  (componentes de terceiros e modificações em código GPL de terceiros → `publico/modificacoes/`).
+  (componentes de terceiros e modificações em código GPL de terceiros → `duiaos-fontes-abertas/modificacoes/`).
 - Versões publicadas sob GPLv3 (até o commit d6526e4 / v0.0.1) continuam GPL para quem as obteve.
 - Dependências do código próprio: só licença permissiva (MIT/BSD/Apache/LGPL dinâmico); vale para modelos de IA
   e serviços de dados (ex.: previsão do tempo com uso comercial permitido).

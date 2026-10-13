@@ -14,7 +14,6 @@ Todos podem ser rodados de novo sem estragar nada.
 | `trazer-isos.sh` | Copia para o Mac as ISOs geradas no runner do Dell (fase local) |
 | `configurar-runners.sh mac\|dell` | Instala/refaz o runner da máquina e organiza `~/Projetos` |
 | `configurar-acesso-dell.sh` | Chave somente leitura para o Dell fazer `git pull` (repositório privado) |
-| `criar-repo-publico.sh` | Cria o `duiaos-fontes-abertas`, cadastra o token e sincroniza |
 | `criar-chave-apt.sh` | Cria a chave que assina o repositório apt (uma vez só) |
 
 No Dell, o teste da instalação é `sudo /usr/lib/duiaos/verificar-instalacao`.
@@ -43,7 +42,7 @@ bash ferramentas/runners-espera.sh retomar
 ```
 ~/Projetos/
   duiaos/                  repositório principal (o código)
-  duiaos-fontes-abertas/   cópia do repositório público — só leitura (edite em duiaos/publico/)
+  duiaos-fontes-abertas/   código aberto, EULA e licenças — editado direto nele (ADR 043); o build lê daqui
   duiaos-isos/             ISOs de teste
   duiaos-runner/           runner do GitHub Actions (não mexa)
 ```
@@ -112,6 +111,7 @@ bash ferramentas/lancar-versao.sh 0.1.0
 | Nome | Tipo | Valor |
 | --- | --- | --- |
 | `DUIAOS_TOKEN_PUBLICO` | Segredo | Token fine-grained com Contents: Read and write só no `duiaos-fontes-abertas` (renovar anualmente) |
+| `DUIAOS_TOKEN_WISE` | Segredo | Token fine-grained com Contents: **Read-only** só no `duiaos-wise` (renovar anualmente). O build gera o pacote do Wise para a ISO e o apt (ADR 042); sem ele, lançamentos falham e builds de teste saem sem o Wise |
 | `DUIAOS_APT_CHAVE` | Segredo | Chave privada que assina o repositório apt (`criar-chave-apt.sh`; cópia em `~/Projetos/duiaos-chaves`) |
 | `DUIAOS_AMD64_EM` | Variável (opcional) | Força a máquina padrão da amd64 (`github` ou `dell`) |
 | `DUIAOS_ARM64_EM` | Variável (opcional) | Força a máquina padrão da arm64 (`github`, `mac` ou `dell`) |

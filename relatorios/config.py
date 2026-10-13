@@ -3,9 +3,9 @@
 /etc/duiaos/relatorios.conf (0644; nada secreto):
     [relatorios]
     nivel = nao_escolhido | desligado | erros | erros_e_uso | desenvolvimento
-    transporte = git | https
+    transporte = https | git                 (padrão https; git só nos computadores de teste)
     repositorio = git@github.com:gustavoduia/duiaos-diagnosticos.git     (transporte git)
-    endereco = https://…/api/relatorios                                   (transporte https, fase 3)
+    endereco = https://…/api/relatorios                                   (transporte https; padrão: o site)
     maquina = dell                                                        (só no nível desenvolvimento)
 
 Sem o arquivo, o nível é "nao_escolhido": nada é coletado nem enviado até a pessoa escolher.
@@ -22,7 +22,10 @@ CHAVE_GIT = Path(os.environ.get("DUIAOS_RELATORIOS_CHAVE", "/etc/duiaos/relatori
 HOSTS_GITHUB = Path(os.environ.get("DUIAOS_RELATORIOS_HOSTS", "/usr/share/duiaos/relatorios/known_hosts"))
 
 NIVEIS = ("nao_escolhido", "desligado", "erros", "erros_e_uso", "desenvolvimento")
-TRANSPORTES = ("git", "https")
+TRANSPORTES = ("https", "git")
+# Site do DuiaOS (duiaos-websites, site/worker/relatorios.js): recebe sem credencial e grava em lotes no
+# repositório privado. Trocar aqui quando o domínio duiaos.com.br estiver no ar.
+ENDERECO_PADRAO = "https://duiaos.gustavoduia.workers.dev/api/relatorios"
 NOMES_NIVEIS = {
     "nao_escolhido": "Ainda não escolhido (nada é enviado)",
     "desligado": "Desligado (nada é enviado)",
@@ -33,9 +36,9 @@ NOMES_NIVEIS = {
 
 
 class Config:
-    def __init__(self, nivel="nao_escolhido", transporte="git", repositorio="", endereco="", maquina=""):
+    def __init__(self, nivel="nao_escolhido", transporte="https", repositorio="", endereco="", maquina=""):
         self.nivel = nivel if nivel in NIVEIS else "nao_escolhido"
-        self.transporte = transporte if transporte in TRANSPORTES else "git"
+        self.transporte = transporte if transporte in TRANSPORTES else "https"
         self.repositorio = repositorio
         self.endereco = endereco
         self.maquina = maquina
@@ -49,7 +52,7 @@ class Config:
         dados = configparser.ConfigParser()
         dados.read(arquivo or ARQUIVO)
         sec = dados["relatorios"] if dados.has_section("relatorios") else {}
-        return cls(sec.get("nivel", "nao_escolhido"), sec.get("transporte", "git"), sec.get("repositorio", ""),
+        return cls(sec.get("nivel", "nao_escolhido"), sec.get("transporte", "https"), sec.get("repositorio", ""),
                    sec.get("endereco", ""), sec.get("maquina", ""))
 
     def salvar(self, arquivo=None):

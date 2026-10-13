@@ -23,8 +23,8 @@
 > O repositório está visível publicamente durante o desenvolvimento, mas isso
 > não concede nenhuma licença: é proibido copiar, modificar ou redistribuir
 > sem autorização por escrito. O que é
-> público (ISOs, EULA, licenças de terceiros, marca) fica na pasta
-> [`publico/`](publico/), espelhada no repositório
+> público (ISOs, EULA, licenças de terceiros, marca, código GPL e modificações
+> em software livre) fica no repositório
 > [duiaos-fontes-abertas](https://github.com/gustavoduia/duiaos-fontes-abertas).
 
 > **Em desenvolvimento.** A versão 1.0 tem o codinome **Zoinho**.
@@ -136,14 +136,13 @@ Guia completo: [ferramentas/README.md](ferramentas/README.md) (ADRs 020, 024 e 0
 | `branding/` | Identidade visual |
 | `docs/` | Documentação |
 | `ferramentas/` | Scripts do dia a dia: runners, repositório público, lançar versão |
-| `publico/` | Conteúdo do repositório público: EULA, licenças de terceiros, marca, modificações em código livre |
 
 ## Licença
 
 O código próprio do DuiaOS é **proprietário, com todos os direitos
 reservados** ([LICENSE](LICENSE)). Usuários finais usam o sistema nos termos
-do [EULA](publico/EULA.md). Componentes de terceiros mantêm as suas licenças
-([publico/LICENCAS-DE-TERCEIROS.md](publico/LICENCAS-DE-TERCEIROS.md)).
+do [EULA](https://github.com/gustavoduia/duiaos-fontes-abertas/blob/main/EULA.md). Componentes de terceiros mantêm as suas licenças
+([LICENCAS-DE-TERCEIROS.md](https://github.com/gustavoduia/duiaos-fontes-abertas/blob/main/LICENCAS-DE-TERCEIROS.md)).
 
 As versões publicadas até o commit `d6526e4` (release v0.0.1) foram
 distribuídas sob a GPLv3 e continuam assim para quem as obteve.
@@ -152,4 +151,4 @@ Regra para dependências novas do código próprio: só licenças permissivas
 (MIT, BSD, Apache-2.0, ou LGPL usada de forma dinâmica). Código GPL só como
 programa separado. Veja o ADR 019.
 
-Marcas: [publico/TRADEMARKS.md](publico/TRADEMARKS.md).
+Marcas: [TRADEMARKS.md](https://github.com/gustavoduia/duiaos-fontes-abertas/blob/main/TRADEMARKS.md).
