@@ -36,7 +36,6 @@ on:
       - "**.md"
       - "docs/**"
       - "branding/**"
-      - "publico/**"
       - "ferramentas/**"
   workflow_dispatch:
     inputs:
@@ -212,6 +211,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0   # tags: a versão dos pacotes parte da última tag
+
+      - name: EULA e licenças (duiaos-fontes-abertas, ADR 043)
+        uses: actions/checkout@v4
+        with:
+          repository: gustavoduia/duiaos-fontes-abertas
+          ref: main
+          path: fontes-abertas
 
       - name: Versão dos pacotes e chave do repositório apt
         env:

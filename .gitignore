@@ -26,3 +26,4 @@ pacotes/chave.gpg
 # Downloads guardados pelo build (release do Ollama)
 .cache/
 pacotes/externos/
+fontes-abertas/

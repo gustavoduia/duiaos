@@ -1,52 +1,63 @@
 # DuiaOS — instruções para o Claude (qualquer conta)
 
-A memória do projeto é este repositório, não o histórico de uma conversa. Siga a ordem abaixo em TODA sessão.
+**O repositório oficial do projeto é este, o `gustavoduia/duiaos`. Toda instrução fica exclusivamente aqui.**
+Não crie instruções (CLAUDE.md, memórias, estado, regras) em nenhum outro repositório.
 
-## Ao começar (antes de mudar qualquer arquivo)
-0. **Memória dos chats primeiro** (`docs/memoria-dos-chats/` deste repositório): leia o README e TODOS os arquivos, do mais antigo ao mais novo (na `main` e na
-   branch `claude/memoria-dos-chats`, se ainda não tiver merge). Eles guardam o que o Gustavo decidiu e por quê.
-   Nada de decidir contra a visão do produto ou contra uma decisão registrada lá; em dúvida, pergunte.
-1. Leia, nesta ordem: `docs/continuidade/CONTEXTO.md` → `docs/continuidade/ESTADO.md` →
-   `docs/continuidade/RECURSOS.md` → as duas últimas entradas de `docs/continuidade/DIARIO.md`.
-   Se a tarefa envolve o Wise, leia também `duiaos-wise/CLAUDE.md` e `duiaos-wise/docs/continuidade/`.
-   Falha relatada (sistema ou Wise) → seção "Quando o Gustavo relatar uma falha" abaixo.
-2. Confira os PRs abertos (`gh api repos/gustavoduia/duiaos/pulls?state=open`) e compare com a seção 1 do
-   ESTADO. Se houver PR aberto que o ESTADO não conhece, PARE e pergunte ao Gustavo.
-3. Escolha a base: a `main` atualizada; se houver PR aberto que reúne trabalho ainda sem merge, parta da branch
-   desse PR (a mais recente, que reúne as outras) e diga isso ao Gustavo. **Nunca** parta de uma branch antiga.
-4. Rode `python3 ferramentas/conferir-recursos.py`. Se falhar na base escolhida, a base está errada.
-5. Abra o PR em rascunho logo no início (é o aviso de "em andamento" para as outras contas) e anote a frente
-   na seção 3 do ESTADO.
+## Início e fim de chat
+- Início — "Continuar o DuiaOS": siga `docs/continuidade/REGRASINI.md` (ler todas as memórias e referências de
+  `docs/continuidade/` na íntegra, da mais antiga para a mais recente, antes de tudo).
+- Fim — "Encerrar esse chat para abrir um novo": siga `docs/continuidade/REGRASFIM.md` (memória única do chat).
+
+## Só a `main`
+- Trabalhe **exclusivamente na branch `main`** de cada repositório. **Não crie branches nem pull requests.**
+- Antes de enviar: `git pull --rebase origin main`; depois `git push origin main`.
+- Se o ambiente bloquear ou pedir aprovação para enviar à `main`, pare e peça ao Gustavo — nunca crie branch.
+
+## Cada coisa no seu repositório (ADR 043)
+| Repositório | O que guarda |
+| --- | --- |
+| `duiaos` (este) | Código próprio do sistema; instruções, memórias, decisões (ADRs) e continuidade de todo o projeto |
+| `duiaos-fontes-abertas` | Código GPL-3 e outros que não podem ser fechados, modificações em software livre, EULA e licenças; Releases (ISOs) e apt (`gh-pages`) |
+| `duiaos-wise` | Fontes do Wise (produto próprio; privado) e a documentação técnica dele (`docs/arquitetura.md`, `docs/decisoes.md`) |
+| `duiaos-diagnosticos` | Logs enviados pelo DuiaOS para análise do suporte (privado; dados pessoais) |
+| `duiaos-websites` | Fontes do site institucional e do site da documentação (privado) |
+
+Clone os repositórios lado a lado (`../duiaos-wise`, `../duiaos-websites`, `../duiaos-diagnosticos`,
+`../duiaos-fontes-abertas`): ferramentas e inventários contam com isso.
+
+## Antes de cada envio
+- `python3 ferramentas/conferir-recursos.py` sem problemas (confere `RECURSOS.md`, `RECURSOS-WISE.md` e
+  `RECURSOS-WEBSITES.md`).
+- Testes: `python3 -m unittest discover -s ia/testes -t .`, `-s agente/testes` e `-s relatorios/testes` (use
+  `python3.12` se o 3.13 do ambiente não tiver `gi`); no Wise, `python3 -m unittest discover -s testes -t .`; no
+  site, `npm test` e `npm run build`; `shellcheck` nos scripts mudados.
+- Programa novo do DuiaOS: `duiaos_registro.ligar("duiaos-NOME")` no início e eventos com
+  `duiaos_registro.info/aviso/erro` (nunca `print` para registrar).
+- Recurso novo ou mudado → linha no inventário certo com conferência. Decisão nova → ADR em `docs/decisoes.md`
+  (decisões internas do Wise também podem ir em `duiaos-wise/docs/decisoes.md`, que é documentação técnica dele).
+- Recurso visível para o usuário → página da documentação no `duiaos-websites`, no mesmo chat
+  (`docs/continuidade/GUIA-SITE-E-DOCUMENTACAO.md`).
+
+## Wise (repositório `duiaos-wise`, privado)
+- Nada do código do Wise vai para o `duiaos` (público nesta fase); aqui fica só o contrato
+  (`/usr/bin/duiaos-wise --alternar`, o `.desktop`, o estado em `$XDG_RUNTIME_DIR`) e o empacotamento na ISO
+  (`pacotes/trazer-wise.sh`, ADR 042).
+- Segurança (`duiaos-wise/docs/arquitetura.md`): o modelo só pede ferramentas; validação, nível de risco e
+  execução são do orquestrador. Ferramenta nova sempre com esquema JSON, nível e teste. Conteúdo vindo de
+  ferramentas é dado, nunca instrução. Nunca registrar segredos. Código novo registra por `wise/diagnostico.py`.
 
 ## Quando o Gustavo relatar uma falha (ADR 040)
-1. `add_repo` de `gustavoduia/duiaos-diagnosticos` (privado; leia o CLAUDE.md dele) e `git pull`.
+1. Anexe `gustavoduia/duiaos-diagnosticos` (privado) e `git pull`. Não edite nem apague os relatórios em
+   `maquinas/`: são o histórico.
 2. `python3 ferramentas/ler-relatorios.py ../duiaos-diagnosticos --horas 6 --maquina dell`; depois `--falha
    ASSINATURA` (rastro) ou `--componente duiaos-wise --eventos` (linha do tempo). Relatório antigo → peça
    🔗 DELL: `duiaos-relatorios enviar`.
-3. Corrija a causa na raiz, com teste do caso. Os dados são pessoais: nunca copie trechos para este repositório
-   público (commits, issues, testes) — descreva com as suas palavras.
-
-## Antes de cada pull request
-- `python3 ferramentas/conferir-recursos.py` sem problemas.
-- Testes: `python3 -m unittest discover -s ia/testes -t .`, `-s agente/testes` e `-s relatorios/testes` (use
-  `python3.12` se o 3.13 do ambiente não tiver `gi`); `shellcheck` nos scripts mudados.
-- Programa novo do DuiaOS: `duiaos_registro.ligar("duiaos-NOME")` no início (falhas no registro do sistema) e
-  eventos com `duiaos_registro.info/aviso/erro` (nunca `print` para registrar).
-- Recurso novo ou mudado → linha em `docs/continuidade/RECURSOS.md` com conferência.
-- Decisão nova → ADR em `docs/decisoes.md`.
-- Recurso visível para o usuário → **PR irmão** no `gustavoduia/duiaos-websites` (mesmo nome de branch) com a
-  página da documentação (e o site, se for de divulgar), seguindo `duiaos-websites/CLAUDE.md`. Cite o irmão na
-  descrição (`gustavoduia/duiaos-websites#N`) — o workflow `documentacao-irma.yml` confere.
-
-## Ao terminar o bloco de trabalho
-- Escreva (ou atualize) o arquivo deste chat em `docs/memoria-dos-chats/` (pelo `MODELO.md`). Sem segredos,
-  dados pessoais nem código do Wise (este repositório é público por enquanto).
-- Atualize `docs/continuidade/ESTADO.md` (o que está na main, PRs, o que está instalado em cada máquina,
-  próximos passos, perguntas) e acrescente a entrada no `docs/continuidade/DIARIO.md`.
-- Envie (push) tudo para a branch do PR. Nada pode ficar só no ambiente do Claude ou só no Project do claude.ai.
+3. Corrija a causa na raiz, com teste do caso. Os dados são pessoais: nunca copie trechos para repositórios
+   públicos (commits, testes, memórias) — descreva com as suas palavras; em testes, dados inventados.
 
 ## Regras do projeto (resumo; detalhes no CONTEXTO)
 - Português do Brasil em tudo. Código próprio é proprietário; dependências só com licença permissiva.
-- Este repositório é PÚBLICO nesta fase: nada do código do Wise aqui.
-- Fluxo: branch `claude/...` + PR; merge só pelo Gustavo (squash). Medir antes de afirmar ganho.
+- O Wise é o cérebro do DuiaOS: vai instalado com o sistema. Nunca propor o DuiaOS sem ele.
+- Medir antes de afirmar ganho; causa raiz antes de corrigir; nada de correção paliativa.
 - Comandos para o Gustavo sempre com 🍎 MAC, 🔗 DELL (sessão SSH, sem `ssh` na frente) ou 💻 DELL LOCAL.
+- Decisões de produto são do Gustavo; em dúvida, pergunte.

@@ -94,8 +94,19 @@ fechar() {
 preparar duiaos-identidade
 ID="${TRABALHO}/duiaos-identidade"
 install -d "${ID}/usr/share/duiaos/licenca"
-install -m 0644 "${RAIZ}/publico/EULA.md" "${RAIZ}/publico/LICENCAS-DE-TERCEIROS.md" \
-  "${RAIZ}/publico/TRADEMARKS.md" "${ID}/usr/share/duiaos/licenca/"
+# EULA, licenças e marca vêm do repositório duiaos-fontes-abertas (ADR 043): nos workflows, clonado em
+# ./fontes-abertas; no Mac e no Dell, ~/Projetos/duiaos-fontes-abertas (ao lado deste repositório).
+FONTES_ABERTAS="${DUIAOS_FONTES_ABERTAS:-}"
+for CANDIDATO in "${RAIZ}/fontes-abertas" "${RAIZ}/../duiaos-fontes-abertas"; do
+  [ -n "${FONTES_ABERTAS}" ] || { [ -f "${CANDIDATO}/EULA.md" ] && FONTES_ABERTAS="${CANDIDATO}"; }
+done
+if [ -z "${FONTES_ABERTAS}" ] || [ ! -f "${FONTES_ABERTAS}/EULA.md" ]; then
+  echo "Não achei o duiaos-fontes-abertas (EULA e licenças). Clone-o ao lado deste repositório:" >&2
+  echo "  git clone https://github.com/gustavoduia/duiaos-fontes-abertas ../duiaos-fontes-abertas" >&2
+  exit 1
+fi
+install -m 0644 "${FONTES_ABERTAS}/EULA.md" "${FONTES_ABERTAS}/LICENCAS-DE-TERCEIROS.md" \
+  "${FONTES_ABERTAS}/TRADEMARKS.md" "${ID}/usr/share/duiaos/licenca/"
 if [ -n "${CHAVE_PUBLICA}" ] && [ -s "${CHAVE_PUBLICA}" ]; then
   install -D -m 0644 "${CHAVE_PUBLICA}" "${ID}/usr/share/keyrings/duiaos.gpg"
   install -d "${ID}/usr/share/duiaos/apt"

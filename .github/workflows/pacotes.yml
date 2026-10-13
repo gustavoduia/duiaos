@@ -41,6 +41,13 @@ jobs:
         with:
           fetch-depth: 0   # tags: a versão parte da última tag
 
+      - name: EULA e licenças (duiaos-fontes-abertas, ADR 043)
+        uses: actions/checkout@v4
+        with:
+          repository: gustavoduia/duiaos-fontes-abertas
+          ref: main
+          path: fontes-abertas
+
       - name: Ferramentas
         run: |
           command -v apt-ftparchive >/dev/null && command -v zstd >/dev/null \

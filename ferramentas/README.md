@@ -14,7 +14,6 @@ Todos podem ser rodados de novo sem estragar nada.
 | `trazer-isos.sh` | Copia para o Mac as ISOs geradas no runner do Dell (fase local) |
 | `configurar-runners.sh mac\|dell` | Instala/refaz o runner da máquina e organiza `~/Projetos` |
 | `configurar-acesso-dell.sh` | Chave somente leitura para o Dell fazer `git pull` (repositório privado) |
-| `criar-repo-publico.sh` | Cria o `duiaos-fontes-abertas`, cadastra o token e sincroniza |
 | `criar-chave-apt.sh` | Cria a chave que assina o repositório apt (uma vez só) |
 
 No Dell, o teste da instalação é `sudo /usr/lib/duiaos/verificar-instalacao`.
@@ -43,7 +42,7 @@ bash ferramentas/runners-espera.sh retomar
 ```
 ~/Projetos/
   duiaos/                  repositório principal (o código)
-  duiaos-fontes-abertas/   cópia do repositório público — só leitura (edite em duiaos/publico/)
+  duiaos-fontes-abertas/   código aberto, EULA e licenças — editado direto nele (ADR 043); o build lê daqui
   duiaos-isos/             ISOs de teste
   duiaos-runner/           runner do GitHub Actions (não mexa)
 ```

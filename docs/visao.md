@@ -251,12 +251,12 @@ alterações automáticas.
 
 - Código próprio (interface, Wise, aplicativos) **proprietário**, em
   repositório privado; usuários finais usam o sistema pelo **EULA**
-  (`publico/EULA.md`). Wise e aplicativos distribuídos compilados (Nuitka);
+  (`EULA.md` no `duiaos-fontes-abertas`). Wise e aplicativos distribuídos compilados (Nuitka);
   a parte mais valiosa do Wise roda no servidor.
 - Componentes livres de terceiros mantêm as licenças deles; o que a lei exige
   publicar fica no repositório público `duiaos-fontes-abertas` (ADRs 017–019).
 - Marcas **DuiaOS**, **Zoinho**, **Wise** e logotipo protegidas
-  (`publico/TRADEMARKS.md`; registro no INPI — avaliar o risco do nome Wise
+  (`TRADEMARKS.md` no `duiaos-fontes-abertas`; registro no INPI — avaliar o risco do nome Wise
   diante da fintech Wise).
 - Colaboradores somente com contrato de cessão de direitos + NDA (ADR 021).
 - Edição corporativa futura: serviços, suporte, gestão de frotas e conectores

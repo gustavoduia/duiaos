@@ -3,6 +3,14 @@
 Uma entrada por sessão, a mais nova em cima. Só acrescentar; nunca apagar.
 Formato: data · quem/conta · branches/PRs · o que foi feito · decisões · o que ficou pendente.
 
+
+## 12/10/2026 (22h) · Claude (conta do Gustavo) · organização dos repositórios (ADR 043)
+- Gustavo: só a `main`, sem branches; o `duiaos` é o repositório oficial e guarda toda instrução; REGRASINI e
+  REGRASFIM para iniciar e encerrar chats; memória única por chat em `docs/continuidade/`.
+- Instruções e continuidade do Wise e do site trazidas para cá; `publico/` substituída pelo `duiaos-fontes-abertas`;
+  o ambiente bloqueia envio direto à `main` e apagar branches → 3 PRs finais (duiaos #12, Wise #10, site #8) e
+  `ferramentas/organizar-repositorios.sh` para o Gustavo. Detalhes na memória
+  `2026-10-12_19h51_cinco-etapas-e-wise-na-iso.md`.
 ## 12–13/10/2026 (noite) · Claude (conta do Gustavo) · duiaos #12, duiaos-wise #10, duiaos-websites #8–#10
 - Pedido do Gustavo: as cinco etapas de uma vez (há muito a fazer depois: explorador de arquivos, Configurações,
   painel de controle).

@@ -21,7 +21,15 @@ import sys
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[1]
-INVENTARIO = RAIZ / "docs" / "continuidade" / "RECURSOS.md"
+CONTINUIDADE = RAIZ / "docs" / "continuidade"
+INVENTARIO = CONTINUIDADE / "RECURSOS.md"
+# Todos os inventários ficam aqui (o duiaos é o repositório oficial do projeto, ADR 043); os do Wise e do
+# site conferem os arquivos desses repositórios, clonados ao lado deste (../duiaos-wise, ../duiaos-websites).
+INVENTARIOS = [
+    ("duiaos", INVENTARIO, RAIZ),
+    ("duiaos-wise", CONTINUIDADE / "RECURSOS-WISE.md", RAIZ.parent / "duiaos-wise"),
+    ("duiaos-websites", CONTINUIDADE / "RECURSOS-WEBSITES.md", RAIZ.parent / "duiaos-websites"),
+]
 CONFERENCIA = re.compile(r"`([^`]+?)::([^`]+)`")
 
 
@@ -55,20 +63,29 @@ def main():
     if not INVENTARIO.exists():
         print(f"Sem inventário em {INVENTARIO}", file=sys.stderr)
         return 1
-    itens = ler_inventario()
-    if "--listar" in sys.argv:
-        for recurso, conferencias in itens:
-            print(f"- {recurso}: " + ", ".join(c for c, _ in conferencias))
-        return 0
-    problemas = conferir()
-    if problemas:
-        print("RECURSOS EM RISCO — não envie esta mudança antes de entender cada item:")
-        for p in problemas:
-            print("  ✗ " + p)
-        return 1
-    total = sum(len(c) for _, c in itens)
-    print(f"Recursos conferidos: {len(itens)} recursos, {total} conferências, nenhum problema.")
-    return 0
+    codigo = 0
+    for nome, arquivo, raiz in INVENTARIOS:
+        if not arquivo.exists():
+            continue
+        itens = ler_inventario(arquivo)
+        if "--listar" in sys.argv:
+            print(f"# {nome}")
+            for recurso, conferencias in itens:
+                print(f"- {recurso}: " + ", ".join(c for c, _ in conferencias))
+            continue
+        if not raiz.is_dir():
+            print(f"{nome}: repositório não está em {raiz} — conferência pulada (clone-o ao lado do duiaos).")
+            continue
+        problemas = conferir(raiz, arquivo)
+        if problemas:
+            print(f"{nome}: RECURSOS EM RISCO — não envie esta mudança antes de entender cada item:")
+            for p in problemas:
+                print("  ✗ " + p)
+            codigo = 1
+            continue
+        total = sum(len(c) for _, c in itens)
+        print(f"{nome}: {len(itens)} recursos, {total} conferências, nenhum problema.")
+    return codigo
 
 
 if __name__ == "__main__":
