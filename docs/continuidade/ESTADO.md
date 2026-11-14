@@ -7,7 +7,7 @@
 Atualizado em: 14/11/2026 · por: Claude (conta do Gustavo) · sessão session_017QRdLiNuMN3h9iSaFMGT25
 **14/11: interface completa (ADR 044) enviada à `main`** — Barra de Recursos nova (Menu do DuiaOS, ícones + balão,
 Central de Controle), Ilha com Aplicativos/Downloads/Lixeira, Central de Aplicativos em tela cheia, Explorador de
-Arquivos e Configurações. Falta o teste no Dell (seção 4) e a documentação para usuários no `duiaos-websites`.
+Arquivos e Configurações, com as páginas da documentação para usuários. Falta o teste no Dell (seção 4).
 **Chat encerrado** (memória `2026-10-12_19h51_cinco-etapas-e-wise-na-iso.md`). Os cinco repositórios só têm a
 `main` (o fontes-abertas também a `gh-pages`) e nenhum PR aberto.
 
@@ -32,13 +32,12 @@ Arquivos e Configurações. Falta o teste no Dell (seção 4) e a documentação
 - Desde 13/10 o build precisa do `duiaos-fontes-abertas` clonado ao lado (`~/Projetos/duiaos-fontes-abertas`).
 
 ## 3. Em andamento
-- Interface completa (ADR 044): código na `main`; **sem teste no Dell**. Páginas da documentação para usuários
-  (Barra, Central de Controle, Explorador, Configurações) ainda não escritas no `duiaos-websites`.
+- Interface completa (ADR 044): código e documentação na `main`; **sem teste no Dell**.
 
 ## 4. Próximos passos (detalhes na seção 6 da memória mais recente)
 0. Gustavo: testar a interface nova no Dell — 🔗 DELL: `cd ~/Projetos/duiaos && git pull && bash pacotes/instalar-local.sh`
    (instala também brightnessctl, wlsunset, power-profiles-daemon, pkexec, xdg-user-dirs, xdg-utils, udisks2,
-   python3-pyside6.qtsvg); sair e entrar de novo; relatar o que falhar. Claude: documentação para usuários.
+   python3-pyside6.qtsvg); sair e entrar de novo; relatar o que falhar.
 1. Claude: relatório de realinhamento a partir das 5 memórias (adiado pelo Gustavo em 14/11).
 2. Gustavo: segredos `DUIAOS_TOKEN_WISE` (duiaos) e `GITHUB_DIAGNOSTICOS` (duiaos-websites, não confirmado).
 3. Teste no Dell (W20, janela "Ajude a melhorar", Wi-Fi pelo Wise) e leitura dos relatórios.
