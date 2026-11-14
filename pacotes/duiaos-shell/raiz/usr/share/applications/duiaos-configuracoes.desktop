@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Configurações
+GenericName=Configurações do sistema
+Comment=Wi-Fi, Bluetooth, som, tela, papel de parede, senha, data e hora e mais
+Exec=duiaos-configuracoes
+Icon=duiaos-configuracoes
+StartupWMClass=duiaos-configuracoes
+Terminal=false
+Categories=Settings;System;
+Keywords=ajustes;preferências;wifi;bluetooth;som;tela;brilho;papel de parede;senha;teclado;data;hora;

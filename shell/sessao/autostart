@@ -2,13 +2,18 @@
 # Instalado em /etc/xdg/labwc/autostart. DUIAOS_SHELL vem de iniciar-sessao
 # (padrão /usr/share/duiaos/shell).
 DUIAOS_SHELL="${DUIAOS_SHELL:-/usr/share/duiaos/shell}"
-PAPEL_DE_PAREDE=/usr/share/duiaos/papel-de-parede/orbita.jpg
 
-# Papel de parede
-if [ -f "${PAPEL_DE_PAREDE}" ]; then
-  swaybg -i "${PAPEL_DE_PAREDE}" -m fill >/dev/null 2>&1 &
-else
+# Pastas do usuário (Área de Trabalho, Documentos, Downloads, Imagens, Música, Vídeos)
+xdg-user-dirs-update >/dev/null 2>&1 || true
+
+# Escolhas das Configurações (~/.config/duiaos/preferencias.conf): papel de parede,
+# resolução e escala das telas, luz noturna e a Tela de Bloqueio automática
+# (padrão: bloqueia após 10 minutos sem uso, antes de repousar e quando o
+# sistema pede). Sem o Python, o papel de parede e o bloqueio de sempre.
+if ! python3 "${DUIAOS_SHELL}/comum/sessao.py" aplicar >/tmp/duiaos-sessao.log 2>&1; then
   swaybg -c '#E8F0FE' >/dev/null 2>&1 &
+  swayidle -w timeout 600 "${DUIAOS_SHELL}/bloqueio/bloquear" \
+    before-sleep "${DUIAOS_SHELL}/bloqueio/bloquear" lock "${DUIAOS_SHELL}/bloqueio/bloquear" >/dev/null 2>&1 &
 fi
 
 # Barra de Recursos e Ilha de Aplicativos
@@ -43,11 +48,3 @@ fi
 if [ -x /usr/bin/duiaos-ajude-a-melhorar ]; then
   (sleep 4; /usr/bin/duiaos-ajude-a-melhorar --primeira-entrada >/dev/null 2>&1) &
 fi
-
-# Tela de Bloqueio: após 10 minutos sem uso, antes de suspender e
-# quando o sistema pede (loginctl lock-session)
-BLOQUEAR="${DUIAOS_SHELL}/bloqueio/bloquear"
-swayidle -w \
-  timeout 600 "${BLOQUEAR}" \
-  before-sleep "${BLOQUEAR}" \
-  lock "${BLOQUEAR}" >/dev/null 2>&1 &

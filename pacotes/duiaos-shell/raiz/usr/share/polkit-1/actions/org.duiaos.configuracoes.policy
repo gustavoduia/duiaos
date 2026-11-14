@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<!-- DuiaOS — Configurações › Usuário e senha. O ajudante /usr/lib/duiaos/conta só muda a
+     conta de quem chamou e confere a senha atual antes de trocá-la; por isso quem está
+     no computador (sessão local e ativa) pode usá-lo sem outra senha. -->
+<policyconfig>
+  <vendor>DuiaOS</vendor>
+  <action id="org.duiaos.configuracoes.conta">
+    <description>Mudar o nome ou a senha da própria conta</description>
+    <message>É preciso autorização para mudar a sua conta</message>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>yes</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/lib/duiaos/conta</annotate>
+  </action>
+</policyconfig>

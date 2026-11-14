@@ -1,5 +1,6 @@
 # DuiaOS — pacotes da interface gráfica: Tela de Entrada e de Bloqueio, sessão,
-# Barra de Recursos, Ilha de Aplicativos, Menu de Energia e animação de boot.
+# Barra de Recursos, Ilha de Aplicativos, Menu de Energia, Explorador de Arquivos,
+# Configurações e animação de boot.
 # Esta lista entra na ISO (build/build.sh a copia para config/package-lists).
 # Instalação manual: sudo apt install -y $(grep -v '^#' shell/pacotes.list)
 
@@ -50,6 +51,19 @@ qml6-module-qtquick-window
 python3-pyside6.qtquick
 python3-pyside6.qtqml
 python3-pyside6.qtgui
+python3-pyside6.qtsvg
+
+# Controles da Barra de Recursos, da Central de Controle e das Configurações:
+# brilho (pelo logind), luz noturna, modos de energia, permissões (pkexec)
+brightnessctl
+wlsunset
+power-profiles-daemon
+pkexec
+
+# Explorador de Arquivos: pastas do usuário, abrir arquivos, discos e pendrives
+xdg-user-dirs
+xdg-utils
+udisks2
 
 # Ícones e fontes
 hicolor-icon-theme

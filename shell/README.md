@@ -8,10 +8,26 @@ Esta pasta vira o pacote `duiaos-shell` (veja `pacotes/README.md`): fica em
 | --- | --- |
 | `entrada/` | **Tela de Entrada**: iniciar uma sessão (greetd + cage) |
 | `bloqueio/` | **Tela de Bloqueio**: desbloquear uma sessão aberta |
-| `comum/` | Visual único das duas telas (`TelaDeAcesso.qml`), menu de energia, símbolo, cores e funções comuns |
-| `menu-de-energia/` | **Menu de Energia** da sessão |
-| `barra-de-recursos/` | **Barra de Recursos** (relógio, Wi-Fi, som, bateria); o símbolo abre o Menu de Energia |
-| `ilha-de-aplicativos/` | **Ilha de Aplicativos** e **Central de Aplicativos** |
+| `comum/` | Visual único das duas telas (`TelaDeAcesso.qml`), menu de energia, símbolo e funções comuns; `qml/DuiaOS/` (biblioteca QML `import DuiaOS`: tema, botões, interruptores, deslizantes, ícones), `icones.py` (ícones próprios em SVG), `controles.py` (Wi-Fi, Bluetooth, som, brilho, bateria, energia, luz noturna), `pastas.py` (pastas do usuário e preferências), `aplicativos.py`, `tipos.py`, `sessao.py` (aplica as preferências ao entrar) |
+| `menu-de-energia/` | **Menu de Energia** da sessão (Ctrl+Alt+Delete) |
+| `barra-de-recursos/` | **Barra de Recursos**: Menu do DuiaOS, botão Wise, aplicativo em uso, ícones de controle (até 4 + balão da seta), **Central de Controle** e relógio (calendário) |
+| `ilha-de-aplicativos/` | **Ilha de Aplicativos** (com pasta Aplicativos, pilha de Downloads e Lixeira) e **Central de Aplicativos** em tela cheia |
+| `testes/` | Testes da lógica e das telas (`python3 -m unittest discover -s shell/testes -t .`) |
+
+Os aplicativos **Explorador de Arquivos** e **Configurações** ficam em `../apps/` e
+entram no mesmo pacote `duiaos-shell` (ADR 044).
+
+## Ver as telas sem a sessão do DuiaOS
+
+Cada parte abre numa janela comum, com dados de exemplo, e pode salvar a imagem:
+
+```sh
+python3 shell/barra-de-recursos/main.py --demonstracao --painel central   # menu, central, wifi, som, bateria…
+python3 shell/ilha-de-aplicativos/main.py --demonstracao --downloads       # ou --central
+python3 apps/explorador-de-arquivos/main.py ~/Documentos
+python3 apps/configuracoes/main.py --demonstracao --secao tela
+# + --captura arquivo.png para salvar a imagem e sair
+```
 | `sessao/` | Início da sessão e configuração do labwc |
 | `pacotes.list` | Pacotes do Debian usados pela interface (entram na ISO) |
 
@@ -36,13 +52,14 @@ para desbloquear".
 | Atalho | Ação |
 | --- | --- |
 | Super + Espaço | Abre e fecha a Central de Aplicativos |
+| Super + E | Abre o Explorador de Arquivos |
 | Super + W | Abre e fecha o Wise |
 | Super + L | Bloqueia a tela |
 | Ctrl + Alt + Delete | Menu de Energia |
-| Clique no símbolo da Barra | Menu de Energia |
+| Clique no símbolo da Barra | Menu do DuiaOS (Configurações, Repousar, Reiniciar, Desligar, Encerrar sessão…) |
 
-A tela também bloqueia sozinha após 10 minutos sem uso e antes de suspender
-(swayidle, em `sessao/autostart`).
+A tela também bloqueia sozinha após 10 minutos sem uso (muda em Configurações ›
+Bateria e energia) e antes de repousar (swayidle, iniciado por `comum/sessao.py`).
 
 ## Wise
 

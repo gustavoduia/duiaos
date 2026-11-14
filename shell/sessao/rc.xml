@@ -20,6 +20,10 @@
     <keybind key="W-w">
       <action name="Execute" command="sh -c &quot;[ -x /usr/bin/duiaos-wise ] &amp;&amp; /usr/bin/duiaos-wise --alternar&quot;" />
     </keybind>
+    <!-- Super + E: Explorador de Arquivos -->
+    <keybind key="W-e">
+      <action name="Execute" command="sh -c &quot;command -v duiaos-explorador-de-arquivos &gt;/dev/null &amp;&amp; exec duiaos-explorador-de-arquivos || exec python3 $DUIAOS_SHELL/../explorador-de-arquivos/main.py&quot;" />
+    </keybind>
     <!-- Super + L: bloqueia a tela -->
     <keybind key="W-l">
       <action name="Execute" command="sh -c &quot;$DUIAOS_SHELL/bloqueio/bloquear&quot;" />

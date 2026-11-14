@@ -1,0 +1,773 @@
+// DuiaOS — Configurações.
+// Barra lateral com a pessoa e as seções; à direita, a página da seção em grupos
+// (cartões brancos com linhas), no estilo dos Ajustes do Sistema.
+import QtQuick
+import QtQuick.Window
+import DuiaOS
+
+Window {
+    id: janela
+    width: 980; height: 680
+    minimumWidth: 760; minimumHeight: 480
+    visible: true
+    color: Tema.fundo
+    title: "Configurações"
+
+    readonly property var secoes: [
+        { id: "wifi", nome: "Wi-Fi", icone: "wifi-3", cor: "azul", grupo: 0 },
+        { id: "bluetooth", nome: "Bluetooth", icone: "bluetooth", cor: "azul", grupo: 0 },
+        { id: "som", nome: "Som", icone: "som-2", cor: "noite", grupo: 1 },
+        { id: "tela", nome: "Tela", icone: "brilho", cor: "azul", grupo: 1 },
+        { id: "energia", nome: "Bateria e energia", icone: "bateria", cor: "noite", grupo: 1 },
+        { id: "papel", nome: "Papel de parede", icone: "imagem", cor: "azul", grupo: 2 },
+        { id: "barra", nome: "Barra e Ilha", icone: "barra", cor: "noite", grupo: 2 },
+        { id: "usuario", nome: "Usuário e senha", icone: "usuario", cor: "azul", grupo: 3 },
+        { id: "data", nome: "Data e hora", icone: "relogio", cor: "noite", grupo: 3 },
+        { id: "teclado", nome: "Idioma e teclado", icone: "teclado", cor: "azul", grupo: 3 },
+        { id: "padroes", nome: "Aplicativos padrão", icone: "aplicativos", cor: "noite", grupo: 3 },
+        { id: "privacidade", nome: "Privacidade", icone: "escudo", cor: "azul", grupo: 4 },
+        { id: "ia", nome: "Inteligência artificial", icone: "ia", cor: "noite", grupo: 4 },
+        { id: "sobre", nome: "Sobre este computador", icone: "info", cor: "cinza", grupo: 4 }
+    ]
+    function nomeDaSecao(id) { for (var i = 0; i < secoes.length; i++) if (secoes[i].id === id) return secoes[i].nome; return "" }
+    property string filtro: ""
+
+    // =============================================================== lateral
+    Rectangle {
+        id: lateral
+        width: 248
+        anchors { left: parent.left; top: parent.top; bottom: parent.bottom }
+        color: "#EEF2F7"
+        Rectangle { anchors { right: parent.right; top: parent.top; bottom: parent.bottom } width: 1; color: Tema.borda }
+
+        Campo {
+            id: busca
+            anchors { left: parent.left; right: parent.right; top: parent.top; margins: 12 }
+            icone: "busca"; dica: "Buscar"
+            entrada.onTextChanged: janela.filtro = texto.toLowerCase()
+        }
+        // A pessoa
+        Rectangle {
+            id: cartaoPessoa
+            anchors { left: parent.left; right: parent.right; top: busca.bottom; margins: 10; topMargin: 10 }
+            height: 58; radius: 10
+            color: ajustes.secao === "usuario" ? Qt.rgba(0.18, 0.42, 0.90, 0.14) : (areaPessoa.containsMouse ? Qt.rgba(0.06, 0.09, 0.14, 0.05) : "transparent")
+            Rectangle {
+                id: avatar
+                width: 40; height: 40; radius: 20
+                anchors { left: parent.left; leftMargin: 8; verticalCenter: parent.verticalCenter }
+                gradient: Gradient { GradientStop { position: 0; color: "#6FA0F7" } GradientStop { position: 1; color: Tema.azulNoite } }
+                Text { anchors.centerIn: parent; text: ajustes.usuario.nome.charAt(0).toUpperCase(); color: "white"; font { family: Tema.fonteTitulo; pixelSize: 18; weight: Font.Bold } }
+            }
+            Column {
+                anchors { left: avatar.right; leftMargin: 10; right: parent.right; verticalCenter: parent.verticalCenter }
+                Text { text: ajustes.usuario.nome; color: Tema.texto; elide: Text.ElideRight; width: parent.width; font { family: Tema.fonteTexto; pixelSize: 14; weight: Font.DemiBold } }
+                Text { text: "Conta neste computador"; color: Tema.textoSecundario; font { family: Tema.fonteTexto; pixelSize: 11 } }
+            }
+            MouseArea { id: areaPessoa; anchors.fill: parent; hoverEnabled: true; onClicked: ajustes.irPara("usuario") }
+        }
+
+        ListView {
+            id: listaSecoes
+            anchors { left: parent.left; right: parent.right; top: cartaoPessoa.bottom; bottom: parent.bottom; margins: 10 }
+            clip: true
+            boundsBehavior: Flickable.StopAtBounds
+            model: janela.secoes.filter(function (s) { return janela.filtro === "" || s.nome.toLowerCase().indexOf(janela.filtro) >= 0 })
+            delegate: Item {
+                required property var modelData
+                required property int index
+                width: listaSecoes.width
+                height: 34 + (espaco ? 12 : 0)
+                readonly property bool espaco: index > 0 && listaSecoes.model[index - 1].grupo !== modelData.grupo
+                Rectangle {
+                    anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
+                    height: 34; radius: 8
+                    color: ajustes.secao === modelData.id ? Tema.azulDuia : (areaSecao.containsMouse ? Qt.rgba(0.06, 0.09, 0.14, 0.05) : "transparent")
+                    Ladrilho { id: ladrilho; anchors { left: parent.left; leftMargin: 6; verticalCenter: parent.verticalCenter }
+                               tamanho: 24; radius: 6; icone: modelData.icone; estilo: modelData.cor }
+                    Text {
+                        anchors { left: ladrilho.right; leftMargin: 10; verticalCenter: parent.verticalCenter }
+                        text: modelData.nome
+                        color: ajustes.secao === modelData.id ? "white" : Tema.texto
+                        font { family: Tema.fonteTexto; pixelSize: 13; weight: ajustes.secao === modelData.id ? Font.DemiBold : Font.Normal }
+                    }
+                    MouseArea { id: areaSecao; anchors.fill: parent; hoverEnabled: true; onClicked: ajustes.irPara(modelData.id) }
+                }
+            }
+        }
+    }
+
+    // ========================================================= componentes
+    component Grupo: Rectangle {
+        default property alias linhas: colunaGrupo.data
+        property string titulo: ""
+        width: parent ? parent.width : 500
+        height: colunaGrupo.implicitHeight + (titulo !== "" ? 26 : 0)
+        color: "transparent"
+        Text { visible: parent.titulo !== ""; text: parent.titulo; x: 4; color: Tema.textoSecundario; font { family: Tema.fonteTexto; pixelSize: 12; weight: Font.DemiBold } }
+        Rectangle {
+            anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
+            height: colunaGrupo.implicitHeight
+            radius: 12
+            color: Tema.cartao
+            border { color: Tema.borda; width: 1 }
+            Column { id: colunaGrupo; width: parent.width }
+        }
+    }
+    component Linha: Item {
+        id: linha
+        property string titulo: ""
+        property string descricao: ""
+        property string icone: ""
+        property bool ultima: false
+        property bool clicavel: false
+        default property alias controle: lado.data
+        signal clicada()
+        width: parent ? parent.width : 500
+        height: Math.max(46, textos.implicitHeight + 20)
+        Rectangle { anchors.fill: parent; anchors.margins: 1; radius: 11; color: linha.clicavel && areaLinha.containsMouse ? Qt.rgba(0.06, 0.09, 0.14, 0.03) : "transparent" }
+        Icone { id: iconeLinha; visible: linha.icone !== ""; anchors { left: parent.left; leftMargin: 14; verticalCenter: parent.verticalCenter } nome: linha.icone; tamanho: 18; cor: Tema.textoSecundario }
+        Column {
+            id: textos
+            anchors { left: linha.icone !== "" ? iconeLinha.right : parent.left; leftMargin: 14; right: lado.left; rightMargin: 12; verticalCenter: parent.verticalCenter }
+            Text { width: parent.width; text: linha.titulo; elide: Text.ElideRight; color: Tema.texto; font { family: Tema.fonteTexto; pixelSize: 13 } }
+            Text { width: parent.width; visible: linha.descricao !== ""; text: linha.descricao; wrapMode: Text.WordWrap; color: Tema.textoSecundario; font { family: Tema.fonteTexto; pixelSize: 12 } }
+        }
+        MouseArea { id: areaLinha; anchors.fill: parent; enabled: linha.clicavel; hoverEnabled: true; onClicked: linha.clicada() }
+        Row { id: lado; anchors { right: parent.right; rightMargin: 14; verticalCenter: parent.verticalCenter } spacing: 8 }
+        Rectangle { visible: !linha.ultima; anchors { left: textos.left; right: parent.right; bottom: parent.bottom } height: 1; color: Tema.borda }
+    }
+    // Lista de opções que abre por cima da página (com busca quando são muitas)
+    component Seletor: Rectangle {
+        id: seletor
+        property var opcoes: []            // [{valor, rotulo}]
+        property string valor: ""
+        property string vazio: "Escolher"
+        signal escolhido(string valor)
+        width: 230; height: 30; radius: 8
+        color: areaSeletor.containsMouse ? "#F4F7FB" : Tema.cartao
+        border { color: Tema.bordaForte; width: 1 }
+        readonly property string rotulo: {
+            for (var i = 0; i < opcoes.length; i++) if (opcoes[i].valor === valor) return opcoes[i].rotulo
+            return vazio
+        }
+        Text { anchors { left: parent.left; leftMargin: 10; right: setaSeletor.left; rightMargin: 6; verticalCenter: parent.verticalCenter }
+               text: seletor.rotulo; elide: Text.ElideRight; color: Tema.texto; font { family: Tema.fonteTexto; pixelSize: 13 } }
+        Icone { id: setaSeletor; anchors { right: parent.right; rightMargin: 8; verticalCenter: parent.verticalCenter } nome: "seta-baixo"; tamanho: 13; cor: Tema.textoSecundario }
+        MouseArea {
+            id: areaSeletor; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+            onClicked: { var p = seletor.mapToItem(null, 0, seletor.height + 4); escolha.abrir(seletor.opcoes, seletor.valor, function (v) { seletor.escolhido(v) }, p.x, p.y, seletor.width) }
+        }
+    }
+    component Pagina: Flickable {
+        default property alias corpo: colunaPagina.data
+        contentHeight: colunaPagina.implicitHeight + 40
+        clip: true
+        boundsBehavior: Flickable.StopAtBounds
+        Column {
+            id: colunaPagina
+            x: 28; y: 8
+            width: parent.width - 56
+            spacing: 18
+        }
+    }
+    component Destaque: Row {
+        property string icone: ""
+        property string estilo: "azul"
+        property string titulo: ""
+        property string texto: ""
+        spacing: 14
+        width: parent ? parent.width : 400
+        Ladrilho { tamanho: 52; icone: parent.icone; estilo: parent.estilo }
+        Column {
+            width: parent.width - 66
+            anchors.verticalCenter: parent.verticalCenter
+            Titulo { nivel: 2; text: parent.parent.titulo }
+            Rotulo { width: parent.width; secundario: true; text: parent.parent.texto }
+        }
+    }
+
+    // ================================================================ página
+    Item {
+        id: conteudo
+        anchors { left: lateral.right; right: parent.right; top: parent.top; bottom: parent.bottom }
+        Rectangle { anchors.fill: parent; color: Tema.fundo }
+        Titulo {
+            id: tituloPagina
+            anchors { left: parent.left; top: parent.top; leftMargin: 28; topMargin: 18 }
+            text: janela.nomeDaSecao(ajustes.secao)
+        }
+        Loader {
+            anchors { left: parent.left; right: parent.right; top: tituloPagina.bottom; bottom: parent.bottom; topMargin: 10 }
+            sourceComponent: ({ wifi: paginaWifi, bluetooth: paginaBluetooth, som: paginaSom, tela: paginaTela, energia: paginaEnergia,
+                                papel: paginaPapel, barra: paginaBarra, usuario: paginaUsuario, data: paginaData, teclado: paginaTeclado,
+                                padroes: paginaPadroes, privacidade: paginaPrivacidade, ia: paginaIa, sobre: paginaSobre })[ajustes.secao]
+        }
+    }
+
+    // ------------------------------------------------------------------ Wi-Fi
+    Component {
+        id: paginaWifi
+        Pagina {
+            Component.onCompleted: controles.buscarRedes(true)
+            Grupo {
+                Linha {
+                    icone: "wifi-3"; titulo: "Wi-Fi"
+                    descricao: !controles.wifiLigado ? "Desligado" : (controles.wifiRede !== "" ? "Conectado a " + controles.wifiRede : "Ligado, sem conexão")
+                    ultima: !controles.ethernet
+                    Interruptor { ligado: controles.wifiLigado; onAlternado: (v) => controles.ligarWifi(v) }
+                }
+                Linha { visible: controles.ethernet; icone: "rede"; titulo: "Cabo de rede"; descricao: "Conectado"; ultima: true }
+            }
+            Grupo {
+                visible: controles.wifiLigado
+                titulo: controles.buscandoRedes ? "Procurando redes…" : "Redes disponíveis"
+                Repeater {
+                    model: controles.redes
+                    Column {
+                        required property var modelData
+                        required property int index
+                        width: parent.width
+                        property bool pedindoSenha: false
+                        Linha {
+                            icone: "wifi-" + (modelData.sinal >= 67 ? 3 : (modelData.sinal >= 34 ? 2 : 1))
+                            titulo: modelData.ssid
+                            descricao: modelData.conectada ? "Conectada" : (controles.redeSalva(modelData.ssid) ? "Salva" : (modelData.segura ? "Protegida por senha" : "Aberta"))
+                            ultima: index === controles.redes.length - 1 && !parent.pedindoSenha
+                            Icone { visible: modelData.segura; nome: "cadeado"; tamanho: 14; cor: Tema.textoApagado; anchors.verticalCenter: parent.verticalCenter }
+                            Botao {
+                                visible: !modelData.conectada
+                                texto: "Conectar"
+                                onClicado: {
+                                    if (!modelData.segura || controles.redeSalva(modelData.ssid)) controles.conectarWifi(modelData.ssid, "")
+                                    else parent.parent.parent.pedindoSenha = true
+                                }
+                            }
+                            Botao { visible: modelData.conectada; texto: "Desconectar"; onClicado: controles.desconectarWifi(modelData.ssid) }
+                            Botao { visible: controles.redeSalva(modelData.ssid); texto: "Esquecer"; onClicado: controles.esquecerWifi(modelData.ssid) }
+                        }
+                        Row {
+                            visible: parent.pedindoSenha
+                            spacing: 8; leftPadding: 46; bottomPadding: 10
+                            Campo { id: senhaWifi; width: 240; senha: true; dica: "Senha da rede"
+                                    onConfirmado: { controles.conectarWifi(modelData.ssid, texto); parent.parent.pedindoSenha = false } }
+                            Botao { texto: "Conectar"; tipo: "primario"; onClicado: { controles.conectarWifi(modelData.ssid, senhaWifi.texto); parent.parent.pedindoSenha = false } }
+                            Botao { texto: "Cancelar"; onClicado: parent.parent.pedindoSenha = false }
+                        }
+                    }
+                }
+            }
+            Botao { visible: controles.wifiLigado; texto: "Procurar de novo"; icone: "reiniciar"; onClicado: controles.buscarRedes(true) }
+        }
+    }
+
+    // -------------------------------------------------------------- Bluetooth
+    Component {
+        id: paginaBluetooth
+        Pagina {
+            Component.onCompleted: controles.buscarBluetooth(false)
+            Rotulo { visible: !controles.bluetoothExiste; secundario: true; text: "Este computador não tem Bluetooth, ou ele está desligado no equipamento." }
+            Grupo {
+                visible: controles.bluetoothExiste
+                Linha { icone: "bluetooth"; titulo: "Bluetooth"; descricao: controles.bluetoothLigado ? "Ligado e visível para os seus dispositivos" : "Desligado"; ultima: true
+                        Interruptor { ligado: controles.bluetoothLigado; onAlternado: (v) => controles.ligarBluetooth(v) } }
+            }
+            Grupo {
+                visible: controles.bluetoothLigado
+                titulo: "Meus dispositivos"
+                Linha { visible: controles.bluetoothPareados.length === 0; titulo: "Nenhum dispositivo pareado ainda"; ultima: true }
+                Repeater {
+                    model: controles.bluetoothPareados
+                    Linha {
+                        required property var modelData
+                        required property int index
+                        icone: "bluetooth"; titulo: modelData.nome; descricao: modelData.conectado ? "Conectado" : "Não conectado"
+                        ultima: index === controles.bluetoothPareados.length - 1
+                        Botao { texto: modelData.conectado ? "Desconectar" : "Conectar"
+                                onClicado: modelData.conectado ? controles.desconectarBluetooth(modelData.endereco) : controles.conectarBluetooth(modelData.endereco) }
+                        Botao { texto: "Esquecer"; onClicado: controles.esquecerBluetooth(modelData.endereco) }
+                    }
+                }
+            }
+            Grupo {
+                visible: controles.bluetoothLigado
+                titulo: controles.buscandoBluetooth ? "Procurando dispositivos por perto…" : "Dispositivos por perto"
+                Linha { visible: controles.bluetoothProximos.length === 0; titulo: controles.buscandoBluetooth ? "Procurando…" : "Clique em Procurar com o dispositivo em modo de pareamento"; ultima: true }
+                Repeater {
+                    model: controles.bluetoothProximos
+                    Linha {
+                        required property var modelData
+                        required property int index
+                        icone: "bluetooth"; titulo: modelData.nome; ultima: index === controles.bluetoothProximos.length - 1
+                        Botao { texto: "Parear"; tipo: "primario"; onClicado: controles.conectarBluetooth(modelData.endereco) }
+                    }
+                }
+            }
+            Botao { visible: controles.bluetoothLigado; texto: "Procurar"; icone: "busca"; ativo: !controles.buscandoBluetooth; onClicado: controles.buscarBluetooth(true) }
+        }
+    }
+
+    // -------------------------------------------------------------------- Som
+    Component {
+        id: paginaSom
+        Pagina {
+            Grupo {
+                titulo: "Saída"
+                Linha {
+                    icone: controles.mudo ? "som-mudo" : "som-2"; titulo: "Volume"
+                    Deslizante { width: 260; valor: controles.mudo ? 0 : controles.volume; icone: "som-2"; iconeBaixo: "som-0"
+                                 onMovido: (v) => controles.definirVolume(v); onIconeClicado: controles.alternarMudo() }
+                }
+                Linha { titulo: "Sem som"; ultima: controles.saidas.length === 0; Interruptor { ligado: controles.mudo; onAlternado: controles.alternarMudo() } }
+                Repeater {
+                    model: controles.saidas
+                    Linha {
+                        required property var modelData
+                        required property int index
+                        titulo: modelData.nome; clicavel: true; ultima: index === controles.saidas.length - 1
+                        onClicada: controles.escolherDispositivoDeSom(modelData.id)
+                        Icone { visible: modelData.padrao; nome: "check"; tamanho: 16; cor: Tema.azulDuia }
+                    }
+                }
+            }
+            Grupo {
+                titulo: "Entrada"
+                visible: controles.microfone >= 0
+                Linha {
+                    icone: "microfone"; titulo: "Volume do microfone"
+                    Deslizante { width: 260; valor: controles.microfoneMudo ? 0 : controles.microfone; icone: "microfone"
+                                 onMovido: (v) => controles.definirMicrofone(v); onIconeClicado: controles.alternarMicrofoneMudo() }
+                }
+                Repeater {
+                    model: controles.entradas
+                    Linha {
+                        required property var modelData
+                        required property int index
+                        titulo: modelData.nome; clicavel: true; ultima: index === controles.entradas.length - 1
+                        onClicada: controles.escolherDispositivoDeSom(modelData.id)
+                        Icone { visible: modelData.padrao; nome: "check"; tamanho: 16; cor: Tema.azulDuia }
+                    }
+                }
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------ Tela
+    Component {
+        id: paginaTela
+        Pagina {
+            Grupo {
+                visible: controles.brilho >= 0
+                Linha { icone: "brilho"; titulo: "Brilho"; ultima: true
+                        Deslizante { width: 260; valor: controles.brilho; icone: "brilho"; iconeBaixo: "brilho-baixo"; onMovido: (v) => controles.definirBrilho(v) } }
+            }
+            Repeater {
+                model: ajustes.telas
+                Grupo {
+                    required property var modelData
+                    titulo: modelData.descricao !== "" ? modelData.descricao : modelData.nome
+                    Linha {
+                        icone: "monitor"; titulo: "Resolução"
+                        Seletor { opcoes: modelData.modos.map(function (m) { return { valor: m.valor, rotulo: m.rotulo + (m.preferido ? " · recomendada" : "") } })
+                                  valor: modelData.modo; onEscolhido: (v) => ajustes.definirTela(modelData.nome, v, modelData.escala) }
+                    }
+                    Linha {
+                        titulo: "Tamanho do texto e dos itens"; descricao: "Escala da tela"; ultima: true
+                        Seletor { width: 160
+                                  opcoes: [{ valor: "1", rotulo: "100%" }, { valor: "1.25", rotulo: "125%" }, { valor: "1.5", rotulo: "150%" },
+                                           { valor: "1.75", rotulo: "175%" }, { valor: "2", rotulo: "200%" }]
+                                  valor: String(modelData.escala); onEscolhido: (v) => ajustes.definirTela(modelData.nome, modelData.modo, parseFloat(v)) }
+                    }
+                }
+            }
+            Rotulo { visible: ajustes.telas.length === 0; secundario: true; text: "Não foi possível ler as telas (wlr-randr)." }
+            Grupo {
+                titulo: "Luz noturna"
+                Linha {
+                    icone: "lua"; titulo: "Luz noturna"; descricao: "Cores mais quentes, que cansam menos a vista à noite"
+                    Seletor { width: 200
+                              opcoes: [{ valor: "desligada", rotulo: "Desligada" }, { valor: "ligada", rotulo: "Ligada" }, { valor: "programada", rotulo: "Programada" }]
+                              valor: controles.luzNoturna; onEscolhido: (v) => controles.definirLuzNoturna(v) }
+                }
+                Linha {
+                    titulo: "Horário programado"; descricao: "Usado no modo Programada"; ultima: true
+                    Campo { id: luzInicio; width: 72; texto: ajustes.luzInicio; entrada.horizontalAlignment: TextInput.AlignHCenter }
+                    Text { text: "às"; anchors.verticalCenter: parent.verticalCenter; color: Tema.textoSecundario; font.family: Tema.fonteTexto }
+                    Campo { id: luzFim; width: 72; texto: ajustes.luzFim; entrada.horizontalAlignment: TextInput.AlignHCenter }
+                    Botao { texto: "Salvar"; onClicado: ajustes.definirHorarioLuz(luzInicio.texto, luzFim.texto) }
+                }
+            }
+        }
+    }
+
+    // ------------------------------------------------------- Bateria e energia
+    Component {
+        id: paginaEnergia
+        Pagina {
+            Grupo {
+                visible: controles.bateria >= 0
+                Linha {
+                    titulo: "Bateria"
+                    descricao: controles.carregando ? "Carregando" + (controles.tempoBateria !== "" ? " · cheia em " + controles.tempoBateria : "")
+                               : (controles.tomada ? "Na tomada" : (controles.tempoBateria !== "" ? "Restam cerca de " + controles.tempoBateria : "Usando a bateria"))
+                    ultima: true
+                    IconeBateria { anchors.verticalCenter: parent.verticalCenter; nivel: controles.bateria; carregando: controles.carregando }
+                    Text { anchors.verticalCenter: parent.verticalCenter; text: controles.bateria + "%"; color: Tema.texto; font { family: Tema.fonteTitulo; pixelSize: 18; weight: Font.Bold } }
+                }
+            }
+            Grupo {
+                visible: controles.perfis.length > 0
+                titulo: "Modo de energia"
+                Repeater {
+                    model: controles.perfis
+                    Linha {
+                        required property string modelData
+                        required property int index
+                        titulo: controles.nomesPerfis[modelData]
+                        descricao: ({ "power-saver": "Mais horas de bateria, um pouco mais lento", balanced: "O melhor para o dia a dia", performance: "Mais rápido; gasta mais bateria e esquenta mais" })[modelData]
+                        clicavel: true; ultima: index === controles.perfis.length - 1
+                        onClicada: controles.definirPerfil(modelData)
+                        Icone { visible: controles.perfil === modelData; nome: "check"; tamanho: 16; cor: Tema.azulDuia }
+                    }
+                }
+            }
+            Grupo {
+                titulo: "Tela de Bloqueio e repouso"
+                Linha {
+                    icone: "cadeado"; titulo: "Bloquear a tela depois de"
+                    Seletor { width: 180
+                              opcoes: [{ valor: "2", rotulo: "2 minutos" }, { valor: "5", rotulo: "5 minutos" }, { valor: "10", rotulo: "10 minutos" },
+                                       { valor: "15", rotulo: "15 minutos" }, { valor: "30", rotulo: "30 minutos" }, { valor: "60", rotulo: "1 hora" }, { valor: "0", rotulo: "Nunca" }]
+                              valor: String(ajustes.bloquearApos); onEscolhido: (v) => ajustes.definirMinutos("bloquear", parseInt(v)) }
+                }
+                Linha {
+                    icone: "lua"; titulo: "Repousar depois de"; descricao: "Sem uso; a tela bloqueia antes"; ultima: true
+                    Seletor { width: 180
+                              opcoes: [{ valor: "15", rotulo: "15 minutos" }, { valor: "30", rotulo: "30 minutos" }, { valor: "60", rotulo: "1 hora" },
+                                       { valor: "120", rotulo: "2 horas" }, { valor: "0", rotulo: "Nunca" }]
+                              valor: String(ajustes.repousarApos); onEscolhido: (v) => ajustes.definirMinutos("repousar", parseInt(v)) }
+                }
+            }
+        }
+    }
+
+    // -------------------------------------------------------- Papel de parede
+    Component {
+        id: paginaPapel
+        Pagina {
+            id: pp
+            property var imagens: ajustes.imagensDoUsuario()
+            Rectangle {
+                width: Math.min(parent.width, 420); height: width * 0.6; radius: 14
+                color: ajustes.papelAtual !== "" ? Tema.controleDesligado : ajustes.corAtual
+                clip: true
+                border { color: Tema.borda; width: 1 }
+                Image { anchors.fill: parent; anchors.margins: 1; visible: ajustes.papelAtual !== ""; source: ajustes.papelAtual !== "" ? "file://" + ajustes.papelAtual : ""
+                        fillMode: Image.PreserveAspectCrop; sourceSize.width: 840; asynchronous: true }
+            }
+            component Miniatura: Rectangle {
+                property string arquivo: ""
+                property string cor: ""
+                readonly property bool atual: arquivo !== "" ? ajustes.papelAtual === arquivo : (ajustes.papelAtual === "" && ajustes.corAtual === cor)
+                width: 132; height: 82; radius: 10
+                color: cor !== "" ? cor : Tema.controleDesligado
+                border { color: atual ? Tema.azulDuia : Tema.borda; width: atual ? 3 : 1 }
+                Image { anchors.fill: parent; anchors.margins: parent.atual ? 3 : 1; visible: parent.arquivo !== ""; source: parent.arquivo !== "" ? "file://" + parent.arquivo : ""
+                        fillMode: Image.PreserveAspectCrop; sourceSize.width: 264; asynchronous: true }
+                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: ajustes.definirPapel(parent.arquivo !== "" ? parent.arquivo : parent.cor) }
+            }
+            Titulo { nivel: 3; text: "Do DuiaOS" }
+            Flow { width: parent.width; spacing: 12; Repeater { model: ajustes.papeis; Miniatura { required property string modelData; arquivo: modelData } } }
+            Titulo { nivel: 3; text: "Cores" }
+            Flow {
+                width: parent.width; spacing: 12
+                Repeater { model: ["#E8F0FE", "#1A3A73", "#0F1724", "#2E6BE6", "#2FA67A", "#F4E9DA", "#E8A33D", "#5B6675"]
+                           Miniatura { required property string modelData; cor: modelData; width: 82 } }
+            }
+            Titulo { nivel: 3; text: "Da pasta Imagens"; visible: pp.imagens.length > 0 }
+            Flow { width: parent.width; spacing: 12; Repeater { model: pp.imagens; Miniatura { required property string modelData; arquivo: modelData } } }
+            Rotulo { visible: pp.imagens.length === 0; secundario: true; width: parent.width
+                     text: "Para usar uma foto sua, coloque-a na pasta Imagens; ela aparece aqui." }
+        }
+    }
+
+    // ----------------------------------------------------------- Barra e Ilha
+    Component {
+        id: paginaBarra
+        Pagina {
+            Grupo {
+                titulo: "Barra de Recursos"
+                Linha {
+                    icone: "barra"; titulo: "Posição na tela"; ultima: true
+                    Seletor { width: 180
+                              opcoes: [{ valor: "topo", rotulo: "No alto" }, { valor: "base", rotulo: "Embaixo" }, { valor: "esquerda", rotulo: "À esquerda" }, { valor: "direita", rotulo: "À direita" }]
+                              valor: ajustes.posicaoBarra; onEscolhido: (v) => ajustes.definirPosicaoBarra(v) }
+                }
+            }
+            Grupo {
+                titulo: "Ícones da Barra (os 4 primeiros ficam à vista; os outros, no balão da seta)"
+                Repeater {
+                    model: ajustes.ordemIcones
+                    Linha {
+                        required property string modelData
+                        required property int index
+                        icone: ({ wise: "ia", wifi: "wifi-3", som: "som-2", bateria: "bateria", bluetooth: "bluetooth", brilho: "brilho", luz: "lua" })[modelData] || "ponto"
+                        titulo: ({ wise: "Wise", wifi: "Wi-Fi", som: "Som", bateria: "Bateria", bluetooth: "Bluetooth", brilho: "Brilho", luz: "Luz noturna" })[modelData] || modelData
+                        descricao: index < 4 ? "À vista" : "No balão"
+                        ultima: index === ajustes.ordemIcones.length - 1
+                        function mover(delta) {
+                            var o = ajustes.ordemIcones.slice()
+                            var j = index + delta
+                            if (j < 0 || j >= o.length) return
+                            var t = o[index]; o[index] = o[j]; o[j] = t
+                            ajustes.definirOrdemIcones(o)
+                        }
+                        BotaoIcone { icone: "seta-cima"; ativo: index > 0; onClicado: parent.parent.mover(-1) }
+                        BotaoIcone { icone: "seta-baixo"; ativo: index < ajustes.ordemIcones.length - 1; onClicado: parent.parent.mover(1) }
+                    }
+                }
+            }
+            Grupo {
+                titulo: "Ilha de Aplicativos"
+                Linha { icone: "aplicativos"; titulo: "Fixar e tirar aplicativos"; descricao: "Na Central de Aplicativos (Super + Espaço), clique com o botão direito no aplicativo."; ultima: true }
+            }
+        }
+    }
+
+    // --------------------------------------------------------------- Usuário
+    Component {
+        id: paginaUsuario
+        Pagina {
+            Grupo {
+                Linha {
+                    icone: "usuario"; titulo: "Nome"; descricao: "Aparece na Tela de Entrada e no Menu do DuiaOS"
+                    Campo { id: campoNome; width: 220; texto: ajustes.usuario.nome }
+                    Botao { texto: "Salvar"; onClicado: ajustes.definirNome(campoNome.texto) }
+                }
+                Linha { titulo: "Usuário"; descricao: "Nome de acesso (não muda)"; ultima: true
+                        Text { anchors.verticalCenter: parent.verticalCenter; text: ajustes.usuario.usuario; color: Tema.textoSecundario; font { family: Tema.fonteCodigo; pixelSize: 13 } } }
+            }
+            Grupo {
+                titulo: "Trocar a senha"
+                Linha { titulo: "Senha atual"; Campo { id: senhaAtual; width: 240; senha: true } }
+                Linha { titulo: "Senha nova"; descricao: "Pelo menos 6 caracteres"; Campo { id: senhaNova; width: 240; senha: true } }
+                Linha { titulo: "Repita a senha nova"; ultima: true; Campo { id: senhaRepetida; width: 240; senha: true } }
+            }
+            Botao {
+                texto: "Trocar a senha"; tipo: "primario"
+                ativo: senhaAtual.texto !== "" && senhaNova.texto !== ""
+                onClicado: { ajustes.trocarSenha(senhaAtual.texto, senhaNova.texto, senhaRepetida.texto); senhaAtual.texto = ""; senhaNova.texto = ""; senhaRepetida.texto = "" }
+            }
+        }
+    }
+
+    // ----------------------------------------------------------- Data e hora
+    Component {
+        id: paginaData
+        Pagina {
+            id: pd
+            property date agora: new Date()
+            Timer { interval: 1000; running: true; repeat: true; onTriggered: pd.agora = new Date() }
+            Grupo {
+                Linha {
+                    icone: "relogio"; titulo: "Agora"
+                    Text { anchors.verticalCenter: parent.verticalCenter
+                           text: pd.agora.toLocaleDateString(Qt.locale("pt_BR"), "dddd, d 'de' MMMM") + "  ·  " + pd.agora.toLocaleTimeString(Qt.locale("pt_BR"), "HH:mm")
+                           color: Tema.texto; font { family: Tema.fonteTexto; pixelSize: 13; weight: Font.DemiBold } }
+                }
+                Linha { titulo: "Acertar automaticamente"; descricao: "Pela internet"
+                        Interruptor { ligado: ajustes.data.automatica; onAlternado: (v) => ajustes.definirHoraAutomatica(v) } }
+                Linha {
+                    icone: "globo"; titulo: "Fuso horário"; ultima: true
+                    Seletor { width: 260; vazio: ajustes.data.fuso || "Escolher"
+                              opcoes: ajustes.fusos.map(function (f) { return { valor: f, rotulo: f.replace(/_/g, " ").replace("/", " › ") } })
+                              valor: ajustes.data.fuso; onEscolhido: (v) => ajustes.definirFuso(v) }
+                }
+            }
+        }
+    }
+
+    // ------------------------------------------------------ Idioma e teclado
+    Component {
+        id: paginaTeclado
+        Pagina {
+            Grupo {
+                Linha { icone: "globo"; titulo: "Idioma do sistema"; descricao: "Português do Brasil"; ultima: true }
+            }
+            Grupo {
+                titulo: "Teclado"
+                Linha {
+                    icone: "teclado"; titulo: "Tipo de teclado"; descricao: "A troca vale a partir da próxima entrada"; ultima: true
+                    Seletor { width: 300
+                              opcoes: Object.keys(controles.layouts).map(function (k) { return { valor: k, rotulo: controles.layouts[k] } })
+                              valor: controles.teclado; onEscolhido: (v) => ajustes.definirTeclado(v) }
+                }
+            }
+            Grupo {
+                titulo: "Atalhos do DuiaOS"
+                Repeater {
+                    model: [["Super + Espaço", "Central de Aplicativos"], ["Super + W", "Wise"], ["Super + L", "Bloquear a tela"], ["Ctrl + Alt + Delete", "Menu de Energia"],
+                            ["Alt + Tab", "Trocar de janela"], ["Ctrl + C · Ctrl + X · Ctrl + V", "Copiar, recortar e colar"]]
+                    Linha {
+                        required property var modelData
+                        required property int index
+                        titulo: modelData[1]; ultima: index === 5
+                        Text { anchors.verticalCenter: parent.verticalCenter; text: modelData[0]; color: Tema.textoSecundario; font { family: Tema.fonteTexto; pixelSize: 12; weight: Font.DemiBold } }
+                    }
+                }
+            }
+        }
+    }
+
+    // ---------------------------------------------------- Aplicativos padrão
+    Component {
+        id: paginaPadroes
+        Pagina {
+            Grupo {
+                Repeater {
+                    model: ajustes.categoriasPadrao
+                    Linha {
+                        required property var modelData
+                        required property int index
+                        titulo: modelData.nome
+                        ultima: index === ajustes.categoriasPadrao.length - 1
+                        Seletor {
+                            width: 260
+                            vazio: (ajustes.appsPorCategoria[modelData.id] || []).length === 0 ? "Nenhum instalado" : "Escolher"
+                            opcoes: (ajustes.appsPorCategoria[modelData.id] || []).map(function (a) { return { valor: a.id, rotulo: a.nome } })
+                            valor: ajustes.padroes[modelData.id] || ""
+                            onEscolhido: (v) => ajustes.definirPadrao(modelData.id, v)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // ----------------------------------------------------------- Privacidade
+    Component {
+        id: paginaPrivacidade
+        Pagina {
+            Destaque { icone: "escudo"; titulo: "Ajude a melhorar o DuiaOS"
+                       texto: "Você escolhe se o computador envia relatórios de erros e de uso, sempre somados e sem dados pessoais. Nada sai antes da sua escolha." }
+            Botao { texto: "Abrir “Ajude a melhorar o DuiaOS”"; tipo: "primario"; onClicado: ajustes.abrirApp("ajude-a-melhorar") }
+            Grupo {
+                titulo: "Permissões do Wise"
+                visible: ajustes.wise
+                Linha { icone: "ia"; titulo: "O Wise pede a sua aprovação"; descricao: "Antes de enviar, apagar, pagar, instalar ou confirmar qualquer coisa por você."; ultima: true }
+            }
+        }
+    }
+
+    // ---------------------------------------------- Inteligência artificial
+    Component {
+        id: paginaIa
+        Pagina {
+            Destaque { icone: "ia"; estilo: "noite"; titulo: "IA do sistema"
+                       texto: "O modelo de IA local que todos os programas usam, inclusive o Wise. Escolha, baixe ou remova modelos na Central de IA." }
+            Botao { texto: "Abrir a Central de IA"; tipo: "primario"; onClicado: ajustes.abrirApp("central-de-ia") }
+            Grupo {
+                visible: ajustes.wise
+                titulo: "Wise"
+                Linha { icone: "teclado"; titulo: "Abrir e fechar o Wise"; ultima: true
+                        Text { anchors.verticalCenter: parent.verticalCenter; text: "Super + W"; color: Tema.textoSecundario; font { family: Tema.fonteTexto; pixelSize: 12; weight: Font.DemiBold } } }
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------- Sobre
+    Component {
+        id: paginaSobre
+        Pagina {
+            Row {
+                spacing: 18
+                Simbolo { width: 64; height: 64 }
+                Column {
+                    anchors.verticalCenter: parent.verticalCenter
+                    Titulo { text: ajustes.sobre.sistema || "DuiaOS" }
+                    Rotulo { secundario: true; text: "Baseado no Debian 13 · com o Wise" }
+                }
+            }
+            Grupo {
+                Linha { icone: "computador"; titulo: "Nome do computador"; descricao: "Como ele aparece na rede"
+                        Campo { id: nomePc; width: 180; texto: ajustes.sobre.computador || "" }
+                        Botao { texto: "Salvar"; onClicado: ajustes.definirNomeComputador(nomePc.texto) } }
+                Repeater {
+                    model: [["Processador", ajustes.sobre.processador], ["Memória", ajustes.sobre.memoria], ["Gráficos", ajustes.sobre.graficos],
+                            ["Disco", ajustes.sobre.disco], ["Versão do Linux", (ajustes.sobre.nucleo || "") + " · " + (ajustes.sobre.arquitetura || "")]]
+                    Linha {
+                        required property var modelData
+                        required property int index
+                        titulo: modelData[0]; ultima: index === 4
+                        Text { anchors.verticalCenter: parent.verticalCenter; width: Math.min(implicitWidth, 380); elide: Text.ElideRight
+                               text: modelData[1] || "—"; color: Tema.textoSecundario; font { family: Tema.fonteTexto; pixelSize: 13 } }
+                    }
+                }
+            }
+            Grupo {
+                Linha { icone: "documento"; titulo: "Contrato de licença (EULA)"; clicavel: true; onClicada: Qt.openUrlExternally("file:///usr/share/duiaos/licenca/EULA.md")
+                        Icone { nome: "seta-direita"; tamanho: 14; cor: Tema.textoApagado } }
+                Linha { icone: "documento"; titulo: "Licenças de terceiros"; clicavel: true; ultima: true; onClicada: Qt.openUrlExternally("file:///usr/share/duiaos/licenca/LICENCAS-DE-TERCEIROS.md")
+                        Icone { nome: "seta-direita"; tamanho: 14; cor: Tema.textoApagado } }
+            }
+        }
+    }
+
+    // ============================================== lista de opções (Seletor)
+    Item {
+        id: escolha
+        anchors.fill: parent
+        visible: false
+        z: 50
+        property var opcoes: []
+        property string atual: ""
+        property var aoEscolher: null
+        property string busca: ""
+        function abrir(lista, valor, funcao, x, y, largura) {
+            opcoes = lista; atual = valor; aoEscolher = funcao; busca = ""
+            cartaoEscolha.width = Math.max(largura, 220)
+            cartaoEscolha.x = Math.min(x, janela.width - cartaoEscolha.width - 8)
+            cartaoEscolha.y = Math.min(y, janela.height - cartaoEscolha.height - 8)
+            visible = true
+            if (lista.length > 12) campoEscolha.entrada.forceActiveFocus()
+            for (var i = 0; i < lista.length; i++) if (lista[i].valor === valor) listaEscolha.positionViewAtIndex(i, ListView.Center)
+        }
+        readonly property var filtradas: busca === "" ? opcoes : opcoes.filter(function (o) { return o.rotulo.toLowerCase().indexOf(busca.toLowerCase()) >= 0 })
+        MouseArea { anchors.fill: parent; onClicked: escolha.visible = false }
+        Cartao {
+            id: cartaoEscolha
+            height: Math.min(360, listaEscolha.contentHeight + (campoEscolha.visible ? 52 : 12))
+            raio: 10
+            cor: Tema.cartao
+            MouseArea { anchors.fill: parent }
+            Campo {
+                id: campoEscolha
+                visible: escolha.opcoes.length > 12
+                anchors { left: parent.left; right: parent.right; top: parent.top; margins: 8 }
+                icone: "busca"; dica: "Buscar"
+                entrada.onTextChanged: escolha.busca = texto
+                onVisibleChanged: texto = ""
+            }
+            ListView {
+                id: listaEscolha
+                anchors { left: parent.left; right: parent.right; top: campoEscolha.visible ? campoEscolha.bottom : parent.top; bottom: parent.bottom; margins: 6 }
+                clip: true
+                model: escolha.filtradas
+                boundsBehavior: Flickable.StopAtBounds
+                delegate: ItemDeMenu {
+                    required property var modelData
+                    width: listaEscolha.width
+                    texto: modelData.rotulo
+                    icone: modelData.valor === escolha.atual ? "check" : ""
+                    onClicado: { escolha.visible = false; if (escolha.aoEscolher) escolha.aoEscolher(modelData.valor) }
+                }
+            }
+        }
+    }
+
+    Aviso { id: aviso; anchors { horizontalCenter: conteudo.horizontalCenter; bottom: parent.bottom; bottomMargin: 20 } z: 60 }
+    Connections { target: ajustes; function onAviso(m) { aviso.mostrar(m) } }
+    Connections { target: controles; function onAviso(m) { aviso.mostrar(m) } }
+
+    Timer { interval: 900; running: capturaArquivo !== ""; onTriggered: janela.contentItem.grabToImage(function (r) { r.saveToFile(capturaArquivo); Qt.quit() }) }
+}

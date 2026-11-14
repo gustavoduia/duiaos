@@ -1,0 +1,21 @@
+module DuiaOS
+singleton Tema 1.0 Tema.qml
+Icone 1.0 Icone.qml
+IconeApp 1.0 IconeApp.qml
+Cartao 1.0 Cartao.qml
+Interruptor 1.0 Interruptor.qml
+Deslizante 1.0 Deslizante.qml
+Botao 1.0 Botao.qml
+BotaoIcone 1.0 BotaoIcone.qml
+Campo 1.0 Campo.qml
+ItemDeMenu 1.0 ItemDeMenu.qml
+Separador 1.0 Separador.qml
+IconeBateria 1.0 IconeBateria.qml
+Calendario 1.0 Calendario.qml
+Rotulo 1.0 Rotulo.qml
+Titulo 1.0 Titulo.qml
+Opcao 1.0 Opcao.qml
+LinhaDeLista 1.0 LinhaDeLista.qml
+Aviso 1.0 Aviso.qml
+Ladrilho 1.0 Ladrilho.qml
+Simbolo 1.0 Simbolo.qml

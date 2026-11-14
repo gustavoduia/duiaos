@@ -1,0 +1,44 @@
+#!/usr/bin/python3
+"""DuiaOS — muda o nome ou a senha da própria conta (Configurações › Usuário e senha).
+
+Roda como root pelo pkexec (ação org.duiaos.configuracoes.conta) e só mexe na conta
+de quem chamou (PKEXEC_UID), nunca numa conta escolhida por argumento.
+  conta nome    lê o nome novo na entrada padrão
+  conta senha   lê a senha atual e a nova (uma por linha); confere a atual pelo PAM
+Saída: 0 ok · 2 uso errado · 3 senha atual não confere · 1 outra falha.
+"""
+import os
+import pwd
+import subprocess
+import sys
+
+
+def main():
+    if os.geteuid() != 0 or "PKEXEC_UID" not in os.environ or len(sys.argv) != 2:
+        return 2
+    try:
+        usuario = pwd.getpwuid(int(os.environ["PKEXEC_UID"])).pw_name
+    except (KeyError, ValueError):
+        return 2
+    linhas = sys.stdin.read().split("\n")
+    if sys.argv[1] == "nome":
+        nome = linhas[0].strip()
+        if not nome or any(c in nome for c in ":,\n") or len(nome) > 80:
+            return 2
+        return 0 if subprocess.run(["usermod", "-c", nome, usuario], check=False).returncode == 0 else 1
+    if sys.argv[1] == "senha":
+        if len(linhas) < 2 or not linhas[1]:
+            return 2
+        atual, nova = linhas[0], linhas[1]
+        import pamela
+        try:
+            pamela.authenticate(usuario, atual, service="duiaos-bloqueio")
+        except pamela.PAMError:
+            return 3
+        processo = subprocess.run(["chpasswd"], input=f"{usuario}:{nova}\n", text=True, check=False)
+        return 0 if processo.returncode == 0 else 1
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main())

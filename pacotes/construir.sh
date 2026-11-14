@@ -3,7 +3,7 @@
 # DuiaOS — gera os pacotes .deb do código próprio (ADR 023).
 #
 #   duiaos-identidade  identidade, padrões do sistema, scripts, repositório apt
-#   duiaos-shell       interface gráfica (pasta shell/) e Tela de Entrada
+#   duiaos-shell       interface gráfica (pasta shell/), Tela de Entrada, Explorador de Arquivos e Configurações
 #   duiaos-ia          IA do sistema: serviço org.duiaos.IA1, comando e Central de IA
 #   duiaos-agente      agente do sistema: ações aprovadas (org.duiaos.Agente1, ADR 034)
 #   duiaos-relatorios  registros do sistema e "Ajude a melhorar o DuiaOS" (ADR 040)
@@ -132,6 +132,11 @@ cp -R "${RAIZ}/shell" "${SH}/usr/share/duiaos/shell"
 install -m 0644 "${RAIZ}/shell/sessao/autostart" "${RAIZ}/shell/sessao/environment" \
   "${RAIZ}/shell/sessao/rc.xml" "${SH}/etc/xdg/labwc/"
 install -m 0644 "${RAIZ}/shell/sessao/duiaos.desktop" "${SH}/usr/share/wayland-sessions/"
+# Aplicativos da interface: Explorador de Arquivos e Configurações
+for APP in explorador-de-arquivos configuracoes; do
+  install -d "${SH}/usr/share/duiaos/${APP}"
+  install -m 0644 "${RAIZ}/apps/${APP}"/*.py "${RAIZ}/apps/${APP}"/*.qml "${SH}/usr/share/duiaos/${APP}/"
+done
 fechar duiaos-shell
 
 # ------------------------------------------------------------------ duiaos-ia

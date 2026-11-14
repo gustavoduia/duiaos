@@ -1,0 +1,4 @@
+# DuiaOS — aplicativos padrão do sistema (cada pessoa muda nas Configurações ›
+# Aplicativos padrão, gravado em ~/.config/mimeapps.list).
+[Default Applications]
+inode/directory=duiaos-explorador-de-arquivos.desktop

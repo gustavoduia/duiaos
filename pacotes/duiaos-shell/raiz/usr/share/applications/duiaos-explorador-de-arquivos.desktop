@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Explorador de Arquivos
+GenericName=Arquivos
+Comment=Abra e organize seus arquivos e pastas
+Exec=duiaos-explorador-de-arquivos %U
+Icon=duiaos-explorador-de-arquivos
+StartupWMClass=duiaos-explorador-de-arquivos
+Terminal=false
+Categories=System;FileManager;Utility;
+MimeType=inode/directory;
+Keywords=arquivos;pastas;documentos;downloads;lixeira;finder;explorer;

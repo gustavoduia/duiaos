@@ -28,7 +28,8 @@ Clone os repositórios lado a lado (`../duiaos-wise`, `../duiaos-websites`, `../
 ## Antes de cada envio
 - `python3 ferramentas/conferir-recursos.py` sem problemas (confere `RECURSOS.md`, `RECURSOS-WISE.md` e
   `RECURSOS-WEBSITES.md`).
-- Testes: `python3 -m unittest discover -s ia/testes -t .`, `-s agente/testes` e `-s relatorios/testes` (use
+- Testes: `python3 -m unittest discover -s ia/testes -t .`, `-s agente/testes`, `-s relatorios/testes` e `-s shell/testes`
+  (este abre cada tela em modo de demonstração; precisa do PySide6) (use
   `python3.12` se o 3.13 do ambiente não tiver `gi`); no Wise, `python3 -m unittest discover -s testes -t .`; no
   site, `npm test` e `npm run build`; `shellcheck` nos scripts mudados.
 - Programa novo do DuiaOS: `duiaos_registro.ligar("duiaos-NOME")` no início e eventos com

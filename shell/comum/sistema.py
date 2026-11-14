@@ -143,7 +143,7 @@ def opcoes_de_energia(na_sessao):
              "descricao": "Fecha os aplicativos e volta à Tela de Entrada"},
         ]
     opcoes += [
-        {"id": "suspender", "titulo": "Suspender",
+        {"id": "suspender", "titulo": "Repousar",
          "descricao": "Economiza energia; volta de onde parou"},
         {"id": "reiniciar", "titulo": "Reiniciar",
          "descricao": "Desliga e liga o computador de novo"},
@@ -180,3 +180,36 @@ def executar_energia(acao):
     except ImportError:
         pass
     return True
+
+
+# ------------------------------------------------------- aplicativos do DuiaOS
+
+APLICATIVOS_DUIAOS = {
+    # nome → (comando instalado, script no repositório)
+    "configuracoes": ("/usr/bin/duiaos-configuracoes", RAIZ_REPOSITORIO / "apps/configuracoes/main.py"),
+    "explorador-de-arquivos": ("/usr/bin/duiaos-explorador-de-arquivos",
+                               RAIZ_REPOSITORIO / "apps/explorador-de-arquivos/main.py"),
+    "central-de-ia": ("/usr/bin/duiaos-central-de-ia", RAIZ_REPOSITORIO / "apps/central-de-ia/main.py"),
+    "ajude-a-melhorar": ("/usr/bin/duiaos-ajude-a-melhorar", RAIZ_REPOSITORIO / "apps/ajude-a-melhorar/main.py"),
+}
+
+
+def comando_app_duiaos(nome, *argumentos):
+    """Comando para abrir um aplicativo próprio: o instalado ou, em desenvolvimento, o do repositório."""
+    instalado, script = APLICATIVOS_DUIAOS[nome]
+    if os.access(instalado, os.X_OK):
+        return [instalado, *argumentos]
+    import sys
+    return [sys.executable, str(script), *argumentos]
+
+
+def abrir_app_duiaos(nome, *argumentos):
+    """Abre Configurações, Explorador de Arquivos etc. sem prender o processo de quem abriu."""
+    if nome not in APLICATIVOS_DUIAOS:
+        return False
+    try:
+        subprocess.Popen(comando_app_duiaos(nome, *argumentos), stdout=subprocess.DEVNULL,
+                         stderr=subprocess.DEVNULL, start_new_session=True)
+        return True
+    except OSError:
+        return False

@@ -1,7 +1,6 @@
-// DuiaOS — Barra de Recursos.
-// Mostra o símbolo do DuiaOS, data e hora, Wi-Fi, volume e bateria.
-// Um clique no símbolo abre o Menu de Energia; o botão "Wise" (só com o
-// Wise instalado) abre e fecha a janela do Wise.
+// DuiaOS — Barra de Recursos: janela presa à borda da tela (layer-shell) com o
+// conteúdo de Barra.qml, e a camada do Painel (menu, balões, Central de Controle),
+// que cobre a área de trabalho só enquanto algo está aberto.
 // A posição (topo, base, esquerda ou direita) vem de configuracao.posicao.
 import QtQuick
 import QtQuick.Window
@@ -9,29 +8,16 @@ import org.kde.layershell 1.0 as LayerShell
 import "../comum/telas.js" as Telas
 
 Window {
-    id: barra
+    id: janela
     // Fica na tela principal (a do notebook, quando houver; comum/telas.js)
     screen: Telas.principal(Qt.application.screens)
-
-    // Cores e fontes da identidade visual (branding/README.md)
-    readonly property color corFundo: "#F7F9FC"
-    readonly property color corBorda: "#DDE3EC"
-    readonly property color corTexto: "#1F2933"
-    readonly property color corTextoSecundario: "#5B6675"
-    readonly property color corAzulNoite: "#1A3A73"
-    readonly property color corAzulDuia: "#2E6BE6"
-    readonly property color corAviso: "#E8A33D"
-    readonly property string fonte: "Inter"
-
-    // Posição e tamanho
     readonly property string posicao: configuracao.posicao
     readonly property bool horizontal: posicao === "topo" || posicao === "base"
-    readonly property int espessura: horizontal ? 36 : 72
 
-    width: horizontal ? Screen.width : espessura
-    height: horizontal ? espessura : Screen.height
+    width: horizontal ? Screen.width : barra.espessura
+    height: horizontal ? barra.espessura : Screen.height
     visible: true
-    color: corFundo
+    color: "transparent"
     title: "Barra de Recursos"
 
     LayerShell.Window.anchors: {
@@ -44,195 +30,35 @@ Window {
         return LayerShell.Window.AnchorTop | LayerShell.Window.AnchorLeft | LayerShell.Window.AnchorRight
     }
     LayerShell.Window.layer: LayerShell.Window.LayerTop
-    LayerShell.Window.exclusionZone: espessura
+    LayerShell.Window.exclusionZone: barra.espessura
     LayerShell.Window.keyboardInteractivity: LayerShell.Window.KeyboardInteractivityNone
     LayerShell.Window.scope: "duiaos-barra-de-recursos"
 
-    // Data e hora, atualizadas a cada segundo
-    property date agora: new Date()
-    Timer {
-        interval: 1000; running: true; repeat: true
-        onTriggered: barra.agora = new Date()
-    }
-    readonly property var local: Qt.locale("pt_BR")
+    Barra { id: barra; anchors.fill: parent }
 
-    // Linha fina no lado voltado para a área de trabalho
-    Rectangle {
-        color: barra.corBorda
-        width: barra.horizontal ? parent.width : 1
-        height: barra.horizontal ? 1 : parent.height
-        x: barra.posicao === "esquerda" ? parent.width - 1 : 0
-        y: barra.posicao === "topo" ? parent.height - 1 : 0
-    }
+    // Camada do Painel: respeita a área da barra (exclusionZone 0), então a barra
+    // continua clicável e outro ícone troca o balão aberto.
+    Window {
+        id: camada
+        screen: janela.screen
+        width: Screen.width; height: Screen.height      // o compositor ajusta à área livre
+        visible: sistema.painel !== "" || sistema.confirmacao !== ""
+        color: "transparent"
+        title: "Painel da Barra de Recursos"
+        LayerShell.Window.anchors: LayerShell.Window.AnchorTop | LayerShell.Window.AnchorBottom
+                                   | LayerShell.Window.AnchorLeft | LayerShell.Window.AnchorRight
+        LayerShell.Window.layer: LayerShell.Window.LayerOverlay
+        LayerShell.Window.exclusionZone: 0
+        LayerShell.Window.keyboardInteractivity: LayerShell.Window.KeyboardInteractivityOnDemand
+        LayerShell.Window.scope: "duiaos-painel-da-barra"
+        onVisibleChanged: if (visible) conteudo.forceActiveFocus()
 
-    // Símbolo do DuiaOS: o "D" aberto e o ponto em órbita
-    component Simbolo: Canvas {
-        width: 22; height: 22
-        onPaint: {
-            const ctx = getContext("2d")
-            ctx.reset()
-            ctx.scale(width / 104, height / 104)
-            ctx.translate(-12, -8)
-            ctx.lineWidth = 14
-            ctx.lineCap = "round"
-            ctx.lineJoin = "round"
-            ctx.strokeStyle = barra.corAzulNoite
-            ctx.beginPath()
-            ctx.moveTo(58, 100)
-            ctx.lineTo(28, 100)
-            ctx.lineTo(28, 20)
-            ctx.lineTo(58, 20)
-            ctx.arc(58, 60, 40, -Math.PI / 2, 20 * Math.PI / 180, false)
-            ctx.stroke()
-            ctx.fillStyle = barra.corAzulDuia
-            ctx.beginPath()
-            ctx.arc(80.94, 92.77, 8, 0, 2 * Math.PI)
-            ctx.fill()
-        }
-    }
-
-    // Área clicável sobre o símbolo: abre o Menu de Energia
-    component BotaoEnergia: MouseArea {
-        anchors { fill: parent; margins: -6 }
-        cursorShape: Qt.PointingHandCursor
-        onClicked: sistema.abrirMenuDeEnergia()
-    }
-
-    // Botão do Wise: pílula com o nome, na cor primária
-    component BotaoWise: Rectangle {
-        visible: sistema.wise
-        width: barra.horizontal ? textoWise.implicitWidth + 22 : 52
-        height: 24
-        radius: 12
-        color: areaWise.pressed ? barra.corAzulNoite : (areaWise.containsMouse ? "#255BC7" : barra.corAzulDuia)
-        Text {
-            id: textoWise
-            anchors.centerIn: parent
-            text: "Wise"
-            font { family: barra.fonte; pixelSize: 13; weight: Font.DemiBold }
-            color: "white"
-        }
-        MouseArea {
-            id: areaWise
+        ConteudoPainel {
+            id: conteudo
             anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onClicked: sistema.abrirWise()
-        }
-    }
-
-    // Ícone do Wise perto da bateria: aparece enquanto o Wise está rodando
-    // (descansando fica mais apagado). Um clique abre ou fecha o Wise.
-    component IndicadorWise: Image {
-        visible: sistema.wiseEstado !== ""
-        source: "file:///usr/share/icons/hicolor/scalable/apps/duiaos-wise.svg"
-        width: 20; height: 20
-        sourceSize: Qt.size(40, 40)
-        opacity: sistema.wiseEstado === "descansando" ? 0.55 : 1.0
-        Behavior on opacity { NumberAnimation { duration: 200 } }
-        MouseArea {
-            anchors { fill: parent; margins: -6 }
-            cursorShape: Qt.PointingHandCursor
-            onClicked: sistema.abrirWise()
-        }
-    }
-
-    component Rotulo: Text {
-        font { family: barra.fonte; pixelSize: 13 }
-        color: barra.corTexto
-        horizontalAlignment: Text.AlignHCenter
-    }
-
-    // ---------- Barra horizontal (topo ou base) ----------
-    Item {
-        anchors.fill: parent
-        visible: barra.horizontal
-
-        Simbolo {
-            id: simboloHorizontal
-            anchors { left: parent.left; leftMargin: 14; verticalCenter: parent.verticalCenter }
-            BotaoEnergia {}
-        }
-        BotaoWise {
-            anchors { left: simboloHorizontal.right; leftMargin: 14; verticalCenter: parent.verticalCenter }
-        }
-        Rotulo {
-            anchors.centerIn: parent
-            font { pixelSize: 14; weight: Font.DemiBold }
-            text: barra.agora.toLocaleDateString(barra.local, "ddd, d 'de' MMM") + "   " + barra.agora.toLocaleTimeString(barra.local, "HH:mm")
-        }
-        Row {
-            anchors { right: parent.right; rightMargin: 16; verticalCenter: parent.verticalCenter }
-            spacing: 20
-            Rotulo {
-                color: sistema.wifi !== "" ? barra.corTexto : barra.corTextoSecundario
-                text: sistema.wifi !== "" ? "Wi-Fi  " + sistema.wifi : "Sem rede"
-            }
-            Rotulo {
-                visible: sistema.volume >= 0
-                color: sistema.mudo ? barra.corTextoSecundario : barra.corTexto
-                text: sistema.mudo ? "Som  mudo" : "Som  " + sistema.volume + "%"
-            }
-            Rotulo {
-                visible: sistema.bateria >= 0
-                color: (!sistema.carregando && sistema.bateria <= 15) ? barra.corAviso : barra.corTexto
-                text: (sistema.carregando ? "Carregando  " : "Bateria  ") + sistema.bateria + "%"
-            }
-            IndicadorWise { anchors.verticalCenter: parent.verticalCenter }
-        }
-    }
-
-    // ---------- Barra vertical (esquerda ou direita) ----------
-    Item {
-        anchors.fill: parent
-        visible: !barra.horizontal
-
-        Simbolo {
-            anchors { top: parent.top; topMargin: 14; horizontalCenter: parent.horizontalCenter }
-            BotaoEnergia {}
-        }
-        BotaoWise {
-            anchors { top: parent.top; topMargin: 112; horizontalCenter: parent.horizontalCenter }
-        }
-        Column {
-            anchors { top: parent.top; topMargin: 52; horizontalCenter: parent.horizontalCenter }
-            spacing: 2
-            Rotulo {
-                anchors.horizontalCenter: parent.horizontalCenter
-                font { pixelSize: 16; weight: Font.DemiBold }
-                text: barra.agora.toLocaleTimeString(barra.local, "HH:mm")
-            }
-            Rotulo {
-                anchors.horizontalCenter: parent.horizontalCenter
-                font.pixelSize: 11
-                color: barra.corTextoSecundario
-                text: barra.agora.toLocaleDateString(barra.local, "ddd") + "\n" + barra.agora.toLocaleDateString(barra.local, "d MMM")
-            }
-        }
-        Column {
-            anchors { bottom: parent.bottom; bottomMargin: 16; horizontalCenter: parent.horizontalCenter }
-            spacing: 12
-            Rotulo {
-                anchors.horizontalCenter: parent.horizontalCenter
-                font.pixelSize: 11
-                color: sistema.wifi !== "" ? barra.corTexto : barra.corTextoSecundario
-                text: sistema.wifi !== "" ? "Wi-Fi" : "Sem\nrede"
-            }
-            Rotulo {
-                anchors.horizontalCenter: parent.horizontalCenter
-                visible: sistema.volume >= 0
-                font.pixelSize: 11
-                color: sistema.mudo ? barra.corTextoSecundario : barra.corTexto
-                text: "Som\n" + (sistema.mudo ? "mudo" : sistema.volume + "%")
-            }
-            Rotulo {
-                anchors.horizontalCenter: parent.horizontalCenter
-                visible: sistema.bateria >= 0
-                font.pixelSize: 11
-                color: (!sistema.carregando && sistema.bateria <= 15) ? barra.corAviso : barra.corTexto
-                text: (sistema.carregando ? "Carr.\n" : "Bat.\n") + sistema.bateria + "%"
-            }
-            IndicadorWise { anchors.horizontalCenter: parent.horizontalCenter }
+            ocultos: barra.ocultos
+            // A âncora vem em coordenadas da tela; a camada começa depois da barra
+            deslocamento: janela.posicao === "topo" || janela.posicao === "esquerda" ? barra.espessura : 0
         }
     }
 }

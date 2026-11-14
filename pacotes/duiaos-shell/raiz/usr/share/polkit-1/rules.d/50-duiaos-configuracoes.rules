@@ -1,0 +1,16 @@
+// DuiaOS — Configurações: fuso horário, acerto automático do relógio, teclado do sistema e
+// nome do computador sem senha para quem está no computador (sessão local e ativa) e é
+// administrador (grupo sudo). A sessão do DuiaOS não tem agente de senha do polkit; de fora
+// (SSH) ou sem ser administrador, continua pedindo senha.
+polkit.addRule(function (action, subject) {
+    var liberadas = [
+        "org.freedesktop.timedate1.set-timezone",
+        "org.freedesktop.timedate1.set-ntp",
+        "org.freedesktop.locale1.set-keyboard",
+        "org.freedesktop.hostname1.set-hostname",
+        "org.freedesktop.hostname1.set-static-hostname"
+    ];
+    if (liberadas.indexOf(action.id) >= 0 && subject.local && subject.active && subject.isInGroup("sudo")) {
+        return polkit.Result.YES;
+    }
+});
