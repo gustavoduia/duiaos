@@ -11,8 +11,8 @@ Rectangle {
     readonly property var cores: ({
         azul: ["#6FA0F7", "#2E6BE6", "white"],
         noite: ["#3D5F9E", "#1A3A73", "white"],
-        cinza: ["#F3F5F8", "#C9D1DC", "#1F2933"],
-        claro: ["#FFFFFF", "#E4EAF2", "#1F2933"]
+        cinza: Tema.escuro ? ["#535B68", "#363C47", "#E6EAF0"] : ["#F3F5F8", "#C9D1DC", "#1F2933"],
+        claro: Tema.escuro ? ["#3A404B", "#2B3039", "#E6EAF0"] : ["#FFFFFF", "#E4EAF2", "#1F2933"]
     })
     readonly property var c: cores[estilo] || cores.azul
     gradient: Gradient {

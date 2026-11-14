@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  DuiaOS — menus do compositor labwc, em português. Instalado em /etc/xdg/labwc/menu.xml.
+  client-menu: botão direito na barra de título de uma janela (ou Alt + Espaço).
+  root-menu: não abre mais na área de trabalho (os cliques lá são da Área de Trabalho do DuiaOS).
+-->
+<openbox_menu>
+  <menu id="client-menu">
+    <item label="Minimizar"><action name="Iconify" /></item>
+    <item label="Maximizar ou restaurar"><action name="ToggleMaximize" /></item>
+    <item label="Tela cheia"><action name="ToggleFullscreen" /></item>
+    <item label="Sempre na frente"><action name="ToggleAlwaysOnTop" /></item>
+    <separator />
+    <item label="Mover"><action name="Move" /></item>
+    <item label="Redimensionar"><action name="Resize" /></item>
+    <separator />
+    <item label="Fechar"><action name="Close" /></item>
+  </menu>
+  <menu id="root-menu">
+    <item label="Configurações"><action name="Execute" command="duiaos-configuracoes" /></item>
+    <item label="Explorador de Arquivos"><action name="Execute" command="duiaos-explorador-de-arquivos" /></item>
+  </menu>
+</openbox_menu>

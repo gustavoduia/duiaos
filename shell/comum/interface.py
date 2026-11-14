@@ -46,11 +46,57 @@ def provedor_icones_do_tema():
     return Icones()
 
 
+def aparencia():
+    """Objeto "aparencia" do QML (modo escuro), igual em todas as janelas e atualizado na hora."""
+    global _APARENCIA
+    if _APARENCIA is None:
+        _APARENCIA = _criar_aparencia()
+    return _APARENCIA
+
+
+_APARENCIA = None
+
+
+def _criar_aparencia():
+    from PySide6.QtCore import QFileSystemWatcher, QObject, Property, QTimer, Signal, Slot
+    import pastas
+
+    class Aparencia(QObject):
+        mudou = Signal()
+
+        def __init__(self):
+            super().__init__()
+            self._escuro = pastas.ler_preferencia("aparencia", "modo", "claro") == "escuro"
+            pastas.PREFERENCIAS.parent.mkdir(parents=True, exist_ok=True)
+            self._vigia = QFileSystemWatcher([str(pastas.PREFERENCIAS.parent)], self)
+            self._vigia.directoryChanged.connect(lambda _c: self._atraso.start())
+            self._atraso = QTimer(self, singleShot=True, interval=150, timeout=self.recarregar)
+
+        def recarregar(self):
+            escuro = pastas.ler_preferencia("aparencia", "modo", "claro") == "escuro"
+            if escuro != self._escuro:
+                self._escuro = escuro
+                self.mudou.emit()
+
+        @Slot(bool)
+        def definirEscuro(self, escuro):
+            pastas.gravar_preferencia("aparencia", "modo", "escuro" if escuro else "claro")
+            self.recarregar()
+            import sessao
+            import threading
+            threading.Thread(target=sessao.aplicar_aparencia, daemon=True).start()
+
+        escuro = Property(bool, lambda self: self._escuro, notify=mudou)
+
+    return Aparencia()
+
+
 def preparar(engine):
     configurar_tema_de_icones()
     engine.addImportPath(str(PASTA / "qml"))
     icones.registrar(engine)
     engine.addImageProvider("icone", provedor_icones_do_tema())
+    engine.rootContext().setContextProperty("aparencia", aparencia())
 
 
 def registrar_uso(evento, **dados):

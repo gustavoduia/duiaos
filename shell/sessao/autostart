@@ -6,10 +6,22 @@ DUIAOS_SHELL="${DUIAOS_SHELL:-/usr/share/duiaos/shell}"
 # Pastas do usuário (Área de Trabalho, Documentos, Downloads, Imagens, Música, Vídeos)
 xdg-user-dirs-update >/dev/null 2>&1 || true
 
-# Escolhas das Configurações (~/.config/duiaos/preferencias.conf): papel de parede,
-# resolução e escala das telas, luz noturna e a Tela de Bloqueio automática
-# (padrão: bloqueia após 10 minutos sem uso, antes de repousar e quando o
-# sistema pede). Sem o Python, o papel de parede e o bloqueio de sempre.
+# Área de Trabalho: papel de parede (imagem, GIF, vídeo ou cor) e ícones da pasta Área de
+# Trabalho, por baixo das janelas. Se fechar ou travar, volta em 2 segundos.
+(
+  while kill -0 "${LABWC_PID}" 2>/dev/null; do
+    python3 "${DUIAOS_SHELL}/area-de-trabalho/main.py" >>/tmp/duiaos-area-de-trabalho.log 2>&1
+    sleep 2
+  done
+) &
+
+# Notificações (org.freedesktop.Notifications do DuiaOS): balões no canto e histórico
+python3 "${DUIAOS_SHELL}/notificacoes/main.py" >/tmp/duiaos-notificacoes.log 2>&1 &
+
+# Escolhas das Configurações (~/.config/duiaos/preferencias.conf): modo escuro,
+# resolução e escala das telas, luz noturna, Tela de Descanso e a Tela de Bloqueio
+# automática (padrão: bloqueia após 10 minutos sem uso, antes de repousar e quando
+# o sistema pede). Sem o Python, o fundo e o bloqueio de sempre.
 if ! python3 "${DUIAOS_SHELL}/comum/sessao.py" aplicar >/tmp/duiaos-sessao.log 2>&1; then
   swaybg -c '#E8F0FE' >/dev/null 2>&1 &
   swayidle -w timeout 600 "${DUIAOS_SHELL}/bloqueio/bloquear" \

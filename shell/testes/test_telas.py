@@ -57,8 +57,26 @@ class TesteTelas(unittest.TestCase):
                 self.abrir("barra-" + (painel.replace(":", "-") or "sozinha"),
                            ["shell/barra-de-recursos/main.py", "--demonstracao", "--painel", painel])
 
+    def test_area_de_trabalho_descanso_e_notificacoes(self):
+        for menu in ("", "fundo", "item"):
+            with self.subTest(menu=menu):
+                self.abrir("area-de-trabalho-" + (menu or "sozinha"), ["shell/area-de-trabalho/main.py", "--demonstracao", "--menu", menu])
+        self.abrir("descanso", ["shell/descanso/main.py", "--demonstracao"])
+        self.abrir("notificacoes", ["shell/notificacoes/main.py", "--demonstracao"])
+
+    def test_modo_escuro(self):
+        (self.inicio / ".config" / "duiaos").mkdir(parents=True, exist_ok=True)
+        preferencias = self.inicio / ".config" / "duiaos" / "preferencias.conf"
+        preferencias.write_text("[aparencia]\nmodo = escuro\n")
+        try:
+            self.abrir("escuro-barra", ["shell/barra-de-recursos/main.py", "--demonstracao", "--painel", "central"])
+            self.abrir("escuro-configuracoes", ["apps/configuracoes/main.py", "--demonstracao", "--secao", "aparencia"])
+            self.abrir("escuro-explorador", ["apps/explorador-de-arquivos/main.py", str(self.inicio / "Documentos")])
+        finally:
+            preferencias.unlink()
+
     def test_ilha_de_aplicativos(self):
-        for modo in ("", "--central", "--downloads"):
+        for modo in ("", "--central", "--downloads", "--menu"):
             with self.subTest(modo=modo):
                 self.abrir("ilha" + modo, ["shell/ilha-de-aplicativos/main.py", "--demonstracao", *([modo] if modo else [])])
 
@@ -70,8 +88,8 @@ class TesteTelas(unittest.TestCase):
         self.abrir("explorador-aplicativos", ["apps/explorador-de-arquivos/main.py", "aplicativos:"])
 
     def test_configuracoes(self):
-        for secao in ("wifi", "bluetooth", "som", "tela", "energia", "papel", "barra", "usuario", "data", "teclado",
-                      "padroes", "privacidade", "ia", "sobre"):
+        for secao in ("wifi", "bluetooth", "notificacoes", "som", "tela", "energia", "aparencia", "papel", "descanso",
+                      "barra", "usuario", "data", "teclado", "padroes", "atualizacoes", "privacidade", "ia", "sobre"):
             with self.subTest(secao=secao):
                 self.abrir("configuracoes-" + secao, ["apps/configuracoes/main.py", "--demonstracao", "--secao", secao])
 

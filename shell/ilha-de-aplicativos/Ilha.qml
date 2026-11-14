@@ -11,7 +11,7 @@ Rectangle {
     width: linha.width + 16
     height: tamanhoIcone + 22
     radius: 22
-    color: "#EBF7F9FC"
+    color: Tema.ilha
     border { color: Qt.rgba(1, 1, 1, 0.9); width: 1 }
     Rectangle { anchors { fill: parent; margins: -1 } radius: parent.radius + 1; color: "transparent"; border { color: Tema.borda; width: 1 } }
 
@@ -28,6 +28,7 @@ Rectangle {
         property string nome: ""
         default property alias desenho: dentro.data
         signal clicado()
+        signal menu(real ancora)
         width: ilhaFundo.tamanhoIcone + 6
         height: ilhaFundo.tamanhoIcone + 16
         Accessible.role: Accessible.Button
@@ -41,7 +42,16 @@ Rectangle {
             Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
         }
         PontoAberto { visible: vaga.aberto; anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: 2 } }
-        MouseArea { id: area; anchors.fill: parent; hoverEnabled: true; onClicked: vaga.clicado() }
+        MouseArea {
+            id: area
+            anchors.fill: parent
+            hoverEnabled: true
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
+            onClicked: (m) => {
+                if (m.button === Qt.RightButton) vaga.menu(vaga.mapToItem(null, vaga.width / 2, 0).x + ilhaFundo.deslocamentoX)
+                else vaga.clicado()
+            }
+        }
     }
 
     component Divisoria: Rectangle {
@@ -58,6 +68,7 @@ Rectangle {
         Vaga {
             nome: "Central de Aplicativos"
             onClicado: ilha.alternarCentral()
+            onMenu: (x) => ilha.abrirMenu("central", -1, x)
             Ladrilho { anchors.fill: parent; icone: "aplicativos"; estilo: "noite"; tamanho: ilhaFundo.tamanhoIcone }
         }
 
@@ -73,6 +84,7 @@ Rectangle {
                     nome: modelData.nome
                     aberto: modelData.aberto
                     onClicado: ilha.ativar(index)
+                    onMenu: (x) => ilha.abrirMenu("app", index, x)
                     Ladrilho {
                         visible: (modelData.iconeDuia || "") !== ""
                         anchors.fill: parent
@@ -96,6 +108,7 @@ Rectangle {
         Vaga {
             nome: "Aplicativos"
             onClicado: ilha.abrirPasta("aplicativos")
+            onMenu: (x) => ilha.abrirMenu("aplicativos", -1, x)
             Ladrilho { anchors.fill: parent; icone: "pasta-aplicativos"; estilo: "azul"; tamanho: ilhaFundo.tamanhoIcone }
         }
         Vaga {
@@ -105,11 +118,13 @@ Rectangle {
                 var p = vagaDownloads.mapToItem(null, vagaDownloads.width / 2, 0)
                 ilha.alternarDownloads(p.x + ilhaFundo.deslocamentoX)
             }
+            onMenu: (x) => ilha.abrirMenu("downloads", -1, x)
             Ladrilho { anchors.fill: parent; icone: "pasta-downloads"; estilo: "azul"; tamanho: ilhaFundo.tamanhoIcone }
         }
         Vaga {
             nome: "Lixeira"
             onClicado: ilha.abrirPasta("lixeira")
+            onMenu: (x) => ilha.abrirMenu("lixeira", -1, x)
             Ladrilho { anchors.fill: parent; icone: ilha.lixeiraCheia ? "lixeira-cheia" : "lixeira"; estilo: "claro"; tamanho: ilhaFundo.tamanhoIcone }
         }
     }

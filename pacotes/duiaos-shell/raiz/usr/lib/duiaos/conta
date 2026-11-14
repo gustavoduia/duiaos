@@ -5,6 +5,9 @@ Roda como root pelo pkexec (ação org.duiaos.configuracoes.conta) e só mexe na
 de quem chamou (PKEXEC_UID), nunca numa conta escolhida por argumento.
   conta nome    lê o nome novo na entrada padrão
   conta senha   lê a senha atual e a nova (uma por linha); confere a atual pelo PAM
+  conta foto    lê a foto (PNG, até 2 MB) na entrada padrão e grava em /var/lib/duiaos/fotos/USUARIO.png,
+                onde a Tela de Entrada consegue ler (a pasta pessoal é fechada para ela)
+  conta sem-foto  apaga a foto
 Saída: 0 ok · 2 uso errado · 3 senha atual não confere · 1 outra falha.
 """
 import os
@@ -20,6 +23,24 @@ def main():
         usuario = pwd.getpwuid(int(os.environ["PKEXEC_UID"])).pw_name
     except (KeyError, ValueError):
         return 2
+    if sys.argv[1] == "foto":
+        dados = sys.stdin.buffer.read(2_000_001)
+        if len(dados) > 2_000_000 or not dados.startswith(b"\x89PNG\r\n\x1a\n"):
+            return 2
+        pasta = "/var/lib/duiaos/fotos"
+        os.makedirs(pasta, mode=0o755, exist_ok=True)
+        temporario = os.path.join(pasta, f".{usuario}.tmp")
+        with open(temporario, "wb") as arquivo:
+            arquivo.write(dados)
+        os.chmod(temporario, 0o644)
+        os.replace(temporario, os.path.join(pasta, f"{usuario}.png"))
+        return 0
+    if sys.argv[1] == "sem-foto":
+        try:
+            os.remove(f"/var/lib/duiaos/fotos/{usuario}.png")
+        except FileNotFoundError:
+            pass
+        return 0
     linhas = sys.stdin.read().split("\n")
     if sys.argv[1] == "nome":
         nome = linhas[0].strip()

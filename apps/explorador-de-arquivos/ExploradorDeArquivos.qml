@@ -134,7 +134,7 @@ Window {
         id: lateral
         width: 214
         anchors { left: parent.left; top: parent.top; bottom: parent.bottom }
-        color: "#EEF2F7"
+        color: Tema.lateral
         Rectangle { anchors { right: parent.right; top: parent.top; bottom: parent.bottom } width: 1; color: Tema.borda }
 
         component ItemLateral: Rectangle {
@@ -149,7 +149,7 @@ Window {
             width: parent ? parent.width : 200
             height: 30
             radius: 7
-            color: marcado ? Qt.rgba(0.18, 0.42, 0.90, 0.14) : (areaIl.containsMouse ? Qt.rgba(0.06, 0.09, 0.14, 0.05) : "transparent")
+            color: marcado ? Tema.selecao : (areaIl.containsMouse ? Tema.realce : "transparent")
             Icone { id: icIl; anchors { left: parent.left; leftMargin: 9; verticalCenter: parent.verticalCenter } nome: il.icone; tamanho: 17; cor: Tema.azulDuia }
             Text {
                 anchors { left: icIl.right; leftMargin: 9; right: parent.right; rightMargin: il.ejetavel ? 30 : 8; verticalCenter: parent.verticalCenter }
@@ -249,7 +249,7 @@ Window {
                             Rectangle {
                                 height: 26; anchors.verticalCenter: parent.verticalCenter
                                 width: textoTrilha.implicitWidth + 14; radius: 6
-                                color: areaTrilha.containsMouse ? Qt.rgba(0.06, 0.09, 0.14, 0.06) : "transparent"
+                                color: areaTrilha.containsMouse ? Tema.realce : "transparent"
                                 Text {
                                     id: textoTrilha
                                     anchors.centerIn: parent
@@ -410,7 +410,7 @@ Window {
             visible: janela.renomeando === item.caminho
             height: 24
             radius: 5
-            color: "white"
+            color: Tema.cartao
             border { color: Tema.azulDuia; width: 2 }
             z: 5
             TextInput {
@@ -468,7 +468,7 @@ Window {
                 Rectangle {
                     anchors { horizontalCenter: parent.horizontalCenter; top: parent.top; topMargin: 2 }
                     width: 76; height: 70; radius: 10
-                    color: celula.sel ? Qt.rgba(0.06, 0.09, 0.14, 0.09) : (toqueGrade.containsMouse ? Qt.rgba(0.06, 0.09, 0.14, 0.04) : "transparent")
+                    color: celula.sel ? Tema.pressionado : (toqueGrade.containsMouse ? Tema.realce : "transparent")
                 }
                 Item {
                     id: figura
@@ -561,7 +561,7 @@ Window {
                     readonly property bool sel: janela.selecao[modelData.caminho] === true
                     width: lista.width; height: 30
                     radius: 6
-                    color: sel ? Tema.azulDuia : (index % 2 ? "#F1F4F8" : "transparent")
+                    color: sel ? Tema.azulDuia : (index % 2 ? Tema.listra : "transparent")
                     readonly property color corTexto: sel ? "white" : Tema.texto
                     readonly property color corSecundaria: sel ? "#DDE7FB" : Tema.textoSecundario
                     Row {

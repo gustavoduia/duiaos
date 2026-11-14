@@ -3,6 +3,7 @@
 // (cartões brancos com linhas), no estilo dos Ajustes do Sistema.
 import QtQuick
 import QtQuick.Window
+import QtQuick.Dialogs
 import DuiaOS
 
 Window {
@@ -16,15 +17,19 @@ Window {
     readonly property var secoes: [
         { id: "wifi", nome: "Wi-Fi", icone: "wifi-3", cor: "azul", grupo: 0 },
         { id: "bluetooth", nome: "Bluetooth", icone: "bluetooth", cor: "azul", grupo: 0 },
+        { id: "notificacoes", nome: "Notificações", icone: "sino", cor: "noite", grupo: 0 },
         { id: "som", nome: "Som", icone: "som-2", cor: "noite", grupo: 1 },
         { id: "tela", nome: "Tela", icone: "brilho", cor: "azul", grupo: 1 },
         { id: "energia", nome: "Bateria e energia", icone: "bateria", cor: "noite", grupo: 1 },
+        { id: "aparencia", nome: "Aparência", icone: "paleta", cor: "noite", grupo: 2 },
         { id: "papel", nome: "Papel de parede", icone: "imagem", cor: "azul", grupo: 2 },
+        { id: "descanso", nome: "Tela de Descanso", icone: "monitor", cor: "noite", grupo: 2 },
         { id: "barra", nome: "Barra e Ilha", icone: "barra", cor: "noite", grupo: 2 },
         { id: "usuario", nome: "Usuário e senha", icone: "usuario", cor: "azul", grupo: 3 },
         { id: "data", nome: "Data e hora", icone: "relogio", cor: "noite", grupo: 3 },
         { id: "teclado", nome: "Idioma e teclado", icone: "teclado", cor: "azul", grupo: 3 },
         { id: "padroes", nome: "Aplicativos padrão", icone: "aplicativos", cor: "noite", grupo: 3 },
+        { id: "atualizacoes", nome: "Atualizações", icone: "reiniciar", cor: "azul", grupo: 4 },
         { id: "privacidade", nome: "Privacidade", icone: "escudo", cor: "azul", grupo: 4 },
         { id: "ia", nome: "Inteligência artificial", icone: "ia", cor: "noite", grupo: 4 },
         { id: "sobre", nome: "Sobre este computador", icone: "info", cor: "cinza", grupo: 4 }
@@ -37,7 +42,7 @@ Window {
         id: lateral
         width: 248
         anchors { left: parent.left; top: parent.top; bottom: parent.bottom }
-        color: "#EEF2F7"
+        color: Tema.lateral
         Rectangle { anchors { right: parent.right; top: parent.top; bottom: parent.bottom } width: 1; color: Tema.borda }
 
         Campo {
@@ -51,13 +56,14 @@ Window {
             id: cartaoPessoa
             anchors { left: parent.left; right: parent.right; top: busca.bottom; margins: 10; topMargin: 10 }
             height: 58; radius: 10
-            color: ajustes.secao === "usuario" ? Qt.rgba(0.18, 0.42, 0.90, 0.14) : (areaPessoa.containsMouse ? Qt.rgba(0.06, 0.09, 0.14, 0.05) : "transparent")
+            color: ajustes.secao === "usuario" ? Tema.selecao : (areaPessoa.containsMouse ? Tema.realce : "transparent")
             Rectangle {
                 id: avatar
                 width: 40; height: 40; radius: 20
                 anchors { left: parent.left; leftMargin: 8; verticalCenter: parent.verticalCenter }
-                gradient: Gradient { GradientStop { position: 0; color: "#6FA0F7" } GradientStop { position: 1; color: Tema.azulNoite } }
-                Text { anchors.centerIn: parent; text: ajustes.usuario.nome.charAt(0).toUpperCase(); color: "white"; font { family: Tema.fonteTitulo; pixelSize: 18; weight: Font.Bold } }
+                gradient: Gradient { GradientStop { position: 0; color: "#6FA0F7" } GradientStop { position: 1; color: "#1A3A73" } }
+                Image { id: fotoLateral; anchors.fill: parent; source: ajustes.fotoConta; sourceSize: Qt.size(80, 80); visible: status === Image.Ready; cache: false }
+                Text { visible: !fotoLateral.visible; anchors.centerIn: parent; text: ajustes.usuario.nome.charAt(0).toUpperCase(); color: "white"; font { family: Tema.fonteTitulo; pixelSize: 18; weight: Font.Bold } }
             }
             Column {
                 anchors { left: avatar.right; leftMargin: 10; right: parent.right; verticalCenter: parent.verticalCenter }
@@ -82,7 +88,7 @@ Window {
                 Rectangle {
                     anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
                     height: 34; radius: 8
-                    color: ajustes.secao === modelData.id ? Tema.azulDuia : (areaSecao.containsMouse ? Qt.rgba(0.06, 0.09, 0.14, 0.05) : "transparent")
+                    color: ajustes.secao === modelData.id ? Tema.azulDuia : (areaSecao.containsMouse ? Tema.realce : "transparent")
                     Ladrilho { id: ladrilho; anchors { left: parent.left; leftMargin: 6; verticalCenter: parent.verticalCenter }
                                tamanho: 24; radius: 6; icone: modelData.icone; estilo: modelData.cor }
                     Text {
@@ -125,7 +131,7 @@ Window {
         signal clicada()
         width: parent ? parent.width : 500
         height: Math.max(46, textos.implicitHeight + 20)
-        Rectangle { anchors.fill: parent; anchors.margins: 1; radius: 11; color: linha.clicavel && areaLinha.containsMouse ? Qt.rgba(0.06, 0.09, 0.14, 0.03) : "transparent" }
+        Rectangle { anchors.fill: parent; anchors.margins: 1; radius: 11; color: linha.clicavel && areaLinha.containsMouse ? Tema.realce : "transparent" }
         Icone { id: iconeLinha; visible: linha.icone !== ""; anchors { left: parent.left; leftMargin: 14; verticalCenter: parent.verticalCenter } nome: linha.icone; tamanho: 18; cor: Tema.textoSecundario }
         Column {
             id: textos
@@ -145,7 +151,7 @@ Window {
         property string vazio: "Escolher"
         signal escolhido(string valor)
         width: 230; height: 30; radius: 8
-        color: areaSeletor.containsMouse ? "#F4F7FB" : Tema.cartao
+        color: areaSeletor.containsMouse ? Tema.realce : Tema.cartao
         border { color: Tema.bordaForte; width: 1 }
         readonly property string rotulo: {
             for (var i = 0; i < opcoes.length; i++) if (opcoes[i].valor === valor) return opcoes[i].rotulo
@@ -199,9 +205,11 @@ Window {
         }
         Loader {
             anchors { left: parent.left; right: parent.right; top: tituloPagina.bottom; bottom: parent.bottom; topMargin: 10 }
-            sourceComponent: ({ wifi: paginaWifi, bluetooth: paginaBluetooth, som: paginaSom, tela: paginaTela, energia: paginaEnergia,
-                                papel: paginaPapel, barra: paginaBarra, usuario: paginaUsuario, data: paginaData, teclado: paginaTeclado,
-                                padroes: paginaPadroes, privacidade: paginaPrivacidade, ia: paginaIa, sobre: paginaSobre })[ajustes.secao]
+            sourceComponent: ({ wifi: paginaWifi, bluetooth: paginaBluetooth, notificacoes: paginaNotificacoes, som: paginaSom,
+                                tela: paginaTela, energia: paginaEnergia, aparencia: paginaAparencia, papel: paginaPapel,
+                                descanso: paginaDescanso, barra: paginaBarra, usuario: paginaUsuario, data: paginaData,
+                                teclado: paginaTeclado, padroes: paginaPadroes, atualizacoes: paginaAtualizacoes,
+                                privacidade: paginaPrivacidade, ia: paginaIa, sobre: paginaSobre })[ajustes.secao]
         }
     }
 
@@ -451,6 +459,52 @@ Window {
         }
     }
 
+    // ---------------------------------- miniatura de fundo (imagem, GIF, vídeo ou cor)
+    component MiniaturaFundo: Rectangle {
+        id: mf
+        property string arquivo: ""
+        property string cor: ""
+        property bool atual: false
+        signal escolhida()
+        readonly property string ext: arquivo.toLowerCase().split(".").pop()
+        readonly property bool video: ["mp4", "webm", "mkv", "mov", "m4v"].indexOf(ext) >= 0
+        width: 132; height: 82; radius: 10
+        color: cor !== "" ? cor : Tema.controleDesligado
+        clip: true
+        border { color: atual ? Tema.azulDuia : Tema.borda; width: atual ? 3 : 1 }
+        Image { anchors.fill: parent; anchors.margins: mf.atual ? 3 : 1; visible: mf.arquivo !== "" && !mf.video
+                source: visible ? "file://" + mf.arquivo : ""; fillMode: Image.PreserveAspectCrop; sourceSize.width: 264; asynchronous: true }
+        Column {
+            visible: mf.video
+            anchors.centerIn: parent
+            spacing: 2
+            Icone { anchors.horizontalCenter: parent.horizontalCenter; nome: "video"; tamanho: 24; cor: Tema.textoSecundario }
+            Text { width: mf.width - 16; horizontalAlignment: Text.AlignHCenter; elide: Text.ElideMiddle
+                   text: mf.arquivo.split("/").pop(); color: Tema.textoSecundario; font { family: Tema.fonteTexto; pixelSize: 10 } }
+        }
+        Rectangle {
+            visible: mf.video || mf.ext === "gif" || mf.ext === "webp"
+            anchors { right: parent.right; bottom: parent.bottom; margins: 6 }
+            width: 22; height: 16; radius: 4; color: Qt.rgba(0, 0, 0, 0.55)
+            Text { anchors.centerIn: parent; text: "▶"; color: "white"; font.pixelSize: 9 }
+        }
+        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: mf.escolhida() }
+    }
+
+    FileDialog {
+        id: escolherArquivo
+        property string destino: "papel"
+        title: destino === "descanso" ? "Escolher imagem ou vídeo da Tela de Descanso" : "Escolher papel de parede"
+        nameFilters: ["Imagens e vídeos (*.jpg *.jpeg *.png *.webp *.gif *.mp4 *.webm *.mkv *.mov *.m4v)"]
+        onAccepted: ajustes.importarFundo(selectedFile.toString(), destino)
+    }
+    FileDialog {
+        id: escolherFoto
+        title: "Escolher foto da conta"
+        nameFilters: ["Imagens (*.jpg *.jpeg *.png *.webp)"]
+        onAccepted: ajustes.definirFoto(selectedFile.toString())
+    }
+
     // -------------------------------------------------------- Papel de parede
     Component {
         id: paginaPapel
@@ -459,35 +513,168 @@ Window {
             property var imagens: ajustes.imagensDoUsuario()
             Rectangle {
                 width: Math.min(parent.width, 420); height: width * 0.6; radius: 14
-                color: ajustes.papelAtual !== "" ? Tema.controleDesligado : ajustes.corAtual
                 clip: true
+                color: Tema.controleDesligado
                 border { color: Tema.borda; width: 1 }
-                Image { anchors.fill: parent; anchors.margins: 1; visible: ajustes.papelAtual !== ""; source: ajustes.papelAtual !== "" ? "file://" + ajustes.papelAtual : ""
-                        fillMode: Image.PreserveAspectCrop; sourceSize.width: 840; asynchronous: true }
+                Fundo { anchors.fill: parent; anchors.margins: 1; arquivo: ajustes.papelAtual; corFundo: ajustes.corAtual }
             }
-            component Miniatura: Rectangle {
-                property string arquivo: ""
-                property string cor: ""
-                readonly property bool atual: arquivo !== "" ? ajustes.papelAtual === arquivo : (ajustes.papelAtual === "" && ajustes.corAtual === cor)
-                width: 132; height: 82; radius: 10
-                color: cor !== "" ? cor : Tema.controleDesligado
-                border { color: atual ? Tema.azulDuia : Tema.borda; width: atual ? 3 : 1 }
-                Image { anchors.fill: parent; anchors.margins: parent.atual ? 3 : 1; visible: parent.arquivo !== ""; source: parent.arquivo !== "" ? "file://" + parent.arquivo : ""
-                        fillMode: Image.PreserveAspectCrop; sourceSize.width: 264; asynchronous: true }
-                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: ajustes.definirPapel(parent.arquivo !== "" ? parent.arquivo : parent.cor) }
-            }
-            Titulo { nivel: 3; text: "Do DuiaOS" }
-            Flow { width: parent.width; spacing: 12; Repeater { model: ajustes.papeis; Miniatura { required property string modelData; arquivo: modelData } } }
+            Botao { texto: "Importar imagem ou vídeo…"; icone: "mais"; tipo: "primario"
+                    onClicado: { escolherArquivo.destino = "papel"; escolherArquivo.open() } }
+            Rotulo { width: parent.width; secundario: true
+                     text: "Aceita fotos (JPG, PNG, WebP), imagens com movimento (GIF) e vídeos (MP4, WebM, MKV, MOV), que tocam sem som e em laço." }
+            Titulo { nivel: 3; text: "Do DuiaOS"; visible: ajustes.papeis.length > 0 }
+            Flow { width: parent.width; spacing: 12
+                   Repeater { model: ajustes.papeis
+                              MiniaturaFundo { required property string modelData; arquivo: modelData; atual: ajustes.papelAtual === modelData
+                                               onEscolhida: ajustes.definirPapel(modelData) } } }
+            Titulo { nivel: 3; text: "Importados"; visible: ajustes.fundosImportados.length > 0 }
+            Flow { width: parent.width; spacing: 12
+                   Repeater { model: ajustes.fundosImportados
+                              MiniaturaFundo { required property string modelData; arquivo: modelData; atual: ajustes.papelAtual === modelData
+                                               onEscolhida: ajustes.definirPapel(modelData) } } }
             Titulo { nivel: 3; text: "Cores" }
             Flow {
                 width: parent.width; spacing: 12
                 Repeater { model: ["#E8F0FE", "#1A3A73", "#0F1724", "#2E6BE6", "#2FA67A", "#F4E9DA", "#E8A33D", "#5B6675"]
-                           Miniatura { required property string modelData; cor: modelData; width: 82 } }
+                           MiniaturaFundo { required property string modelData; cor: modelData; width: 82
+                                            atual: ajustes.papelAtual === "" && ajustes.corAtual === modelData
+                                            onEscolhida: ajustes.definirPapel(modelData) } }
             }
             Titulo { nivel: 3; text: "Da pasta Imagens"; visible: pp.imagens.length > 0 }
-            Flow { width: parent.width; spacing: 12; Repeater { model: pp.imagens; Miniatura { required property string modelData; arquivo: modelData } } }
-            Rotulo { visible: pp.imagens.length === 0; secundario: true; width: parent.width
-                     text: "Para usar uma foto sua, coloque-a na pasta Imagens; ela aparece aqui." }
+            Flow { width: parent.width; spacing: 12
+                   Repeater { model: pp.imagens
+                              MiniaturaFundo { required property string modelData; arquivo: modelData; atual: ajustes.papelAtual === modelData
+                                               onEscolhida: ajustes.definirPapel(modelData) } } }
+        }
+    }
+
+    // ------------------------------------------------------- Tela de Descanso
+    Component {
+        id: paginaDescanso
+        Pagina {
+            Rectangle {
+                width: Math.min(parent.width, 420); height: width * 0.6; radius: 14
+                clip: true
+                color: "black"
+                border { color: Tema.borda; width: 1 }
+                Fundo { anchors.fill: parent; anchors.margins: 1; arquivo: ajustes.descansoArquivo !== "" ? ajustes.descansoArquivo : ajustes.papelAtual
+                        corFundo: ajustes.corAtual }
+                Text { visible: ajustes.descansoRelogio; anchors { horizontalCenter: parent.horizontalCenter; top: parent.top; topMargin: parent.height * 0.14 }
+                       text: Qt.formatTime(new Date(), "HH:mm"); color: "white"; style: Text.Raised; styleColor: Qt.rgba(0, 0, 0, 0.3)
+                       font { family: Tema.fonteTitulo; pixelSize: 44; weight: Font.Bold } }
+            }
+            Grupo {
+                Linha {
+                    icone: "relogio"; titulo: "Mostrar depois de"; descricao: "Sem uso. Qualquer tecla ou movimento do mouse volta."
+                    Seletor { width: 180
+                              opcoes: [{ valor: "1", rotulo: "1 minuto" }, { valor: "3", rotulo: "3 minutos" }, { valor: "5", rotulo: "5 minutos" },
+                                       { valor: "10", rotulo: "10 minutos" }, { valor: "20", rotulo: "20 minutos" }, { valor: "0", rotulo: "Nunca" }]
+                              valor: String(ajustes.descansoMinutos); onEscolhido: (v) => ajustes.definirMinutosDescanso(parseInt(v)) }
+                }
+                Linha { titulo: "Mostrar o relógio"; Interruptor { ligado: ajustes.descansoRelogio; onAlternado: (v) => ajustes.definirRelogioDescanso(v) } }
+                Linha { titulo: "Imagem ou vídeo"; descricao: ajustes.descansoArquivo !== "" ? ajustes.descansoArquivo.split("/").pop() : "O mesmo do papel de parede"
+                        ultima: true
+                        Botao { texto: "Usar o papel de parede"; visible: ajustes.descansoArquivo !== ""; onClicado: ajustes.definirDescanso("") }
+                        Botao { texto: "Importar…"; tipo: "primario"; onClicado: { escolherArquivo.destino = "descanso"; escolherArquivo.open() } } }
+            }
+            Titulo { nivel: 3; text: "Importados"; visible: ajustes.fundosImportados.length > 0 }
+            Flow { width: parent.width; spacing: 12
+                   Repeater { model: ajustes.fundosImportados
+                              MiniaturaFundo { required property string modelData; arquivo: modelData; atual: ajustes.descansoArquivo === modelData
+                                               onEscolhida: ajustes.definirDescanso(modelData) } } }
+            Botao { texto: "Ver agora"; icone: "olho"; onClicado: ajustes.testarDescanso() }
+            Rotulo { width: parent.width; secundario: true
+                     text: "A Tela de Descanso não pede senha. A tela bloqueia no tempo escolhido em Bateria e energia." }
+        }
+    }
+
+    // -------------------------------------------------------------- Aparência
+    Component {
+        id: paginaAparencia
+        Pagina {
+            Titulo { nivel: 3; text: "Modo" }
+            Row {
+                spacing: 18
+                Repeater {
+                    model: [{ id: false, nome: "Claro" }, { id: true, nome: "Escuro" }]
+                    Column {
+                        required property var modelData
+                        spacing: 8
+                        Rectangle {
+                            width: 180; height: 116; radius: 14
+                            color: modelData.id ? "#1B1F27" : "#F7F9FC"
+                            border { color: Tema.escuro === modelData.id ? Tema.azulDuia : Tema.borda; width: Tema.escuro === modelData.id ? 3 : 1 }
+                            Rectangle { x: 12; y: 12; width: parent.width - 24; height: 12; radius: 4; color: modelData.id ? "#262B34" : "#FFFFFF"
+                                        border { color: modelData.id ? "#353B46" : "#DDE3EC"; width: 1 } }
+                            Rectangle { x: 12; y: 32; width: 100; height: 64; radius: 8; color: modelData.id ? "#262B34" : "#FFFFFF"
+                                        border { color: modelData.id ? "#353B46" : "#DDE3EC"; width: 1 }
+                                        Row { x: 8; y: 8; spacing: 4
+                                              Repeater { model: ["#FF5F57", "#FEBC2E", "#28C840"]; Rectangle { required property string modelData; width: 7; height: 7; radius: 3.5; color: modelData } } }
+                                        Rectangle { x: 8; y: 26; width: 60; height: 6; radius: 3; color: modelData.id ? "#4A5363" : "#C9D2DE" }
+                                        Rectangle { x: 8; y: 38; width: 40; height: 6; radius: 3; color: "#2E6BE6" } }
+                            Rectangle { x: 120; y: 32; width: 48; height: 64; radius: 8; color: modelData.id ? "#20242C" : "#EEF2F7" }
+                            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: aparencia.definirEscuro(modelData.id) }
+                        }
+                        Text { anchors.horizontalCenter: parent.horizontalCenter; text: modelData.nome; color: Tema.texto
+                               font { family: Tema.fonteTexto; pixelSize: 13; weight: Tema.escuro === modelData.id ? Font.Bold : Font.Normal } }
+                    }
+                }
+            }
+            Rotulo { width: parent.width; secundario: true
+                     text: "Vale para a Barra, a Ilha, as janelas e os aplicativos do DuiaOS na hora. Outros aplicativos podem precisar ser abertos de novo." }
+        }
+    }
+
+    // ----------------------------------------------------------- Notificações
+    Component {
+        id: paginaNotificacoes
+        Pagina {
+            Grupo {
+                Linha { icone: "sino-desligado"; titulo: "Não perturbe"; descricao: "Os avisos não aparecem na tela (só os urgentes), mas ficam no histórico do relógio."
+                        Interruptor { ligado: ajustes.naoPerturbe; onAlternado: (v) => ajustes.definirNaoPerturbe(v) } }
+                Linha { icone: "sino"; titulo: "Ver como fica"; ultima: true
+                        Botao { texto: "Enviar um aviso de teste"; onClicado: ajustes.testarNotificacao() } }
+            }
+            Rotulo { width: parent.width; secundario: true
+                     text: "Os avisos aparecem no canto de cima, à direita, e somem sozinhos. Clique no relógio da Barra de Recursos para ver os de hoje." }
+        }
+    }
+
+    // ----------------------------------------------------------- Atualizações
+    Component {
+        id: paginaAtualizacoes
+        Pagina {
+            id: pa
+            readonly property var a: ajustes.atualizacao
+            Destaque { icone: "reiniciar"; titulo: ({ inicio: "Atualizações do sistema", procurando: "Procurando atualizações…",
+                                                       pronta: pa.a.quantidade + (pa.a.quantidade === 1 ? " atualização disponível" : " atualizações disponíveis"),
+                                                       "em-dia": "O sistema está em dia", atualizando: "Atualizando…",
+                                                       concluida: "Sistema atualizado", erro: "Não foi possível atualizar" })[pa.a.etapa] || "Atualizações do sistema"
+                       texto: pa.a.etapa === "pronta" ? "Vai baixar " + pa.a.baixar + ". Você pode continuar usando o computador."
+                              : (pa.a.mensagem || "O DuiaOS, o Wise e os aplicativos instalados recebem correções e novidades por aqui.") }
+            Rectangle {
+                visible: pa.a.etapa === "atualizando" || pa.a.etapa === "procurando"
+                width: parent.width; height: 8; radius: 4; color: Tema.controleDesligado
+                Rectangle { width: parent.width * (pa.a.fracao || (pa.a.etapa === "procurando" ? 0.15 : 0.02)); height: parent.height; radius: 4; color: Tema.azulDuia
+                            Behavior on width { NumberAnimation { duration: 300 } } }
+            }
+            Row {
+                spacing: 8
+                Botao { visible: ["inicio", "em-dia", "concluida", "erro"].indexOf(pa.a.etapa) >= 0; texto: "Procurar atualizações"; tipo: "primario"
+                        onClicado: ajustes.procurarAtualizacoes() }
+                Botao { visible: pa.a.etapa === "pronta"; texto: "Atualizar agora"; tipo: "primario"; onClicado: ajustes.atualizarAgora() }
+                Botao { visible: pa.a.etapa === "atualizando"; texto: "Cancelar"; onClicado: ajustes.cancelarAtualizacao() }
+            }
+            Grupo {
+                visible: pa.a.etapa === "pronta"
+                titulo: "O que muda"
+                Repeater {
+                    model: (pa.a.lista || []).slice(0, 30)
+                    Linha { required property string modelData; required property int index; titulo: modelData; ultima: index === Math.min(29, pa.a.lista.length - 1) }
+                }
+            }
+            Rotulo { width: parent.width; secundario: true
+                     text: "Quem atualiza é o agente do sistema, que confere o que vai mudar e não remove nada essencial. Também dá para pedir ao Wise: “atualiza o sistema”." }
         }
     }
 
@@ -538,6 +725,32 @@ Window {
     Component {
         id: paginaUsuario
         Pagina {
+            Row {
+                spacing: 16
+                Rectangle {
+                    width: 88; height: 88; radius: 44
+                    gradient: Gradient { GradientStop { position: 0; color: "#6FA0F7" } GradientStop { position: 1; color: "#1A3A73" } }
+                    Image { id: fotoGrande; anchors.fill: parent; source: ajustes.fotoConta; sourceSize: Qt.size(176, 176); visible: status === Image.Ready; cache: false }
+                    Text { visible: !fotoGrande.visible; anchors.centerIn: parent; text: ajustes.usuario.nome.charAt(0).toUpperCase(); color: "white"
+                           font { family: Tema.fonteTitulo; pixelSize: 38; weight: Font.Bold } }
+                }
+                Column {
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 8
+                    Titulo { nivel: 2; text: ajustes.usuario.nome }
+                    Row {
+                        spacing: 8
+                        Botao { texto: "Escolher foto…"; tipo: "primario"; onClicado: escolherFoto.open() }
+                        Repeater {
+                            model: ["#2E6BE6", "#1A3A73", "#2FA67A", "#E8A33D", "#D9534F", "#8E5BD9"]
+                            Rectangle { required property string modelData; width: 28; height: 28; radius: 14; color: modelData
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: ajustes.definirFoto(modelData) } }
+                        }
+                    }
+                    Rotulo { secundario: true; text: "A foto aparece na Tela de Entrada, na Tela de Bloqueio e aqui." }
+                }
+            }
             Grupo {
                 Linha {
                     icone: "usuario"; titulo: "Nome"; descricao: "Aparece na Tela de Entrada e no Menu do DuiaOS"

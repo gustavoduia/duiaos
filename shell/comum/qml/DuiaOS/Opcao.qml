@@ -13,7 +13,7 @@ Item {
         id: bolinha
         width: 18; height: 18; radius: 9
         anchors { left: parent.left; top: parent.top; topMargin: 5 }
-        color: "white"
+        color: Tema.cartao
         border { width: raiz.marcada ? 5 : 1.5; color: raiz.marcada ? Tema.azulDuia : Tema.bordaForte }
     }
     Column {

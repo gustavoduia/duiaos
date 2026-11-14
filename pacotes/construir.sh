@@ -129,7 +129,7 @@ preparar duiaos-shell
 SH="${TRABALHO}/duiaos-shell"
 install -d "${SH}/usr/share/duiaos" "${SH}/etc/xdg/labwc" "${SH}/usr/share/wayland-sessions"
 cp -R "${RAIZ}/shell" "${SH}/usr/share/duiaos/shell"
-install -m 0644 "${RAIZ}/shell/sessao/autostart" "${RAIZ}/shell/sessao/environment" \
+install -m 0644 "${RAIZ}/shell/sessao/autostart" "${RAIZ}/shell/sessao/environment" "${RAIZ}/shell/sessao/menu.xml" \
   "${RAIZ}/shell/sessao/rc.xml" "${SH}/etc/xdg/labwc/"
 install -m 0644 "${RAIZ}/shell/sessao/duiaos.desktop" "${SH}/usr/share/wayland-sessions/"
 # Aplicativos da interface: Explorador de Arquivos e Configurações

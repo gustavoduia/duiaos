@@ -72,6 +72,8 @@ DESENHOS = {
     "controles": ('<rect x="3" y="4.5" width="18" height="6.5" rx="3.25"/><circle cx="8" cy="7.75" r="1.6" fill="C"/>'
                   '<rect x="3" y="13" width="18" height="6.5" rx="3.25"/><circle cx="16" cy="16.25" r="1.6" fill="C"/>'),
     "pasta": '<path d="M3 7.5a2 2 0 0 1 2-2h4.2l2 2.2H19a2 2 0 0 1 2 2v7.8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+    "sino": '<path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 1.5h-15zM10 20.5a2 2 0 0 0 4 0"/>',
+    "sino-desligado": '<path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 1.5h-15zM10 20.5a2 2 0 0 0 4 0"/><path d="M4 4l16 16"/>',
     "pasta-cheia": '<path d="M3 7.5a2 2 0 0 1 2-2h4.2l2 2.2H19a2 2 0 0 1 2 2v7.8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" fill="C" fill-opacity="0.16" stroke-width="1.4"/><path d="M3 10h18" stroke-width="1.2" stroke-opacity="0.5"/>',
     "pasta-aplicativos": ('<path d="M3 7.5a2 2 0 0 1 2-2h4.2l2 2.2H19a2 2 0 0 1 2 2v7.8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'
                           '<path d="M9.2 16.8l2.8-6.3 2.8 6.3M10.2 14.6h3.6" stroke-width="1.6"/>'),

@@ -5,10 +5,32 @@
   DUIAOS_SHELL vem de iniciar-sessao (padrão /usr/share/duiaos/shell).
 -->
 <labwc_config>
+  <!-- Janelas no estilo do macOS: tema DuiaOS (/usr/share/themes/DuiaOS), bolinhas à esquerda
+       (fechar, minimizar, maximizar) e título no centro -->
   <theme>
-    <font place=""><name>Inter</name><size>10</size></font>
+    <name>DuiaOS</name>
+    <titlebar>
+      <layout>close,iconify,max:</layout>
+      <showTitle>yes</showTitle>
+    </titlebar>
+    <font place=""><name>Inter</name><size>10</size><weight>Bold</weight></font>
+    <font place="ActiveWindow"><name>Inter</name><size>10</size><weight>Bold</weight></font>
+    <font place="InactiveWindow"><name>Inter</name><size>10</size><weight>Bold</weight></font>
+    <font place="MenuItem"><name>Inter</name><size>10</size></font>
+    <font place="OnScreenDisplay"><name>Inter</name><size>10</size></font>
     <cornerRadius>10</cornerRadius>
+    <dropShadows>yes</dropShadows>
   </theme>
+  <!-- Cliques na área de trabalho são da Área de Trabalho do DuiaOS (esquerdo seleciona e abre,
+       direito abre o menu de contexto); o labwc não abre mais o menu dele (Reconfigurar/Sair). -->
+  <mouse>
+    <default />
+    <context name="Root">
+      <mousebind button="Left" action="Press"><action name="None" /></mousebind>
+      <mousebind button="Right" action="Press"><action name="None" /></mousebind>
+      <mousebind button="Middle" action="Press"><action name="None" /></mousebind>
+    </context>
+  </mouse>
   <keyboard>
     <!-- Mantém os atalhos padrão do labwc -->
     <default />

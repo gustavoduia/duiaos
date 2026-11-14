@@ -93,8 +93,17 @@ def _limites_uid():
     return minimo, maximo
 
 
+PASTA_FOTOS = Path("/var/lib/duiaos/fotos")      # fotos das contas (Configurações › Usuário e senha)
+
+
+def foto(usuario):
+    """URL da foto da conta (redonda, PNG) ou '' sem foto."""
+    caminho = PASTA_FOTOS / f"{usuario}.png"
+    return caminho.as_uri() + f"?{int(caminho.stat().st_mtime)}" if caminho.is_file() else ""
+
+
 def usuarios():
-    """Pessoas que podem entrar no computador: [{'usuario': 'gustavo', 'nome': 'Gustavo'}]."""
+    """Pessoas que podem entrar no computador: [{'usuario': 'gustavo', 'nome': 'Gustavo', 'foto': ''}]."""
     minimo, maximo = _limites_uid()
     lista = []
     for conta in pwd.getpwall():
@@ -103,14 +112,15 @@ def usuarios():
         if conta.pw_shell.endswith(("nologin", "false")):
             continue
         nome = conta.pw_gecos.split(",")[0].strip() or conta.pw_name
-        lista.append({"usuario": conta.pw_name, "nome": nome})
+        lista.append({"usuario": conta.pw_name, "nome": nome, "foto": foto(conta.pw_name)})
     lista.sort(key=lambda u: u["nome"].casefold())
     return lista
 
 
 def usuario_atual():
     conta = pwd.getpwuid(os.getuid())
-    return {"usuario": conta.pw_name, "nome": conta.pw_gecos.split(",")[0].strip() or conta.pw_name}
+    return {"usuario": conta.pw_name, "nome": conta.pw_gecos.split(",")[0].strip() or conta.pw_name,
+            "foto": foto(conta.pw_name)}
 
 
 # --------------------------------------------------------------------- energia

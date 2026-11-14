@@ -204,7 +204,7 @@ Item {
         property string texto: ""
         property bool ligado: false
         signal clicado()
-        color: ligado ? Tema.azulDuia : (areaQp.containsMouse ? "#F4F7FB" : Tema.cartao)
+        color: ligado ? Tema.azulDuia : (areaQp.containsMouse ? Tema.realce : Tema.cartao)
         Column {
             anchors.centerIn: parent
             spacing: 5
@@ -217,14 +217,14 @@ Item {
 
     Balao {
         nome: "central"
-        width: 344
+        width: 364
         coluna.spacing: 10
 
         Row {
             width: parent.width
             spacing: 10
             Quadro {
-                width: (parent.width - 10) * 0.56
+                width: (parent.width - 10) * 0.52
                 height: 146
                 Column {
                     anchors { fill: parent; margins: 10 }
@@ -256,7 +256,7 @@ Item {
                 }
             }
             Column {
-                width: (parent.width - 10) * 0.44
+                width: (parent.width - 10) * 0.48
                 spacing: 10
                 Quadro {
                     width: parent.width; height: 68
@@ -271,17 +271,16 @@ Item {
                         onAlternado: controles.definirLuzNoturna(controles.luzNoturna === "desligada" ? "ligada" : "desligada")
                     }
                 }
-                Row {
-                    width: parent.width; spacing: 10
-                    QuadroPequeno {
-                        width: (parent.width - 10) / 2; height: 68
-                        icone: "cadeado"; texto: "Bloquear"
-                        onClicado: sistema.pedirEnergia("bloquear")
-                    }
-                    QuadroPequeno {
-                        width: (parent.width - 10) / 2; height: 68
-                        icone: "captura"; texto: "Capturar\ntela"
-                        onClicado: { sistema.fecharPainel(); controles.capturarTela() }
+                Quadro {
+                    width: parent.width; height: 68
+                    LinhaDeControle {
+                        anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; margins: 10 }
+                        width: undefined
+                        icone: "sino-desligado"
+                        titulo: "Não perturbe"
+                        detalhe: sistema.naoPerturbe ? "Ligado" : "Desligado"
+                        ligado: sistema.naoPerturbe
+                        onAlternado: sistema.definirNaoPerturbe(!sistema.naoPerturbe)
                     }
                 }
             }
@@ -342,18 +341,15 @@ Item {
             }
         }
         Row {
+            id: linhaPequenos
             width: parent.width; spacing: 10
-            QuadroPequeno {
-                visible: sistema.wise
-                width: (parent.width - 10) / 2; height: 52
-                icone: "ia"; texto: "Wise"
-                onClicado: sistema.abrirWise()
-            }
-            QuadroPequeno {
-                width: sistema.wise ? (parent.width - 10) / 2 : parent.width; height: 52
-                icone: "engrenagem"; texto: "Configurações"
-                onClicado: sistema.abrir("configuracoes")
-            }
+            readonly property int quantos: sistema.wise ? 4 : 3
+            readonly property real lado: (width - (quantos - 1) * 10) / quantos
+            QuadroPequeno { width: linhaPequenos.lado; height: 62; icone: "cadeado"; texto: "Bloquear"; onClicado: sistema.pedirEnergia("bloquear") }
+            QuadroPequeno { width: linhaPequenos.lado; height: 62; icone: "captura"; texto: "Capturar"
+                            onClicado: { sistema.fecharPainel(); controles.capturarTela() } }
+            QuadroPequeno { visible: sistema.wise; width: linhaPequenos.lado; height: 62; icone: "ia"; texto: "Wise"; onClicado: sistema.abrirWise() }
+            QuadroPequeno { width: linhaPequenos.lado; height: 62; icone: "engrenagem"; texto: "Ajustes"; onClicado: sistema.abrir("configuracoes") }
         }
     }
 
@@ -534,7 +530,7 @@ Item {
     // ============================================================ Calendário
     Balao {
         nome: "calendario"
-        width: 276
+        width: 300
         Text {
             width: parent.width; leftPadding: 4
             text: { var t = new Date().toLocaleDateString(Qt.locale("pt_BR"), "dddd, d 'de' MMMM 'de' yyyy"); return t.charAt(0).toUpperCase() + t.slice(1) }
@@ -542,6 +538,55 @@ Item {
             font { family: Tema.fonteTexto; pixelSize: 12 }
         }
         Calendario { anchors.horizontalCenter: parent.horizontalCenter; hoje: new Date() }
+        Separador {}
+        Item {
+            width: parent.width; height: 26
+            Text { anchors { left: parent.left; leftMargin: 4; verticalCenter: parent.verticalCenter } text: "Notificações"
+                   color: Tema.texto; font { family: Tema.fonteTexto; pixelSize: 13; weight: Font.Bold } }
+            Text {
+                visible: sistema.historico.length > 0
+                anchors { right: parent.right; rightMargin: 4; verticalCenter: parent.verticalCenter }
+                text: "Limpar"; color: Tema.azulDuia; font { family: Tema.fonteTexto; pixelSize: 12; weight: Font.DemiBold }
+                MouseArea { anchors { fill: parent; margins: -6 } cursorShape: Qt.PointingHandCursor; onClicked: sistema.limparNotificacoes() }
+            }
+        }
+        Rotulo { visible: sistema.historico.length === 0; width: parent.width; leftPadding: 4; secundario: true
+                 text: sistema.naoPerturbe ? "Não perturbe está ligado. As notificações novas ficam aqui." : "Nenhuma notificação." }
+        Flickable {
+            visible: sistema.historico.length > 0
+            width: parent.width
+            height: Math.min(colunaNotificacoes.height, 260)
+            contentHeight: colunaNotificacoes.height
+            clip: true
+            boundsBehavior: Flickable.StopAtBounds
+            Column {
+                id: colunaNotificacoes
+                width: parent.width
+                spacing: 6
+                Repeater {
+                    model: sistema.historico
+                    Rectangle {
+                        required property var modelData
+                        width: colunaNotificacoes.width
+                        height: textosNotificacao.implicitHeight + 16
+                        radius: 10
+                        color: Tema.cartao
+                        border { color: Tema.borda; width: 1 }
+                        Column {
+                            id: textosNotificacao
+                            anchors { left: parent.left; right: parent.right; top: parent.top; margins: 8; rightMargin: 28 }
+                            Text { text: modelData.app + "  ·  " + modelData.quando; color: Tema.textoSecundario; font { family: Tema.fonteTexto; pixelSize: 11 } }
+                            Text { width: parent.width; text: modelData.titulo; elide: Text.ElideRight; color: Tema.texto
+                                   font { family: Tema.fonteTexto; pixelSize: 12; weight: Font.Bold } }
+                            Text { width: parent.width; visible: modelData.texto !== ""; text: modelData.texto; wrapMode: Text.WordWrap
+                                   maximumLineCount: 2; elide: Text.ElideRight; color: Tema.texto; font { family: Tema.fonteTexto; pixelSize: 12 } }
+                        }
+                        BotaoIcone { anchors { right: parent.right; top: parent.top; margins: 4 } width: 20; height: 20; icone: "fechar"; tamanhoIcone: 11
+                                     corIcone: Tema.textoSecundario; onClicado: sistema.removerNotificacao(modelData.id) }
+                    }
+                }
+            }
+        }
         Separador {}
         ItemDeMenu { texto: "Configurações de data e hora…"; onClicado: sistema.abrir("configuracoes:data") }
     }

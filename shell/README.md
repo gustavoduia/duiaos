@@ -12,6 +12,9 @@ Esta pasta vira o pacote `duiaos-shell` (veja `pacotes/README.md`): fica em
 | `menu-de-energia/` | **Menu de Energia** da sessão (Ctrl+Alt+Delete) |
 | `barra-de-recursos/` | **Barra de Recursos**: Menu do DuiaOS, botão Wise, aplicativo em uso, ícones de controle (até 4 + balão da seta), **Central de Controle** e relógio (calendário) |
 | `ilha-de-aplicativos/` | **Ilha de Aplicativos** (com pasta Aplicativos, pilha de Downloads e Lixeira) e **Central de Aplicativos** em tela cheia |
+| `area-de-trabalho/` | **Área de Trabalho**: papel de parede (imagem, GIF, vídeo, cor) e ícones da pasta Área de Trabalho, com menus do botão direito (ADR 045) |
+| `notificacoes/` | **Notificações**: serviço `org.freedesktop.Notifications` e balões no canto (ADR 045) |
+| `descanso/` | **Tela de Descanso**, aberta pelo swayidle (ADR 045) |
 | `testes/` | Testes da lógica e das telas (`python3 -m unittest discover -s shell/testes -t .`) |
 
 Os aplicativos **Explorador de Arquivos** e **Configurações** ficam em `../apps/` e

@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""DuiaOS — aplica as escolhas das Configurações na sessão (papel de parede, telas,
-luz noturna e bloqueio automático).
+"""DuiaOS — aplica as escolhas das Configurações na sessão (modo escuro, telas, luz noturna,
+Tela de Descanso e bloqueio automático; o papel de parede é da Área de Trabalho).
 
 Chamado por sessao/autostart ao entrar e pelas Configurações quando algo muda:
   sessao.py aplicar                  tudo (início da sessão)
-  sessao.py papel-de-parede          só o papel de parede
+  sessao.py aparencia                modo claro ou escuro nas janelas e nos aplicativos GTK
+  sessao.py papel-de-parede          papel de parede pelo swaybg (reserva, sem a Área de Trabalho)
   sessao.py telas                    só resolução e escala
   sessao.py bloqueio                 só o bloqueio automático e o repouso
 As preferências ficam em ~/.config/duiaos/preferencias.conf (pastas.py).
@@ -33,9 +34,16 @@ def _iniciar(comando):
         pass
 
 
+def _rodar(*comando):
+    """Roda e espera, sem falhar se o programa não existir."""
+    try:
+        subprocess.run(comando, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=20)
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+
+
 def _parar(programa):
-    subprocess.run(["pkill", "-u", str(os.getuid()), "-x", programa], check=False,
-                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    _rodar("pkill", "-u", str(os.getuid()), "-x", programa)
 
 
 # ------------------------------------------------------------ papel de parede
@@ -114,20 +122,83 @@ def comando_tela(nome, modo=None, escala=None):
 
 def aplicar_telas():
     """Reaplica a resolução e a escala guardadas para cada tela que estiver conectada."""
-    saida = subprocess.run(["wlr-randr"], capture_output=True, text=True, check=False).stdout
+    try:
+        saida = subprocess.run(["wlr-randr"], capture_output=True, text=True, check=False, timeout=5).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return
     for tela in interpretar_wlr_randr(saida):
         modo = pastas.ler_preferencia("telas", tela["nome"] + ".modo", "")
         escala = pastas.ler_preferencia("telas", tela["nome"] + ".escala", "")
         if modo or escala:
-            subprocess.run(comando_tela(tela["nome"], modo or None, escala or None), check=False,
-                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            _rodar(*comando_tela(tela["nome"], modo or None, escala or None))
+
+
+# ------------------------------------------------------------ modo escuro
+
+# Cores escuras das janelas (labwc lê este arquivo por cima do tema DuiaOS)
+TEMA_ESCURO = """# DuiaOS — modo escuro das janelas (Configurações › Aparência). Gerado; apagado no modo claro.
+window.active.border.color: #4A5363
+window.inactive.border.color: #353B46
+window.active.title.bg.color: #2A2F39
+window.inactive.title.bg.color: #22262E
+window.active.title.separator.color: #353B46
+window.inactive.title.separator.color: #2A2F39
+window.active.label.text.color: #E6EAF0
+window.inactive.label.text.color: #7A8494
+window.active.button.unpressed.image.color: #A3ADBB
+window.inactive.button.unpressed.image.color: #7A8494
+window.active.shadow.color: #00000070
+window.inactive.shadow.color: #00000040
+menu.border.color: #353B46
+menu.items.bg.color: #262B34
+menu.items.text.color: #E6EAF0
+menu.items.active.bg.color: #2E6BE6
+menu.items.active.text.color: #FFFFFF
+menu.separator.color: #353B46
+menu.title.bg.color: #1B1F27
+menu.title.text.color: #A3ADBB
+osd.bg.color: #262B34
+osd.border.color: #353B46
+osd.label.text.color: #E6EAF0
+"""
+
+
+def aplicar_aparencia(escuro=None):
+    """Modo escuro nas janelas (labwc) e nos aplicativos GTK; os do DuiaOS mudam sozinhos."""
+    if escuro is None:
+        escuro = pastas.ler_preferencia("aparencia", "modo", "claro") == "escuro"
+    override = pastas.CONFIG / "labwc" / "themerc-override"
+    try:
+        if escuro:
+            override.parent.mkdir(parents=True, exist_ok=True)
+            override.write_text(TEMA_ESCURO, encoding="utf-8")
+        elif override.is_file() and override.read_text(encoding="utf-8").startswith("# DuiaOS — modo escuro"):
+            override.unlink()
+    except OSError:
+        pass
+    for versao in ("gtk-3.0", "gtk-4.0"):
+        arquivo = pastas.CONFIG / versao / "settings.ini"
+        try:
+            linhas = arquivo.read_text(encoding="utf-8").splitlines() if arquivo.is_file() else ["[Settings]"]
+            linhas = [l for l in linhas if not l.startswith("gtk-application-prefer-dark-theme")]
+            if "[Settings]" not in linhas:
+                linhas.insert(0, "[Settings]")
+            linhas.insert(linhas.index("[Settings]") + 1, f"gtk-application-prefer-dark-theme={'1' if escuro else '0'}")
+            arquivo.parent.mkdir(parents=True, exist_ok=True)
+            arquivo.write_text("\n".join(linhas) + "\n", encoding="utf-8")
+        except OSError:
+            pass
+    _rodar("gsettings", "set", "org.gnome.desktop.interface", "color-scheme", "prefer-dark" if escuro else "default")
+    _rodar("labwc", "--reconfigure")
 
 
 # ---------------------------------------------------------------- bloqueio
 
-def comando_swayidle(bloquear_minutos, repousar_minutos, bloquear):
-    """Bloqueio automático e repouso (0 = nunca). A tela sempre bloqueia antes de repousar."""
+def comando_swayidle(bloquear_minutos, repousar_minutos, bloquear, descanso_minutos=0, descanso=""):
+    """Tela de Descanso, bloqueio automático e repouso (0 = nunca). A tela sempre bloqueia antes de repousar."""
     comando = ["swayidle", "-w"]
+    if descanso_minutos > 0 and descanso:
+        comando += ["timeout", str(descanso_minutos * 60), descanso, "resume", "pkill -f descanso/main.py"]
     if bloquear_minutos > 0:
         comando += ["timeout", str(bloquear_minutos * 60), bloquear]
     if repousar_minutos > 0:
@@ -144,13 +215,18 @@ def _minutos(chave, padrao):
 def aplicar_bloqueio():
     _parar("swayidle")
     bloquear = str(PASTA_SHELL / "bloqueio" / "bloquear")
-    _iniciar(comando_swayidle(_minutos("bloquear", BLOQUEIO_PADRAO), _minutos("repousar", 0), bloquear))
+    descanso = f"python3 {PASTA_SHELL / 'descanso' / 'main.py'}"
+    minutos_descanso = pastas.ler_preferencia("descanso", "minutos", "0")
+    _iniciar(comando_swayidle(_minutos("bloquear", BLOQUEIO_PADRAO), _minutos("repousar", 0), bloquear,
+                              int(minutos_descanso) if minutos_descanso.isdigit() else 0, descanso))
 
 
 def main(argumentos):
     acao = argumentos[0] if argumentos else "aplicar"
-    if acao in ("aplicar", "papel-de-parede"):
+    if acao == "papel-de-parede":          # só de reserva: na sessão, quem desenha é a Área de Trabalho
         aplicar_papel_de_parede()
+    if acao in ("aplicar", "aparencia"):
+        aplicar_aparencia()
     if acao in ("aplicar", "telas"):
         aplicar_telas()
     if acao in ("aplicar", "bloqueio"):

@@ -13,7 +13,7 @@ Rectangle {
     width: parent ? parent.width : 260
     height: detalhe !== "" ? 44 : 34
     radius: 8
-    color: area.containsMouse ? Qt.rgba(0.06, 0.09, 0.14, 0.05) : "transparent"
+    color: area.containsMouse ? Tema.realce : "transparent"
     Rectangle {
         id: fundoIcone
         visible: raiz.icone !== ""

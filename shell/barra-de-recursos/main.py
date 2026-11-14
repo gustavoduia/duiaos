@@ -155,11 +155,36 @@ def aplicativo_em_foco():
     return ""
 
 
+HISTORICO_NOTIFICACOES = Path(os.environ.get("XDG_RUNTIME_DIR", "/tmp")) / "duiaos-notificacoes.json"
+
+
+def ler_historico():
+    try:
+        import json
+        dados = json.loads(HISTORICO_NOTIFICACOES.read_text(encoding="utf-8"))
+        return dados if isinstance(dados, list) else []
+    except (OSError, ValueError):
+        return []
+
+
+def chamar_notificacoes(metodo, *argumentos):
+    """Limpar/Remover no serviço de notificações do DuiaOS (shell/notificacoes)."""
+    try:
+        from PySide6.QtDBus import QDBusConnection, QDBusMessage
+    except ImportError:
+        return
+    mensagem = QDBusMessage.createMethodCall("org.freedesktop.Notifications", "/org/freedesktop/Notifications",
+                                             "org.duiaos.Notificacoes1", metodo)
+    mensagem.setArguments(list(argumentos))
+    QDBusConnection.sessionBus().asyncCall(mensagem)
+
+
 class Sistema(QObject):
-    """O que a barra mostra além dos controles: Wise, aplicativo em uso, usuário, ações."""
+    """O que a barra mostra além dos controles: Wise, aplicativo em uso, usuário, notificações, ações."""
 
     mudou = Signal()
     painelMudou = Signal()
+    notificacoesMudaram = Signal()
     _foco = Signal(str)
 
     def __init__(self):
@@ -170,13 +195,56 @@ class Sistema(QObject):
         self._usuario = comum.usuario_atual()["nome"]
         self._windows = False
         self._painel, self._ancora, self._confirmar = "", 0.0, ""
+        self._historico, self._marca_historico = [], 0.0
         self._foco.connect(self._ao_foco)
+        if DEMONSTRACAO:
+            self._historico = [
+                {"id": 3, "app": "Wise", "titulo": "Sua agenda de amanhã", "texto": "Reunião às 9h e dentista às 15h.", "quando": "12:40",
+                 "tipoIcone": "", "valorIcone": ""},
+                {"id": 2, "app": "Explorador de Arquivos", "titulo": "Cópia concluída", "texto": "12 itens copiados.", "quando": "11:02",
+                 "tipoIcone": "", "valorIcone": ""}]
         if not DEMONSTRACAO:
             self._timer_wise = QTimer(self, interval=1000, timeout=self.atualizar_wise)
             self._timer_wise.start()
             self._timer_foco = QTimer(self, interval=1500, timeout=self._buscar_foco)
             self._timer_foco.start()
             threading.Thread(target=self._ver_windows, daemon=True).start()
+            self._timer_notificacoes = QTimer(self, interval=1000, timeout=self._ver_historico)
+            self._timer_notificacoes.start()
+
+    def _ver_historico(self):
+        try:
+            marca = HISTORICO_NOTIFICACOES.stat().st_mtime
+        except OSError:
+            marca = 0.0
+        if marca != self._marca_historico:
+            self._marca_historico = marca
+            self._historico = ler_historico()
+            self.notificacoesMudaram.emit()
+
+    @Slot()
+    def limparNotificacoes(self):
+        self._historico = []
+        self.notificacoesMudaram.emit()
+        if not DEMONSTRACAO:
+            chamar_notificacoes("Limpar")
+
+    @Slot(int)
+    def removerNotificacao(self, identificador):
+        self._historico = [h for h in self._historico if h.get("id") != identificador]
+        self.notificacoesMudaram.emit()
+        if not DEMONSTRACAO:
+            chamar_notificacoes("Remover", identificador)
+
+    @Slot(bool)
+    def definirNaoPerturbe(self, ligar):
+        import pastas
+        pastas.gravar_preferencia("notificacoes", "nao_perturbe", "sim" if ligar else "nao")
+        self.notificacoesMudaram.emit()
+
+    def _nao_perturbe(self):
+        import pastas
+        return pastas.ler_preferencia("notificacoes", "nao_perturbe", "nao") == "sim"
 
     def _ver_windows(self):
         self._windows = comum.windows_disponivel()
@@ -256,6 +324,8 @@ class Sistema(QObject):
         if acao and not DEMONSTRACAO:
             comum.executar_energia(acao)
 
+    historico = Property("QVariantList", lambda self: self._historico, notify=notificacoesMudaram)
+    naoPerturbe = Property(bool, _nao_perturbe, notify=notificacoesMudaram)
     wise = Property(bool, lambda self: self._wise, notify=mudou)
     wiseEstado = Property(str, lambda self: self._wise_estado, notify=mudou)
     aplicativoEmFoco = Property(str, lambda self: self._app, notify=mudou)

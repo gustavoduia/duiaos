@@ -34,11 +34,11 @@ Window {
     // Central de Aplicativos (janela própria, aparece por cima de tudo)
     CentralDeAplicativos {}
 
-    // Pilha de Downloads (camada por cima da área de trabalho; clique fora fecha)
+    // Pilha de Downloads e menu do botão direito (camada por cima da área de trabalho; clique fora fecha)
     Window {
         screen: janela.screen
         width: Screen.width; height: Screen.height      // o compositor ajusta à área livre
-        visible: ilha.downloadsVisivel
+        visible: ilha.downloadsVisivel || ilha.menu.tipo !== undefined
         color: "transparent"
         title: "Downloads"
         LayerShell.Window.anchors: LayerShell.Window.AnchorTop | LayerShell.Window.AnchorBottom
@@ -47,6 +47,7 @@ Window {
         LayerShell.Window.exclusionZone: 0
         LayerShell.Window.keyboardInteractivity: LayerShell.Window.KeyboardInteractivityOnDemand
         LayerShell.Window.scope: "duiaos-pilha-de-downloads"
-        ConteudoDownloads { anchors.fill: parent }
+        ConteudoDownloads { anchors.fill: parent; visible: ilha.downloadsVisivel }
+        MenuDaIlha { anchors.fill: parent; visible: ilha.menu.tipo !== undefined }
     }
 }

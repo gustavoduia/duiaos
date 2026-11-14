@@ -1,0 +1,55 @@
+# DuiaOS — tema das janelas (labwc), modo claro. Barra de título no estilo do macOS: três
+# bolinhas à esquerda (fechar, minimizar, maximizar; ordem em /etc/xdg/labwc/rc.xml) e título
+# no centro. O modo escuro troca as cores por ~/.config/labwc/themerc-override
+# (shell/comum/sessao.py). Desenhos dos botões: *-active.svg / *-inactive.svg / *_hover-active.svg.
+
+border.width: 1
+padding.width: 10
+padding.height: 7
+titlebar.padding.width: 10
+titlebar.padding.height: 7
+window.button.width: 22
+window.button.spacing: 2
+
+window.active.border.color: #C9D2DE
+window.inactive.border.color: #DDE3EC
+window.active.indicator.toggled-keybind.color: #2E6BE6
+
+window.active.title.bg.color: #F2F5F9
+window.inactive.title.bg.color: #F7F9FC
+window.active.title.separator.color: #DDE3EC
+window.inactive.title.separator.color: #E4E9F0
+
+window.active.label.text.color: #1F2933
+window.inactive.label.text.color: #8A94A3
+window.label.text.justify: center
+
+window.active.button.unpressed.image.color: #5B6675
+window.inactive.button.unpressed.image.color: #8A94A3
+
+window.active.shadow.size: 28
+window.inactive.shadow.size: 14
+window.active.shadow.color: #0F172440
+window.inactive.shadow.color: #0F172420
+
+menu.overlap.x: 0
+menu.overlap.y: 0
+menu.width.min: 200
+menu.items.padding.x: 12
+menu.items.padding.y: 6
+menu.border.width: 1
+menu.border.color: #DDE3EC
+menu.items.bg.color: #FFFFFF
+menu.items.text.color: #1F2933
+menu.items.active.bg.color: #2E6BE6
+menu.items.active.text.color: #FFFFFF
+menu.separator.color: #DDE3EC
+menu.title.bg.color: #F7F9FC
+menu.title.text.color: #5B6675
+
+osd.bg.color: #FFFFFF
+osd.border.color: #DDE3EC
+osd.border.width: 1
+osd.label.text.color: #1F2933
+osd.window-switcher.width: 640
+osd.window-switcher.item.active.border.color: #2E6BE6

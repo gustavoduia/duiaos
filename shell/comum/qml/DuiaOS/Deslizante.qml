@@ -23,7 +23,7 @@ Item {
             height: parent.height
             width: Math.max(parent.height, parent.width * Math.max(0, Math.min(100, raiz.valor)) / 100)
             radius: height / 2
-            color: "white"
+            color: Tema.trilhaCheia
             border { color: Tema.bordaForte; width: 1 }
             Behavior on width { enabled: !area.pressed; NumberAnimation { duration: 90 } }
         }

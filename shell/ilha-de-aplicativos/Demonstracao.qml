@@ -13,5 +13,6 @@ Window {
     Ilha { id: conteudo; anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: 8 } }
     ConteudoDownloads { anchors.fill: parent; anchors.bottomMargin: conteudo.height + 8; visible: ilha.downloadsVisivel }
     ConteudoCentral { anchors.fill: parent; visible: ilha.centralVisivel }
+    MenuDaIlha { anchors.fill: parent; anchors.bottomMargin: conteudo.height + 8; visible: ilha.menu.tipo !== undefined }
     Timer { interval: 600; running: capturaArquivo !== ""; onTriggered: janela.contentItem.grabToImage(function (r) { r.saveToFile(capturaArquivo); Qt.quit() }) }
 }

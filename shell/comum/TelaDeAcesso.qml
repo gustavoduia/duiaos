@@ -109,12 +109,21 @@ Item {
             anchors { left: parent.left; right: parent.right; top: parent.top; margins: 28 }
             spacing: 0
 
-            // Avatar com a inicial do nome
+            // Foto da conta (Configurações › Usuário e senha) ou avatar com a inicial do nome
             Rectangle {
                 anchors.horizontalCenter: parent.horizontalCenter
                 width: 84; height: 84; radius: 42
                 color: Estilo.azulDuia
+                Image {
+                    id: fotoConta
+                    anchors.fill: parent
+                    source: tela.pessoa.foto || ""
+                    sourceSize: Qt.size(168, 168)
+                    visible: status === Image.Ready
+                    smooth: true
+                }
                 Text {
+                    visible: !fotoConta.visible
                     anchors.centerIn: parent
                     text: tela.pessoa.nome.length > 0 ? tela.pessoa.nome.charAt(0).toUpperCase() : "?"
                     font { family: Estilo.fonteTitulo; pixelSize: 36; weight: Font.Bold }

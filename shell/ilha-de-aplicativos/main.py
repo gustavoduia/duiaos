@@ -18,7 +18,7 @@ balão com os arquivos mais novos) e a Lixeira.
 
 Uso:
   main.py                                inicia a Ilha
-  main.py --demonstracao [--central|--downloads] [--captura ARQUIVO]
+  main.py --demonstracao [--central|--downloads|--menu] [--captura ARQUIVO]
                                          janela comum com dados de exemplo
 Janelas abertas: comando wlrctl (protocolo wlr-foreign-toplevel do labwc).
 """
@@ -139,6 +139,19 @@ def downloads_recentes(pasta=None, limite=12):
     return lista
 
 
+def esvaziar_lixeira():
+    """Apaga de vez o que está na Lixeira (mesma Lixeira do Explorador de Arquivos)."""
+    for pasta in (Path("/usr/share/duiaos/explorador-de-arquivos"), PASTA.parents[1] / "apps" / "explorador-de-arquivos"):
+        if (pasta / "operacoes.py").is_file():
+            sys.path.insert(0, str(pasta))
+            break
+    try:
+        import operacoes
+        operacoes.esvaziar_lixeira()
+    except Exception:          # noqa: BLE001 — falha ao apagar não pode derrubar a Ilha
+        pass
+
+
 def lixeira_vazia(lixeira=None):
     pasta = Path(lixeira or pastas.LIXEIRA) / "files"
     try:
@@ -243,6 +256,8 @@ class Ilha(QObject):
                       "papel-de-parede.png", "Música nova.mp3", "Relatório final.docx", "instalador.deb"]]
         self._downloads_visivel = "--downloads" in sys.argv
         self._ancora_downloads = 760.0
+        if "--menu" in sys.argv:
+            self.abrirMenu("app", 3, 500.0)
 
     def atualizar_lixeira(self):
         cheia = not lixeira_vazia()
@@ -276,6 +291,50 @@ class Ilha(QObject):
         if self._downloads_visivel:
             self._downloads_visivel = False
             self.downloadsMudou.emit()
+
+    # ----- menu do botão direito
+    @Slot(str, int, float)
+    def abrirMenu(self, tipo, indice, ancora):
+        """tipo: app (indice em itens), central, aplicativos, downloads ou lixeira."""
+        self._downloads_visivel = False
+        item = self._itens[indice] if tipo == "app" and 0 <= indice < len(self._itens) else {}
+        fixo = item.get("id") in (WISE_DESKTOP, EXPLORADOR_DESKTOP)
+        self._menu = {"tipo": tipo, "indice": indice, "nome": item.get("nome", ""), "aberto": bool(item.get("aberto")),
+                      "fixado": bool(item.get("fixado")), "fixo": fixo, "podeFixar": bool(item.get("id")) and not fixo,
+                      "lixeiraCheia": self._lixeira_cheia}
+        self._ancora_downloads = ancora
+        self.downloadsMudou.emit()
+
+    @Slot()
+    def fecharMenu(self):
+        if getattr(self, "_menu", None):
+            self._menu = {}
+            self.downloadsMudou.emit()
+
+    @Slot(str)
+    def acaoMenu(self, acao):
+        menu = getattr(self, "_menu", {}) or {}
+        self.fecharMenu()
+        tipo, indice = menu.get("tipo"), menu.get("indice", -1)
+        if tipo == "app" and 0 <= indice < len(self._itens):
+            item = self._itens[indice]
+            if acao == "abrir":
+                self.ativar(indice)
+            elif acao == "nova-janela" and not DEMONSTRACAO:
+                iniciar(comando_de_exec(item))
+            elif acao == "fixar" and item.get("id"):
+                self.alternarFixado(item["id"])
+            elif acao == "fechar" and item.get("appId") and not DEMONSTRACAO:
+                iniciar(["wlrctl", "toplevel", "close", "app_id:" + item["appId"]])
+        elif tipo == "central" and acao == "abrir":
+            self.alternarCentral()
+        elif tipo in ("aplicativos", "downloads", "lixeira") and acao == "abrir":
+            self.abrirPasta(tipo)
+        elif tipo == "lixeira" and acao == "esvaziar" and not DEMONSTRACAO:
+            esvaziar_lixeira()
+            self.atualizar_lixeira()
+
+    menu = Property("QVariantMap", lambda self: getattr(self, "_menu", {}) or {}, notify=downloadsMudou)
 
     @Slot(str)
     def abrirArquivo(self, caminho):

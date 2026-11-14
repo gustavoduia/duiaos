@@ -65,6 +65,20 @@ xdg-user-dirs
 xdg-utils
 udisks2
 
+# Área de Trabalho e Tela de Descanso: vídeos de fundo (QtMultimedia, com FFmpeg) e escolha de
+# arquivos (FileDialog do Qt Quick, sem portal)
+qml6-module-qtmultimedia
+qml6-module-qtquick-dialogs
+qml6-module-qtquick-templates
+qml6-module-qt-labs-folderlistmodel
+
+# Notificações (serviço org.freedesktop.Notifications pelo GLib) e notify-send; Configurações e
+# Barra falam com o agente do sistema e com as notificações pelo D-Bus
+python3-gi
+gir1.2-glib-2.0
+libnotify-bin
+python3-pyside6.qtdbus
+
 # Ícones e fontes
 hicolor-icon-theme
 fonts-inter

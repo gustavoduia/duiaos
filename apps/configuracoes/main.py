@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """DuiaOS — Configurações.
 
-Seções: Wi-Fi, Bluetooth, Som, Tela, Bateria e energia, Papel de parede, Barra e
-Ilha, Usuário, Data e hora, Idioma e teclado, Aplicativos padrão, Privacidade,
-Inteligência artificial e Sobre este computador.
+Seções: Wi-Fi, Bluetooth, Notificações, Som, Tela, Bateria e energia, Aparência
+(modo escuro), Papel de parede, Tela de Descanso, Barra e Ilha, Usuário e senha (com a
+foto da conta), Data e hora, Idioma e teclado, Aplicativos padrão, Atualizações (pelo
+duiaos-agente), Privacidade, Inteligência artificial e Sobre este computador.
 
 Os controles do dia a dia (Wi-Fi, som, brilho…) vêm de shell/comum/controles.py,
 os mesmos da Barra de Recursos. O que precisa de permissão de administrador
@@ -12,9 +13,9 @@ regras do DuiaOS liberam a pessoa que está no computador e é administradora, e
 troca de senha confere a senha atual (/usr/lib/duiaos/conta).
 
 Uso:
-  main.py [--secao NOME]              abre (seções: wifi, bluetooth, som, tela, energia,
-                                      papel, barra, usuario, data, teclado, padroes,
-                                      privacidade, ia, sobre)
+  main.py [--secao NOME]              abre (seções: wifi, bluetooth, notificacoes, som, tela,
+                                      energia, aparencia, papel, descanso, barra, usuario,
+                                      data, teclado, padroes, atualizacoes, privacidade, ia, sobre)
   main.py --demonstracao [--secao NOME] [--captura ARQUIVO]
 """
 import fcntl
@@ -33,6 +34,7 @@ for _comum in (Path(os.environ.get("DUIAOS_SHELL", "/usr/share/duiaos/shell")) /
     if (_comum / "controles.py").is_file():
         sys.path.insert(0, str(_comum))
         break
+sys.path.insert(0, str(PASTA))
 
 import aplicativos  # noqa: E402
 import controles  # noqa: E402
@@ -46,8 +48,11 @@ from PySide6.QtGui import QGuiApplication  # noqa: E402
 from PySide6.QtQml import QQmlApplicationEngine  # noqa: E402
 
 DEMONSTRACAO = "--demonstracao" in sys.argv
-SECOES = ("wifi", "bluetooth", "som", "tela", "energia", "papel", "barra", "usuario", "data", "teclado",
-          "padroes", "privacidade", "ia", "sobre")
+SECOES = ("wifi", "bluetooth", "notificacoes", "som", "tela", "energia", "aparencia", "papel", "descanso", "barra",
+          "usuario", "data", "teclado", "padroes", "atualizacoes", "privacidade", "ia", "sobre")
+PASTA_FUNDOS = pastas.DADOS / "duiaos" / "fundos"          # imagens e vídeos importados
+EXTENSOES_FUNDO = (".jpg", ".jpeg", ".png", ".webp", ".gif", ".mp4", ".webm", ".mkv", ".mov", ".m4v")
+AGENTE = ("org.duiaos.Agente1", "/org/duiaos/Agente1")
 AJUDANTE_CONTA = "/usr/lib/duiaos/conta"
 ARQUIVO_PEDIDO = Path(os.environ.get("XDG_RUNTIME_DIR", "/tmp")) / "duiaos-configuracoes.secao"
 
@@ -127,6 +132,7 @@ def ler_telas():
 class Ajustes(QObject):
     mudou = Signal()
     secaoMudou = Signal()
+    atualizacaoMudou = Signal()
     aviso = Signal(str)
     _pronto = Signal(str, object)
 
@@ -245,9 +251,7 @@ class Ajustes(QObject):
             pastas.gravar_preferencia("papel-de-parede", "arquivo", "")
         else:
             pastas.gravar_preferencia("papel-de-parede", "arquivo", arquivo)
-        self.mudou.emit()
-        if not DEMONSTRACAO:
-            self._em_fundo("x", sessao.aplicar_papel_de_parede)
+        self.mudou.emit()          # a Área de Trabalho vê a preferência mudar e troca o fundo na hora
 
     @Slot(result="QVariantList")
     def imagensDoUsuario(self):
@@ -347,7 +351,7 @@ class Ajustes(QObject):
             return "Não foi possível alterar a senha."
         self._em_fundo("aviso", trocar)
 
-    usuario = Property("QVariantMap", lambda self: comum.usuario_atual(), constant=True)
+    usuario = Property("QVariantMap", lambda self: comum.usuario_atual(), notify=mudou)
 
     # ------------------------------------------------------- data e hora
     @Slot(str)
@@ -425,6 +429,187 @@ class Ajustes(QObject):
         self._em_fundo("aviso", trocar)
         self._sobre = {**self._sobre, "computador": nome}
         self.mudou.emit()
+
+
+    # ------------------------------------------------- fundos importados
+    @Slot(str, str)
+    def importarFundo(self, url, destino):
+        """Copia uma imagem ou vídeo escolhido para a pasta do DuiaOS e usa como papel de parede ou descanso."""
+        origem = Path(url[7:] if url.startswith("file://") else url)
+        from urllib.parse import unquote
+        origem = Path(unquote(str(origem)))
+        if origem.suffix.lower() not in EXTENSOES_FUNDO or not origem.is_file():
+            self.aviso.emit("Escolha uma imagem (JPG, PNG, WebP, GIF) ou um vídeo (MP4, WebM, MKV, MOV).")
+            return
+        PASTA_FUNDOS.mkdir(parents=True, exist_ok=True)
+        import operacoes_fundo
+        alvo = operacoes_fundo.copiar_sem_sobrescrever(origem, PASTA_FUNDOS)
+        if destino == "descanso":
+            self.definirDescanso(str(alvo))
+        else:
+            self.definirPapel(str(alvo))
+        self.mudou.emit()
+
+    def _importados(self):
+        try:
+            return [str(p) for p in sorted(PASTA_FUNDOS.iterdir(), key=lambda p: p.stat().st_mtime, reverse=True)
+                    if p.suffix.lower() in EXTENSOES_FUNDO]
+        except OSError:
+            return []
+
+    fundosImportados = Property("QVariantList", _importados, notify=mudou)
+
+    # ---------------------------------------------------- tela de descanso
+    @Slot(str)
+    def definirDescanso(self, arquivo):
+        pastas.gravar_preferencia("descanso", "arquivo", arquivo[7:] if arquivo.startswith("file://") else arquivo)
+        self.mudou.emit()
+
+    @Slot(int)
+    def definirMinutosDescanso(self, minutos):
+        pastas.gravar_preferencia("descanso", "minutos", str(max(0, int(minutos))))
+        self.mudou.emit()
+        if not DEMONSTRACAO:
+            self._em_fundo("x", sessao.aplicar_bloqueio)
+
+    @Slot(bool)
+    def definirRelogioDescanso(self, ligar):
+        pastas.gravar_preferencia("descanso", "relogio", "sim" if ligar else "nao")
+        self.mudou.emit()
+
+    @Slot()
+    def testarDescanso(self):
+        if not DEMONSTRACAO:
+            aplicativos.iniciar([sys.executable, str(comum.PASTA_SHELL / "descanso" / "main.py")])
+
+    descansoArquivo = Property(str, lambda self: pastas.ler_preferencia("descanso", "arquivo", ""), notify=mudou)
+    descansoMinutos = Property(int, lambda self: int(pastas.ler_preferencia("descanso", "minutos", "0") or 0), notify=mudou)
+    descansoRelogio = Property(bool, lambda self: pastas.ler_preferencia("descanso", "relogio", "sim") == "sim", notify=mudou)
+
+    # -------------------------------------------------------- notificações
+    @Slot(bool)
+    def definirNaoPerturbe(self, ligar):
+        pastas.gravar_preferencia("notificacoes", "nao_perturbe", "sim" if ligar else "nao")
+        self.mudou.emit()
+
+    @Slot()
+    def testarNotificacao(self):
+        if not DEMONSTRACAO:
+            aplicativos.iniciar(["notify-send", "-a", "Configurações", "-i", "duiaos-configuracoes",
+                                 "Notificações funcionando", "É assim que os avisos aparecem no DuiaOS."])
+
+    naoPerturbe = Property(bool, lambda self: pastas.ler_preferencia("notificacoes", "nao_perturbe", "nao") == "sim", notify=mudou)
+
+    # ---------------------------------------------------------------- foto
+    @Slot(str)
+    def definirFoto(self, origem):
+        """Foto da conta: de um arquivo (url) ou "#RRGGBB" (avatar com a inicial nessa cor)."""
+        import operacoes_fundo
+        try:
+            png = operacoes_fundo.foto_redonda(origem, self.usuario["nome"])
+        except ValueError as erro:
+            self.aviso.emit(str(erro))
+            return
+        try:
+            (Path.home() / ".face").write_bytes(png)       # padrão de outros programas
+        except OSError:
+            pass
+        if DEMONSTRACAO:
+            return
+        def gravar():
+            try:
+                resultado = subprocess.run(["pkexec", AJUDANTE_CONTA, "foto"], input=png, capture_output=True, timeout=60)
+            except (OSError, subprocess.TimeoutExpired):
+                return "Não foi possível salvar a foto."
+            return "Foto da conta alterada." if resultado.returncode == 0 else "Não foi possível salvar a foto."
+        self._em_fundo("aviso", gravar)
+        QTimer.singleShot(1500, self.mudou.emit)
+
+    fotoConta = Property(str, lambda self: comum.foto(comum.usuario_atual()["usuario"]), notify=mudou)
+
+    # --------------------------------------------------------- atualizações
+    def _agente(self, metodo, *argumentos, ao_responder=None, tempo=300000):
+        from PySide6.QtDBus import QDBusConnection, QDBusMessage, QDBusPendingCallWatcher
+        mensagem = QDBusMessage.createMethodCall(AGENTE[0], AGENTE[1], AGENTE[0], metodo)
+        mensagem.setArguments(list(argumentos))
+        vigia = QDBusPendingCallWatcher(QDBusConnection.systemBus().asyncCall(mensagem, tempo), self)
+        self._vigias = getattr(self, "_vigias", []) + [vigia]
+
+        def terminou(v):
+            self._vigias.remove(v)
+            if v.isError():
+                self._atualizacao = {**self._atualizacao, "etapa": "erro", "mensagem": v.error().message()}
+                self.atualizacaoMudou.emit()
+            elif ao_responder:
+                ao_responder(v.reply().arguments())
+            v.deleteLater()
+        vigia.finished.connect(terminou)
+
+    def _ligar_agente(self):
+        if getattr(self, "_agente_ligado", False) or DEMONSTRACAO:
+            return
+        from PySide6.QtDBus import QDBusConnection
+        self._agente_ligado = QDBusConnection.systemBus().connect(AGENTE[0], AGENTE[1], AGENTE[0], "Mudou",
+                                                                  self, "1aoMudarAgente(QString)")
+
+    @Slot(str)
+    def aoMudarAgente(self, texto):
+        import json
+        try:
+            estado = json.loads(texto)
+        except ValueError:
+            return
+        tarefa, ultima = estado.get("tarefa"), estado.get("ultima")
+        if tarefa and tarefa.get("acao") == "atualizar_sistema":
+            self._atualizacao = {**self._atualizacao, "etapa": "atualizando", "fracao": tarefa.get("fracao", 0.0),
+                                 "mensagem": tarefa.get("mensagem", "")}
+        elif ultima and ultima.get("acao") == "atualizar_sistema" and self._atualizacao.get("etapa") == "atualizando":
+            ok = ultima.get("resultado") == "ok"
+            self._atualizacao = {"etapa": "concluida" if ok else "erro", "mensagem": ultima.get("mensagem", ""), "fracao": 1.0}
+        self.atualizacaoMudou.emit()
+
+    @Slot()
+    def procurarAtualizacoes(self):
+        self._atualizacao = {"etapa": "procurando", "mensagem": "Procurando atualizações…"}
+        self.atualizacaoMudou.emit()
+        if DEMONSTRACAO:
+            self._atualizacao = {"etapa": "pronta", "plano": "demo", "quantidade": 23, "baixar": "148,2 MB",
+                                 "resumo": "Atualizar 23 pacotes", "lista": ["firefox-esr", "duiaos-shell", "linux-image-amd64"]}
+            self.atualizacaoMudou.emit()
+            return
+        self._ligar_agente()
+
+        def respondeu(argumentos):
+            import json
+            import tipos
+            plano = json.loads(argumentos[0])
+            if plano.get("recusa"):
+                self._atualizacao = {"etapa": "erro", "mensagem": plano["recusa"]["mensagem"]}
+            else:
+                mudancas = plano.get("mudancas", {})
+                lista = [m["pacote"] for m in mudancas.get("atualizar", []) + mudancas.get("instalar", [])]
+                self._atualizacao = {"etapa": "pronta" if lista else "em-dia", "plano": plano["id"], "quantidade": len(lista),
+                                     "baixar": tipos.tamanho_legivel(plano.get("baixar_bytes", 0)),
+                                     "resumo": plano.get("resumo", ""), "lista": lista[:200]}
+            self.atualizacaoMudou.emit()
+        self._agente("Preparar", "atualizar_sistema", "{}", ao_responder=respondeu)
+
+    @Slot()
+    def atualizarAgora(self):
+        plano = self._atualizacao.get("plano")
+        if not plano:
+            return
+        self._atualizacao = {**self._atualizacao, "etapa": "atualizando", "fracao": 0.0, "mensagem": "Começando"}
+        self.atualizacaoMudou.emit()
+        if not DEMONSTRACAO:
+            self._agente("Executar", plano)
+
+    @Slot()
+    def cancelarAtualizacao(self):
+        if not DEMONSTRACAO:
+            self._agente("Cancelar")
+
+    atualizacao = Property("QVariantMap", lambda self: getattr(self, "_atualizacao", {"etapa": "inicio"}), notify=atualizacaoMudou)
 
     secao = Property(str, lambda self: self._secao, notify=secaoMudou)
     sobre = Property("QVariantMap", lambda self: self._sobre, notify=mudou)

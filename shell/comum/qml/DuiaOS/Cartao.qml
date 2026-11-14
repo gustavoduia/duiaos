@@ -17,7 +17,7 @@ Item {
             anchors.bottomMargin: -(index + 1) * 3
             radius: raio + (index + 1) * 2
             color: "transparent"
-            border { width: 2; color: Qt.rgba(0.06, 0.09, 0.14, 0.05 - index * 0.012) }
+            border { width: 2; color: Qt.rgba(Tema.sombra.r, Tema.sombra.g, Tema.sombra.b, Tema.sombra.a * (1 - index * 0.3)) }
         }
     }
     Rectangle {

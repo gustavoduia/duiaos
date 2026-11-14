@@ -7,7 +7,9 @@
 Atualizado em: 14/11/2026 · por: Claude (conta do Gustavo) · sessão session_017QRdLiNuMN3h9iSaFMGT25
 **14/11: interface completa (ADR 044) enviada à `main`** — Barra de Recursos nova (Menu do DuiaOS, ícones + balão,
 Central de Controle), Ilha com Aplicativos/Downloads/Lixeira, Central de Aplicativos em tela cheia, Explorador de
-Arquivos e Configurações, com as páginas da documentação para usuários. Falta o teste no Dell (seção 4).
+Arquivos e Configurações, com as páginas da documentação para usuários. **14/11 (tarde): 2ª rodada (ADR 045)** — Área de
+Trabalho com ícones e botão direito, barra das janelas com bolinhas, modo escuro, notificações, Tela de Descanso,
+fundos com GIF/vídeo, Atualizações nas Configurações, foto da conta, menu da Ilha. Falta o teste no Dell (seção 4).
 **Chat encerrado** (memória `2026-10-12_19h51_cinco-etapas-e-wise-na-iso.md`). Os cinco repositórios só têm a
 `main` (o fontes-abertas também a `gh-pages`) e nenhum PR aberto.
 
@@ -32,18 +34,20 @@ Arquivos e Configurações, com as páginas da documentação para usuários. Fa
 - Desde 13/10 o build precisa do `duiaos-fontes-abertas` clonado ao lado (`~/Projetos/duiaos-fontes-abertas`).
 
 ## 3. Em andamento
-- Interface completa (ADR 044): código e documentação na `main`; **sem teste no Dell**.
+- Interface completa (ADRs 044 e 045): código e documentação na `main`; **sem teste no Dell**.
 
 ## 4. Próximos passos (detalhes na seção 6 da memória mais recente)
 0. Gustavo: testar a interface nova no Dell — 🔗 DELL: `cd ~/Projetos/duiaos && git pull && bash pacotes/instalar-local.sh`
    (instala também brightnessctl, wlsunset, power-profiles-daemon, pkexec, xdg-user-dirs, xdg-utils, udisks2,
-   python3-pyside6.qtsvg); sair e entrar de novo; relatar o que falhar.
+   python3-pyside6.qtsvg; na 2ª rodada também qml6-module-qtmultimedia, qml6-module-qtquick-dialogs, libnotify-bin,
+   python3-pyside6.qtdbus); reiniciar e relatar o que falhar.
 1. Claude: relatório de realinhamento a partir das 5 memórias (adiado pelo Gustavo em 14/11).
 2. Gustavo: segredos `DUIAOS_TOKEN_WISE` (duiaos) e `GITHUB_DIAGNOSTICOS` (duiaos-websites, não confirmado).
 3. Teste no Dell (W20, janela "Ajude a melhorar", Wi-Fi pelo Wise) e leitura dos relatórios.
 4. Lançar a 0.3.0; depois retirar os avisos "Na próxima versão" da documentação.
 5. ~~Explorador de arquivos, Configurações e painel de controle~~ feitos em 14/11 (ADR 044); depois: ícones na
-   Área de Trabalho, notificações, atualizações pelas Configurações (via `duiaos-agente`), modo escuro.
+   ~~Área de Trabalho, notificações, atualizações, modo escuro~~ feitos (ADR 045); depois: modo escuro nas Telas de
+   Entrada/Bloqueio, Central de IA e "Ajude a melhorar"; janelas presas aos cantos.
 
 ## 5. Decisões recentes (detalhe nos ADRs)
 - 13/10: **organização** (ADR 043): o `duiaos` é o repositório oficial e guarda toda instrução; só `main`, sem

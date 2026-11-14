@@ -11,7 +11,7 @@ Rectangle {
     property string posicao: configuracao.posicao
     readonly property bool horizontal: posicao === "topo" || posicao === "base"
     readonly property int espessura: horizontal ? 32 : 64
-    color: "#F2F7F9FC"
+    color: Tema.barra
 
     // ---------------------------------------------------------- relógio
     property date agora: new Date()
@@ -70,7 +70,7 @@ Rectangle {
         width: barra.horizontal ? Math.max(28, dentro.childrenRect.width + 14) : 52
         height: barra.horizontal ? 24 : Math.max(26, dentro.childrenRect.height + 10)
         radius: 6
-        color: aberto ? Qt.rgba(0.06, 0.09, 0.14, 0.12) : (area.containsMouse ? Qt.rgba(0.06, 0.09, 0.14, 0.06) : "transparent")
+        color: aberto ? Tema.pressionado : (area.containsMouse ? Tema.realce : "transparent")
         Item {
             id: dentro
             anchors.centerIn: parent
