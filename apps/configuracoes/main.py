@@ -207,6 +207,8 @@ class Ajustes(QObject):
             # Outra chamada (ex.: um balão da Barra) pede uma seção com a janela já aberta
             self._vigia = QTimer(self, interval=500, timeout=self._ver_pedido)
             self._vigia.start()
+            self._vigia_agente = QTimer(self, interval=10000, timeout=self._conferir_agente)
+            self._vigia_agente.start()
 
     def _demonstracao(self):
         self._sobre = {"sistema": "DuiaOS 0.3.0 (Zoinho)", "computador": "duiaos", "processador": "11th Gen Intel Core i5-1135G7 @ 2.40GHz (8 núcleos)",
@@ -632,6 +634,18 @@ class Ajustes(QObject):
         """Estado do duiaos-agente → tela: andamento (com início, previsão, etapa e alerta) ou o resultado."""
         import time as _tempo
         tarefa, ultima = estado.get("tarefa"), estado.get("ultima")
+        if not tarefa and self._atualizacao.get("etapa") == "atualizando" and not ao_abrir:
+            # O agente não tem mais a tarefa e não disse como acabou: não deixa a tela parada
+            if not ultima or ultima.get("id") != self._atualizacao.get("id", ultima.get("id")):
+                self._sem_tarefa = getattr(self, "_sem_tarefa", 0) + 1
+                if self._sem_tarefa >= 3 and not ultima:
+                    self._atualizacao = {"etapa": "erro", "fracao": 1.0, "registro": self._atualizacao.get("registro", ""),
+                                         "mensagem": "O serviço de atualização parou sem dizer como terminou. "
+                                                     "Procure de novo: o DuiaOS conclui o que tiver ficado pela metade."}
+                    self.atualizacaoMudou.emit()
+                    return
+        if tarefa:
+            self._sem_tarefa = 0
         if tarefa and tarefa.get("acao") == "atualizar_sistema":
             self._atualizacao = {**self._atualizacao, "etapa": "atualizando", "fracao": tarefa.get("fracao", 0.0),
                                  "mensagem": tarefa.get("mensagem", ""), "etapaAtual": tarefa.get("etapa", ""),
@@ -647,6 +661,13 @@ class Ajustes(QObject):
                                  "registro": ultima.get("registro", ""), "duracao": ultima.get("duracao_s", 0),
                                  "resultado": resultado}
         self.atualizacaoMudou.emit()
+
+    def _conferir_agente(self):
+        """Enquanto atualiza, pergunta o estado a cada 10 s (caso um sinal se perca ou o agente reinicie)."""
+        if self._atualizacao.get("etapa") != "atualizando" or DEMONSTRACAO:
+            return
+        import json
+        self._agente("Estado", ao_responder=lambda a: self._aplicar_estado(json.loads(a[0])), tempo=20000)
 
     @Slot()
     def acompanharAgente(self):

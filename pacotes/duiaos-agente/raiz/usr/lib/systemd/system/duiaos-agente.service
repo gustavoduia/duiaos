@@ -10,11 +10,10 @@ ExecStart=/usr/bin/python3 /usr/share/duiaos/agente/agente.py
 LogsDirectory=duiaos-agente
 LogsDirectoryMode=0750
 UMask=0022
-# Sem reiniciar sozinho no meio de uma instalação: o apt não pode ser morto
+# Sem reiniciar sozinho no meio de uma instalação: o apt não pode ser morto, e o agente só sai
+# depois de terminar a tarefa (ele adia o SIGTERM; ADR 047)
 KillMode=process
-TimeoutStopSec=30min
-# Endurecimento possível para quem instala pacotes
-PrivateTmp=yes
-ProtectHome=read-only
-ProtectKernelTunables=yes
-ProtectControlGroups=yes
+TimeoutStopSec=60min
+# Sem isolamento (PrivateTmp, ProtectHome, ProtectKernelTunables…): quem instala pacotes precisa do
+# sistema de verdade. Com PrivateTmp, o /tmp do apt sumia quando o serviço parava no meio da
+# atualização e os scripts dos pacotes falhavam (ca-certificates: "mktemp: No such file", 14/11/2026).

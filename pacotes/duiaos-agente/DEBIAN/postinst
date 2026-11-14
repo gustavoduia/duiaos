@@ -4,7 +4,8 @@ set -e
 if [ "$1" = "configure" ] && [ -d /run/systemd/system ]; then
   systemctl daemon-reload || true
   systemctl reload dbus.service >/dev/null 2>&1 || true
-  # Versão nova: a antiga, se estiver aberta, sai; o D-Bus abre a nova no próximo pedido
-  systemctl try-restart duiaos-agente.service >/dev/null 2>&1 || true
+  # Nunca reiniciar o agente aqui: muitas vezes é ele mesmo que está rodando este apt (atualizar o
+  # sistema pela Central de Atualizações) e parar o serviço no meio derrubava a atualização. A versão
+  # antiga percebe que foi trocada e sai sozinha quando termina; o D-Bus abre a nova no próximo pedido.
 fi
 exit 0

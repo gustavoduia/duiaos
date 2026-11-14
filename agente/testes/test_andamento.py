@@ -157,3 +157,25 @@ class TesteAgente(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TesteAutoAtualizacao(unittest.TestCase):
+    """14/11/2026: o pacote duiaos-agente reiniciava o próprio serviço no meio da atualização feita por ele; com
+    PrivateTmp, o /tmp do apt sumia e o gatilho do ca-certificates falhava ("mktemp: No such file")."""
+
+    RAIZ_PACOTE = PASTA.parent / "pacotes" / "duiaos-agente"
+
+    def test_servico_sem_isolamento_que_quebra_o_apt(self):
+        unidade = (self.RAIZ_PACOTE / "raiz/usr/lib/systemd/system/duiaos-agente.service").read_text()
+        linhas = [l.split("=")[0] for l in unidade.splitlines() if "=" in l and not l.startswith("#")]
+        for proibido in ("PrivateTmp", "ProtectHome", "ProtectKernelTunables", "ProtectControlGroups", "ProtectSystem"):
+            self.assertNotIn(proibido, linhas)
+        self.assertIn("KillMode=process", unidade)
+
+    def test_pacote_nao_reinicia_o_proprio_agente(self):
+        for script in ("postinst", "prerm"):
+            texto = (self.RAIZ_PACOTE / "DEBIAN" / script).read_text()
+            comandos = [l for l in texto.splitlines() if not l.strip().startswith("#")]
+            for comando in comandos:
+                if "duiaos-agente.service" in comando and script == "postinst":
+                    self.fail(f"{script} mexe no serviço em execução: {comando.strip()}")

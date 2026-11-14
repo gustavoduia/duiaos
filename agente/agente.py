@@ -650,13 +650,35 @@ def main():
         print("duiaos-agente: não consegui o nome org.duiaos.Agente1 no D-Bus.", file=sys.stderr)
         laco.quit()
 
-    # Sem uso por 10 minutos e sem tarefa: sai (o D-Bus abre de novo quando preciso)
-    def ocioso():
-        if agente.tarefa is None and time.monotonic() - agente.ultimo_uso > VALIDADE_PLANO:
+    # Sai quando não há tarefa e: ficou 10 minutos sem uso, foi trocado por uma versão nova (o pacote
+    # se atualizou pelo próprio agente) ou o systemd pediu para parar. Com tarefa, espera ela terminar:
+    # parar no meio deixaria o apt sem quem o acompanhe.
+    arquivo_do_agente = Path(__file__).resolve()
+    versao_inicial = arquivo_do_agente.stat().st_mtime if arquivo_do_agente.exists() else 0
+    pedido_de_parar = threading.Event()
+
+    def ao_sigterm():
+        # Sem tarefa: sai na hora. Com tarefa: só depois que ela terminar (ocioso confere a cada 5 s).
+        pedido_de_parar.set()
+        if agente.tarefa is None:
             laco.quit()
+        return True
+    GLib.unix_signal_add(GLib.PRIORITY_HIGH, signal.SIGTERM, ao_sigterm)
+
+    def trocado():
+        try:
+            return arquivo_do_agente.stat().st_mtime != versao_inicial
+        except OSError:
+            return True
+
+    def ocioso():
+        if agente.tarefa is not None:
+            return True
+        if pedido_de_parar.is_set() or trocado() or time.monotonic() - agente.ultimo_uso > VALIDADE_PLANO:
+            GLib.timeout_add_seconds(2, lambda: (laco.quit(), False)[1])   # deixa o último sinal sair
             return False
         return True
-    GLib.timeout_add_seconds(60, ocioso)
+    GLib.timeout_add_seconds(5, ocioso)
 
     barramento = Gio.BusType.SESSION if opcoes.sessao else Gio.BusType.SYSTEM
     Gio.bus_own_name(barramento, NOME, Gio.BusNameOwnerFlags.NONE, ao_conectar, None, ao_perder_nome)
