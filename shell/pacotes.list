@@ -1,6 +1,6 @@
 # DuiaOS — pacotes da interface gráfica: Tela de Entrada e de Bloqueio, sessão,
 # Barra de Recursos, Ilha de Aplicativos, Menu de Energia, Explorador de Arquivos,
-# Configurações e animação de boot.
+# Configurações, Duia App Store e animação de boot.
 # Esta lista entra na ISO (build/build.sh a copia para config/package-lists).
 # Instalação manual: sudo apt install -y $(grep -v '^#' shell/pacotes.list)
 
@@ -84,3 +84,10 @@ hicolor-icon-theme
 fonts-inter
 fonts-manrope
 fonts-jetbrains-mono
+
+# Duia App Store (ADR 049): aplicativos do Flathub (flatpak, sem senha, na conta da
+# pessoa) e do Debian (metadados AppStream/DEP-11 e ícones baixados pelo apt)
+flatpak
+appstream
+apt-config-icons
+python3-yaml

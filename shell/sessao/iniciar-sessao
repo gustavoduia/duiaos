@@ -25,6 +25,11 @@ export XKB_DEFAULT_LAYOUT="${XKBLAYOUT:-br}"
 export XKB_DEFAULT_VARIANT="${XKBVARIANT:-}"
 export XKB_DEFAULT_OPTIONS="${XKBOPTIONS:-}"
 
+# Aplicativos do Flathub (Duia App Store, ADR 049): os atalhos e ícones que o flatpak
+# exporta entram na Central de Aplicativos, no "Abrir com" e no tema de ícones
+DADOS_FLATPAK="${XDG_DATA_HOME:-$HOME/.local/share}/flatpak/exports/share:/var/lib/flatpak/exports/share"
+export XDG_DATA_DIRS="${DADOS_FLATPAK}:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
+
 # Aplicativos Qt e GTK usam o Wayland
 export QT_QPA_PLATFORM=wayland
 export MOZ_ENABLE_WAYLAND=1

@@ -1,0 +1,128 @@
+{
+  "_sobre": "Duia App Store — vitrine curada pelo DuiaOS. Cada item é o componente AppStream (ex.: org.gimp.GIMP) ou o pacote do Debian; 'a|b' usa a primeira opção que existir no catálogo do computador. O que não existir não aparece.",
+  "destaques": [
+    {
+      "app": "org.libreoffice.LibreOffice|libreoffice-writer",
+      "titulo": "Escritório completo",
+      "texto": "Textos, planilhas e apresentações que abrem os arquivos do Word, do Excel e do PowerPoint.",
+      "cores": [
+        "#2E6BE6",
+        "#1A3A73"
+      ]
+    },
+    {
+      "app": "org.gimp.GIMP|gimp",
+      "titulo": "Edite suas fotos",
+      "texto": "Ajuste cores, recorte, retoque e crie imagens com um editor profissional.",
+      "cores": [
+        "#7A5AF5",
+        "#3A2A8C"
+      ]
+    },
+    {
+      "app": "com.obsproject.Studio|obs-studio",
+      "titulo": "Grave e transmita",
+      "texto": "Grave a tela, aulas e jogos, ou transmita ao vivo para o YouTube e a Twitch.",
+      "cores": [
+        "#1F2933",
+        "#0F1724"
+      ]
+    },
+    {
+      "app": "org.blender.Blender|blender",
+      "titulo": "Crie em 3D",
+      "texto": "Modelagem, animação e efeitos visuais usados em filmes e jogos.",
+      "cores": [
+        "#E8873D",
+        "#9C4A12"
+      ]
+    }
+  ],
+  "colecoes": [
+    {
+      "titulo": "Essenciais",
+      "apps": [
+        "org.mozilla.firefox|firefox-esr",
+        "org.libreoffice.LibreOffice|libreoffice-writer",
+        "org.videolan.VLC|vlc",
+        "org.mozilla.Thunderbird|thunderbird",
+        "com.google.Chrome",
+        "org.chromium.Chromium|chromium",
+        "org.onlyoffice.desktopeditors",
+        "org.qbittorrent.qBittorrent|qbittorrent"
+      ]
+    },
+    {
+      "titulo": "Criatividade",
+      "apps": [
+        "org.gimp.GIMP|gimp",
+        "org.inkscape.Inkscape|inkscape",
+        "org.kde.krita|krita",
+        "org.blender.Blender|blender",
+        "org.kde.kdenlive|kdenlive",
+        "org.darktable.Darktable|darktable",
+        "org.audacityteam.Audacity|audacity",
+        "com.obsproject.Studio|obs-studio"
+      ]
+    },
+    {
+      "titulo": "Conversar e se reunir",
+      "apps": [
+        "org.telegram.desktop|telegram-desktop",
+        "com.discordapp.Discord",
+        "org.signal.Signal",
+        "us.zoom.Zoom",
+        "com.slack.Slack",
+        "im.riot.Riot|element-desktop"
+      ]
+    },
+    {
+      "titulo": "Música e vídeo",
+      "apps": [
+        "com.spotify.Client",
+        "org.videolan.VLC|vlc",
+        "io.mpv.Mpv|mpv",
+        "org.gnome.Rhythmbox3|rhythmbox",
+        "org.shotcut.Shotcut|shotcut",
+        "org.openshot.OpenShot|openshot-qt"
+      ]
+    },
+    {
+      "titulo": "Para programar",
+      "apps": [
+        "com.visualstudio.code",
+        "io.github.shiftey.Desktop",
+        "org.gnome.Builder|gnome-builder",
+        "com.jetbrains.IntelliJ-IDEA-Community",
+        "org.geany.Geany|geany",
+        "md.obsidian.Obsidian"
+      ]
+    },
+    {
+      "titulo": "Jogos",
+      "apps": [
+        "com.valvesoftware.Steam",
+        "net.lutris.Lutris|lutris",
+        "org.luanti.luanti|net.minetest.Minetest|minetest",
+        "org.supertuxproject.SuperTux|supertux",
+        "org.kde.kpat|aisleriot",
+        "org.gnome.Mines|gnome-mines",
+        "org.libretro.RetroArch|retroarch",
+        "net.supertuxkart.SuperTuxKart|supertuxkart"
+      ]
+    },
+    {
+      "titulo": "Para estudar",
+      "apps": [
+        "org.geogebra.GeoGebra",
+        "org.stellarium.Stellarium|stellarium",
+        "org.kde.kalgebra|kalgebra",
+        "org.tuxpaint.Tuxpaint|tuxpaint",
+        "org.kde.marble|marble",
+        "net.ankiweb.Anki|anki",
+        "org.gnome.Gnote|gnote",
+        "org.kde.kstars|kstars"
+      ]
+    }
+  ]
+}

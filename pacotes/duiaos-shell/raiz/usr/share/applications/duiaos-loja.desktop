@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Duia App Store
+GenericName=Loja de aplicativos
+Comment=Encontre, instale e atualize aplicativos do Flathub e do Debian
+Exec=duiaos-loja
+Icon=duiaos-loja
+StartupWMClass=duiaos-loja
+Terminal=false
+Categories=System;PackageManager;
+Keywords=loja;app store;aplicativos;programas;instalar;flathub;flatpak;baixar;

@@ -139,11 +139,12 @@ cp -R "${RAIZ}/shell" "${SH}/usr/share/duiaos/shell"
 install -m 0644 "${RAIZ}/shell/sessao/autostart" "${RAIZ}/shell/sessao/environment" "${RAIZ}/shell/sessao/menu.xml" \
   "${RAIZ}/shell/sessao/rc.xml" "${SH}/etc/xdg/labwc/"
 install -m 0644 "${RAIZ}/shell/sessao/duiaos.desktop" "${SH}/usr/share/wayland-sessions/"
-# Aplicativos da interface: Explorador de Arquivos e Configurações
-for APP in explorador-de-arquivos configuracoes; do
+# Aplicativos da interface: Explorador de Arquivos, Configurações e Duia App Store
+for APP in explorador-de-arquivos configuracoes loja; do
   install -d "${SH}/usr/share/duiaos/${APP}"
   install -m 0644 "${RAIZ}/apps/${APP}"/*.py "${RAIZ}/apps/${APP}"/*.qml "${SH}/usr/share/duiaos/${APP}/"
 done
+install -m 0644 "${RAIZ}/apps/loja/destaques.json" "${SH}/usr/share/duiaos/loja/"
 fechar duiaos-shell
 
 # ------------------------------------------------------------------ duiaos-ia

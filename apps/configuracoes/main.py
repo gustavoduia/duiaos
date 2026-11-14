@@ -249,6 +249,10 @@ class Ajustes(QObject):
             self._registro = resultado
             self.atualizacaoMudou.emit()
             return
+        if nome == "flathub":
+            self._flathub = resultado
+            self.atualizacaoMudou.emit()
+            return
         if nome == "fusos":
             self._fusos = resultado
         elif nome == "sobre":
@@ -721,6 +725,7 @@ class Ajustes(QObject):
     def procurarAtualizacoes(self):
         self._atualizacao = {"etapa": "procurando", "mensagem": "Procurando atualizações…"}
         self.atualizacaoMudou.emit()
+        self._procurar_flathub()
         if DEMONSTRACAO:
             catalogo = _catalogo_do_repositorio()["atualizacoes"]
             self._atualizacao = {
@@ -749,6 +754,26 @@ class Ajustes(QObject):
             self.atualizacaoMudou.emit()
             self._em_fundo("detalhes", detalhar_plano, plano)
         self._agente("Preparar", "atualizar_sistema", "{}", ao_responder=respondeu)
+
+    def _procurar_flathub(self):
+        """Aplicativos do Flathub com versão nova: atualizam pela Duia App Store (ADR 049)."""
+        if DEMONSTRACAO:
+            self._flathub = 2
+            return
+        if not shutil.which("flatpak"):
+            return
+
+        def contar():
+            saida = subprocess.run(["flatpak", "remote-ls", "--updates", "--app", "--columns=application"],
+                                   capture_output=True, text=True, timeout=120, check=False).stdout
+            return len({linha.strip() for linha in saida.splitlines() if "." in linha})
+        self._em_fundo("flathub", contar)
+
+    @Slot()
+    def abrirLojaAtualizacoes(self):
+        comum.abrir_app_duiaos("loja", "--pagina", "atualizacoes")
+
+    atualizacoesFlathub = Property(int, lambda self: getattr(self, "_flathub", 0), notify=atualizacaoMudou)
 
     @Slot()
     def atualizarAgora(self):

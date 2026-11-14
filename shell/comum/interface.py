@@ -19,7 +19,9 @@ def configurar_tema_de_icones():
     """Sem ambiente de desktop completo, o Qt não conhece as pastas de ícones do sistema."""
     from PySide6.QtGui import QIcon
     pastas_dados = os.environ.get("XDG_DATA_DIRS", "/usr/local/share:/usr/share").split(":")
-    pastas_icones = [str(Path.home() / ".local/share/icons")] + [p + "/icons" for p in pastas_dados if p]
+    pastas_icones = [str(Path.home() / ".local/share/icons"),
+                     str(Path.home() / ".local/share/flatpak/exports/share/icons"),       # Flathub (ADR 049)
+                     "/var/lib/flatpak/exports/share/icons"] + [p + "/icons" for p in pastas_dados if p]
     QIcon.setThemeSearchPaths(pastas_icones + QIcon.themeSearchPaths())
     QIcon.setFallbackSearchPaths(QIcon.fallbackSearchPaths() + ["/usr/share/pixmaps"])
     if not QIcon.themeName():

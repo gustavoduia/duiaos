@@ -35,10 +35,10 @@ sys.path.insert(0, str(PASTA.parent / "comum"))
 
 PASTA_CONFIG = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "duiaos"
 ARQUIVO_CONFIG = PASTA_CONFIG / "ilha-de-aplicativos.conf"
-FIXADOS_PADRAO = ["duiaos-configuracoes.desktop", "firefox-esr.desktop", "foot.desktop"]
+FIXADOS_PADRAO = ["duiaos-configuracoes.desktop", "duiaos-loja.desktop", "firefox-esr.desktop", "foot.desktop"]
 WISE_DESKTOP = "duiaos-wise.desktop"
 EXPLORADOR_DESKTOP = "duiaos-explorador-de-arquivos.desktop"
-VERSAO_CONFIG = "2"
+VERSAO_CONFIG = "3"
 DEMONSTRACAO = "--demonstracao" in sys.argv
 
 if not DEMONSTRACAO:
@@ -72,14 +72,19 @@ from aplicativos import comando_de_exec, iniciar, ler_desktop, listar_aplicativo
 # ---------------------------------------------------------------- configuração
 
 def ler_fixados():
-    """Fixados da Ilha. Configuração da versão 1 (antes das Configurações): ganha as Configurações uma vez."""
+    """Fixados da Ilha. Configuração antiga ganha, uma vez, o que chegou depois: as Configurações
+    (versão 1) e a Duia App Store (versão 2)."""
     config = configparser.ConfigParser()
     config.read(ARQUIVO_CONFIG)
     texto = config.get("ilha", "fixados", fallback=";".join(FIXADOS_PADRAO))
     fixados = [item.strip() for item in texto.split(";") if item.strip()]
-    if ARQUIVO_CONFIG.exists() and config.get("ilha", "versao", fallback="1") != VERSAO_CONFIG:
-        if "duiaos-configuracoes.desktop" not in fixados:
+    versao = config.get("ilha", "versao", fallback="1")
+    if ARQUIVO_CONFIG.exists() and versao != VERSAO_CONFIG:
+        if versao == "1" and "duiaos-configuracoes.desktop" not in fixados:
             fixados.insert(0, "duiaos-configuracoes.desktop")
+        if "duiaos-loja.desktop" not in fixados:          # versão 3: chegou a Duia App Store
+            posicao = fixados.index("duiaos-configuracoes.desktop") + 1 if "duiaos-configuracoes.desktop" in fixados else 0
+            fixados.insert(posicao, "duiaos-loja.desktop")
         gravar_fixados(fixados)
     return fixados
 
@@ -167,6 +172,7 @@ def lixeira_vazia(lixeira=None):
 SISTEMA = {
     EXPLORADOR_DESKTOP: {"nome": "Explorador de Arquivos", "iconeDuia": "pasta", "app": "explorador-de-arquivos"},
     "duiaos-configuracoes.desktop": {"nome": "Configurações", "iconeDuia": "engrenagem", "app": "configuracoes"},
+    "duiaos-loja.desktop": {"nome": "Duia App Store", "iconeDuia": "sacola", "app": "loja"},
 }
 
 
@@ -229,7 +235,7 @@ class Ilha(QObject):
     def _preparar_demonstracao(self):
         exemplos = [
             ("duiaos-wise.desktop", "Wise", ""), (EXPLORADOR_DESKTOP, "", ""),
-            ("duiaos-configuracoes.desktop", "", ""), ("firefox-esr.desktop", "Firefox", ""),
+            ("duiaos-configuracoes.desktop", "", ""), ("duiaos-loja.desktop", "", ""), ("firefox-esr.desktop", "Firefox", ""),
             ("foot.desktop", "Terminal", ""), ("libreoffice-writer.desktop", "LibreOffice Writer", ""),
         ]
         self._itens = []

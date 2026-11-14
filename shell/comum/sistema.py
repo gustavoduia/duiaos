@@ -201,6 +201,7 @@ APLICATIVOS_DUIAOS = {
                                RAIZ_REPOSITORIO / "apps/explorador-de-arquivos/main.py"),
     "central-de-ia": ("/usr/bin/duiaos-central-de-ia", RAIZ_REPOSITORIO / "apps/central-de-ia/main.py"),
     "ajude-a-melhorar": ("/usr/bin/duiaos-ajude-a-melhorar", RAIZ_REPOSITORIO / "apps/ajude-a-melhorar/main.py"),
+    "loja": ("/usr/bin/duiaos-loja", RAIZ_REPOSITORIO / "apps/loja/main.py"),
 }
 
 

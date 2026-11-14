@@ -35,6 +35,10 @@ fundos com GIF/vídeo, Atualizações nas Configurações, foto da conta, menu d
 
 ## 3. Em andamento
 - Interface completa (ADRs 044 e 045): código e documentação na `main`; **sem teste no Dell**.
+- Duia App Store (ADR 049, ficha DUIA-2026-0007): loja própria com o Debian (AppStream/DEP-11, pelo duiaos-agente)
+  e o Flathub (flatpak --user); testada aqui com os catálogos reais e uma instalação de verdade pelo flatpak;
+  **sem teste no Dell**. Depois da atualização: sair e entrar na sessão; o catálogo do Debian só aparece depois do
+  próximo `apt update` (o pacote `appstream` liga o download dos metadados).
 
 ## 4. Próximos passos (detalhes na seção 6 da memória mais recente)
 0. Gustavo: testar a interface nova no Dell — 🔗 DELL: `cd ~/Projetos/duiaos && git pull && bash pacotes/instalar-local.sh`
@@ -50,6 +54,9 @@ fundos com GIF/vídeo, Atualizações nas Configurações, foto da conta, menu d
    Entrada/Bloqueio, Central de IA e "Ajude a melhorar"; janelas presas aos cantos.
 
 ## 5. Decisões recentes (detalhe nos ADRs)
+- 14/11: **Duia App Store** (ADR 049): o Debian não tem loja própria (só os metadados AppStream que o GNOME Software
+  e o KDE Discover leem) e a Snap Store do Ubuntu tem servidor proprietário; loja própria lendo o AppStream do
+  Debian e do Flathub; um mesmo aplicativo aparece pelo Flathub, com a versão do Debian como alternativa.
 - 13/10: **organização** (ADR 043): o `duiaos` é o repositório oficial e guarda toda instrução; só `main`, sem
   branches nem PRs; `duiaos-fontes-abertas` é a fonte do código aberto; início/fim de chat por REGRASINI/REGRASFIM.
 - 13/10: **o Wise vai instalado com o sistema** (ISO e apt; ADR 042). Código continua no repositório privado; o

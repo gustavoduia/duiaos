@@ -914,6 +914,17 @@ Window {
             Rotulo { visible: pa.a.etapa === "pronta" && (pa.a.debian || []).length > 80; width: parent.width; secundario: true
                      text: "E mais " + ((pa.a.debian || []).length - 80) + " pacotes." }
 
+            // Aplicativos do Flathub: atualizam pela Duia App Store
+            Grupo {
+                visible: ajustes.atualizacoesFlathub > 0
+                Linha {
+                    icone: "sacola"; ultima: true
+                    titulo: ajustes.atualizacoesFlathub === 1 ? "1 aplicativo do Flathub tem versão nova" : ajustes.atualizacoesFlathub + " aplicativos do Flathub têm versão nova"
+                    descricao: "Eles se atualizam pela Duia App Store, sem senha."
+                    Botao { texto: "Abrir a loja"; height: 28; onClicado: ajustes.abrirLojaAtualizacoes() }
+                }
+            }
+
             // Histórico: fichas já instaladas neste computador
             Titulo { nivel: 3; visible: pa.verHistorico; text: "Instaladas neste computador" }
             Rotulo { visible: pa.verHistorico && ajustes.historicoAtualizacoes.length === 0; secundario: true; text: "Nenhuma ficha de atualização instalada ainda." }

@@ -13,6 +13,9 @@ PASTAS_APLICATIVOS = [
     Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share")) / "applications",
     Path("/usr/local/share/applications"),
     Path("/usr/share/applications"),
+    # Aplicativos do Flathub instalados pela Duia App Store (na conta da pessoa e para todos)
+    Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share")) / "flatpak/exports/share/applications",
+    Path("/var/lib/flatpak/exports/share/applications"),
 ]
 
 
