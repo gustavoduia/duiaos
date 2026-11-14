@@ -11,7 +11,7 @@ Esta pasta vira o pacote `duiaos-shell` (veja `pacotes/README.md`): fica em
 | `comum/` | Visual único das duas telas (`TelaDeAcesso.qml`), menu de energia, símbolo e funções comuns; `qml/DuiaOS/` (biblioteca QML `import DuiaOS`: tema, botões, interruptores, deslizantes, ícones), `icones.py` (ícones próprios em SVG), `controles.py` (Wi-Fi, Bluetooth, som, brilho, bateria, energia, luz noturna), `pastas.py` (pastas do usuário e preferências), `aplicativos.py`, `tipos.py`, `sessao.py` (aplica as preferências ao entrar) |
 | `menu-de-energia/` | **Menu de Energia** da sessão (Ctrl+Alt+Delete) |
 | `barra-de-recursos/` | **Barra de Recursos**: Menu do DuiaOS, botão Wise, aplicativo em uso, ícones de controle (até 4 + balão da seta), **Central de Controle** e relógio (calendário) |
-| `ilha-de-aplicativos/` | **Ilha de Aplicativos** (com pasta Aplicativos, pilha de Downloads e Lixeira) e **Central de Aplicativos** em tela cheia |
+| `ilha-de-aplicativos/` | **Ilha de Aplicativos** (com pasta Aplicativos, pilha de Downloads e Lixeira; ampliação, posição, ocultar e efeitos gênio/escala ao minimizar — ADR 050) e **Central de Aplicativos** em tela cheia |
 | `area-de-trabalho/` | **Área de Trabalho**: papel de parede (imagem, GIF, vídeo, cor) e ícones da pasta Área de Trabalho, com menus do botão direito (ADR 045) |
 | `notificacoes/` | **Notificações**: serviço `org.freedesktop.Notifications` e balões no canto (ADR 045) |
 | `descanso/` | **Tela de Descanso**, aberta pelo swayidle (ADR 045) |
@@ -26,7 +26,7 @@ Cada parte abre numa janela comum, com dados de exemplo, e pode salvar a imagem:
 
 ```sh
 python3 shell/barra-de-recursos/main.py --demonstracao --painel central   # menu, central, wifi, som, bateria…
-python3 shell/ilha-de-aplicativos/main.py --demonstracao --downloads       # ou --central
+python3 shell/ilha-de-aplicativos/main.py --demonstracao --downloads       # ou --central, --ampliada, --genio, --menu-ilha, --posicao esquerda
 python3 apps/explorador-de-arquivos/main.py ~/Documentos
 python3 apps/configuracoes/main.py --demonstracao --secao tela
 # + --captura arquivo.png para salvar a imagem e sair

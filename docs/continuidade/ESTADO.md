@@ -54,6 +54,9 @@ fundos com GIF/vídeo, Atualizações nas Configurações, foto da conta, menu d
    Entrada/Bloqueio, Central de IA e "Ajude a melhorar"; janelas presas aos cantos.
 
 ## 5. Decisões recentes (detalhe nos ADRs)
+- 14/11: **Ilha como o Dock do macOS** (ADR 050, ficha DUIA-2026-0008): ampliação, tamanho, posição, ocultar,
+  menus, arrastar e minimizar com gênio/escala feito pela própria Ilha (grim + wlrctl), sem animação do labwc.
+  **Sem teste no Dell**: conferir o efeito real, a máscara de cliques e o botão amarelo.
 - 14/11: **Duia App Store** (ADR 049): o Debian não tem loja própria (só os metadados AppStream que o GNOME Software
   e o KDE Discover leem) e a Snap Store do Ubuntu tem servidor proprietário; loja própria lendo o AppStream do
   Debian e do Flathub; um mesmo aplicativo aparece pelo Flathub, com a versão do Debian como alternativa.

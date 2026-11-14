@@ -30,6 +30,15 @@
       <mousebind button="Right" action="Press"><action name="None" /></mousebind>
       <mousebind button="Middle" action="Press"><action name="None" /></mousebind>
     </context>
+    <!-- Bolinha amarela (minimizar): a Ilha de Aplicativos minimiza com o efeito escolhido
+         (gênio ou escala; Configurações › Barra e Ilha) -->
+    <context name="Iconify">
+      <mousebind button="Left" action="Click">
+        <action name="Focus" />
+        <action name="Raise" />
+        <action name="Execute" command="sh -c &quot;$DUIAOS_SHELL/ilha-de-aplicativos/minimizar.sh&quot;" />
+      </mousebind>
+    </context>
   </mouse>
   <keyboard>
     <!-- Mantém os atalhos padrão do labwc -->
@@ -49,6 +58,10 @@
     <!-- Super + L: bloqueia a tela -->
     <keybind key="W-l">
       <action name="Execute" command="sh -c &quot;$DUIAOS_SHELL/bloqueio/bloquear&quot;" />
+    </keybind>
+    <!-- Super + M: minimiza a janela da frente (com o efeito da Ilha) -->
+    <keybind key="W-m">
+      <action name="Execute" command="sh -c &quot;$DUIAOS_SHELL/ilha-de-aplicativos/minimizar.sh&quot;" />
     </keybind>
     <!-- Ctrl + Alt + Delete: Menu de Energia -->
     <keybind key="C-A-Delete">

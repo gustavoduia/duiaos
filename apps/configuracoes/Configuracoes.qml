@@ -1027,8 +1027,60 @@ Window {
                 }
             }
             Grupo {
+                id: grupoIlha
                 titulo: "Ilha de Aplicativos"
-                Linha { icone: "aplicativos"; titulo: "Fixar e tirar aplicativos"; descricao: "Na Central de Aplicativos (Super + Espaço), clique com o botão direito no aplicativo."; ultima: true }
+                readonly property var o: ajustes.opcoesIlha
+                Linha {
+                    icone: "aplicativos"; titulo: "Tamanho"; descricao: grupoIlha.o.tamanho + " pontos"
+                    Deslizante { width: 200; anchors.verticalCenter: parent.verticalCenter
+                                 valor: (grupoIlha.o.tamanho - 32) / 48 * 100
+                                 onMovido: (v) => ajustes.definirOpcaoIlha("tamanho", Math.round(32 + v / 100 * 48)) }
+                }
+                Linha {
+                    icone: "busca"; titulo: "Ampliação"; descricao: "Os ícones crescem quando o mouse passa por cima"
+                    Interruptor { ligado: grupoIlha.o.ampliacao; onAlternado: (l) => ajustes.definirOpcaoIlha("ampliacao", l ? "sim" : "nao") }
+                }
+                Linha {
+                    visible: grupoIlha.o.ampliacao
+                    icone: "mais"; titulo: "Tamanho da ampliação"; descricao: grupoIlha.o.tamanho_ampliado + " pontos"
+                    Deslizante { width: 200; anchors.verticalCenter: parent.verticalCenter
+                                 valor: (grupoIlha.o.tamanho_ampliado - 32) / 96 * 100
+                                 onMovido: (v) => ajustes.definirOpcaoIlha("tamanho_ampliado", Math.round(32 + v / 100 * 96)) }
+                }
+                Linha {
+                    icone: "barra"; titulo: "Posição na tela"
+                    Seletor { width: 180
+                              opcoes: [{ valor: "base", rotulo: "Embaixo" }, { valor: "esquerda", rotulo: "À esquerda" }, { valor: "direita", rotulo: "À direita" }]
+                              valor: grupoIlha.o.posicao; onEscolhido: (v) => ajustes.definirOpcaoIlha("posicao", v) }
+                }
+                Linha {
+                    icone: "seta-baixo"; titulo: "Efeito ao minimizar"; descricao: "Botão amarelo da janela ou Super + M"
+                    Seletor { width: 180
+                              opcoes: [{ valor: "genio", rotulo: "Gênio" }, { valor: "escala", rotulo: "Escala (suave)" }, { valor: "nenhum", rotulo: "Nenhum" }]
+                              valor: grupoIlha.o.minimizar; onEscolhido: (v) => ajustes.definirOpcaoIlha("minimizar", v) }
+                }
+                Linha {
+                    icone: "olho"; titulo: "Ocultar e mostrar automaticamente"; descricao: "Aparece quando o mouse encosta na borda da tela"
+                    Interruptor { ligado: grupoIlha.o.ocultar; onAlternado: (l) => ajustes.definirOpcaoIlha("ocultar", l ? "sim" : "nao") }
+                }
+                Linha {
+                    icone: "ponto"; titulo: "Mostrar indicadores dos aplicativos abertos"
+                    Interruptor { ligado: grupoIlha.o.indicadores; onAlternado: (l) => ajustes.definirOpcaoIlha("indicadores", l ? "sim" : "nao") }
+                }
+                Linha {
+                    icone: "seta-cima"; titulo: "Animar ao abrir aplicativos"; descricao: "O ícone pula enquanto o aplicativo abre"
+                    Interruptor { ligado: grupoIlha.o.animar_abrir; onAlternado: (l) => ajustes.definirOpcaoIlha("animar_abrir", l ? "sim" : "nao") }
+                }
+                Linha {
+                    icone: "recentes"; titulo: "Mostrar aplicativos recentes"; descricao: "Até 3 aplicativos usados há pouco, depois dos fixados"
+                    Interruptor { ligado: grupoIlha.o.recentes; onAlternado: (l) => ajustes.definirOpcaoIlha("recentes", l ? "sim" : "nao") }
+                }
+                Linha {
+                    icone: "monitor"; titulo: "Clicar no aplicativo da frente minimiza a janela"; descricao: "Como na barra de tarefas do Windows"
+                    Interruptor { ligado: grupoIlha.o.clique_minimiza; onAlternado: (l) => ajustes.definirOpcaoIlha("clique_minimiza", l ? "sim" : "nao") }
+                }
+                Linha { icone: "estrela"; titulo: "Manter, tirar e reordenar aplicativos"; ultima: true
+                        descricao: "Botão direito no ícone: Manter na Ilha ou Tirar da Ilha. Arraste um ícone para mudar a ordem, ou para fora da Ilha para tirá-lo. Botão direito no fundo da Ilha: atalhos destas opções." }
             }
         }
     }

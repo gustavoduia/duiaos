@@ -370,6 +370,33 @@ class Ajustes(QObject):
         ordem = getattr(self, "_ordem_demo", None) or [i for i in config.get("barra", "icones", fallback=padrao).split(",") if i]
         return posicao, ordem
 
+    def _efeitos_ilha(self):
+        pasta = str(comum.PASTA_SHELL / "ilha-de-aplicativos")
+        if pasta not in sys.path:
+            sys.path.insert(0, pasta)
+        import efeitos
+        return efeitos
+
+    def _opcoes_ilha(self):
+        import configparser
+        config = configparser.ConfigParser()
+        config.read(pastas.PREFERENCIAS, encoding="utf-8")
+        secao = dict(config.items("ilha")) if config.has_section("ilha") else {}
+        return self._efeitos_ilha().ler_opcoes({**secao, **getattr(self, "_ilha_demo", {})})
+
+    @Slot(str, str)
+    def definirOpcaoIlha(self, chave, valor):
+        """Opções da Ilha de Aplicativos (preferencias.conf [ilha]); a Ilha aplica na hora."""
+        texto = self._efeitos_ilha().texto_da_opcao(chave, valor)
+        if texto is None:
+            return
+        if DEMONSTRACAO:
+            self._ilha_demo = {**getattr(self, "_ilha_demo", {}), chave: texto}
+        else:
+            pastas.gravar_preferencia("ilha", chave, texto)
+        self.mudou.emit()
+
+    opcoesIlha = Property("QVariantMap", _opcoes_ilha, notify=mudou)
     posicaoBarra = Property(str, lambda self: self._config_barra()[0], notify=mudou)
     ordemIcones = Property("QVariantList", lambda self: self._config_barra()[1], notify=mudou)
 

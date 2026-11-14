@@ -1,6 +1,7 @@
-// DuiaOS — pilha de Downloads: balão acima da Ilha com os arquivos mais novos.
+// DuiaOS — pilha de Downloads: balão ao lado da Ilha com os arquivos mais novos.
 import QtQuick
 import DuiaOS
+import "posicao.js" as Posicao
 
 Item {
     id: pilha
@@ -12,8 +13,9 @@ Item {
         id: cartao
         width: 4 * 92 + 28
         height: colunaPilha.implicitHeight + 24
-        x: Math.max(8, Math.min(pilha.width - width - 8, ilha.ancoraDownloads - width / 2))
-        y: pilha.height - height - 10
+        readonly property var lugar: Posicao.balao(ilha.opcoes.posicao, pilha.width, pilha.height, ilha.ancoraDownloads, width, height)
+        x: lugar.x
+        y: lugar.y
         MouseArea { anchors.fill: parent }
         Column {
             id: colunaPilha

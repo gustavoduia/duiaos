@@ -16,18 +16,28 @@ e não pode ser desafixado; o Explorador de Arquivos vem logo depois, também fi
 À direita, depois da divisória: a pasta Aplicativos, a pilha de Downloads (um
 balão com os arquivos mais novos) e a Lixeira.
 
+Opções (tamanho, ampliação, posição, ocultar, efeito ao minimizar…): efeitos.py,
+gravadas em preferencias.conf [ilha] pelas Configurações e pelo botão direito no
+fundo da Ilha; valem na hora. Minimizar com efeito (gênio ou escala): botão
+amarelo da janela, Super+M ou o clique no aplicativo da frente; o labwc avisa a
+Ilha pelo sinal SIGUSR2 (minimizar.sh).
+
 Uso:
   main.py                                inicia a Ilha
-  main.py --demonstracao [--central|--downloads|--menu] [--captura ARQUIVO]
+  main.py --demonstracao [--central|--downloads|--menu|--menu-ilha|--genio|--ampliada]
+                         [--posicao base|esquerda|direita] [--captura ARQUIVO]
                                          janela comum com dados de exemplo
 Janelas abertas: comando wlrctl (protocolo wlr-foreign-toplevel do labwc).
 """
 import configparser
 import fcntl
 import os
+import shutil
 import signal
 import subprocess
 import sys
+import threading
+import time
 from pathlib import Path
 
 PASTA = Path(__file__).resolve().parent
@@ -58,10 +68,12 @@ if not DEMONSTRACAO:
     os.environ.setdefault("QT_QPA_PLATFORM", "wayland")
     os.environ["QT_WAYLAND_SHELL_INTEGRATION"] = "layer-shell"
 
-from PySide6.QtCore import QFileSystemWatcher, QObject, Property, QTimer, Signal, Slot  # noqa: E402
-from PySide6.QtGui import QGuiApplication  # noqa: E402
+from PySide6.QtCore import QFileSystemWatcher, QObject, Property, QRect, QTimer, QUrl, Signal, Slot  # noqa: E402
+from PySide6.QtGui import QGuiApplication, QImage, QRegion, QWindow  # noqa: E402
+import PySide6.QtQuick  # noqa: E402,F401  (as janelas do QML chegam ao Python como QQuickWindow)
 from PySide6.QtQml import QQmlApplicationEngine  # noqa: E402
 
+import efeitos  # noqa: E402
 import interface  # noqa: E402
 import pastas  # noqa: E402
 import sistema as comum  # noqa: E402
@@ -89,12 +101,58 @@ def ler_fixados():
     return fixados
 
 
+def ler_recentes():
+    config = configparser.ConfigParser()
+    config.read(ARQUIVO_CONFIG)
+    return [i for i in config.get("ilha", "recentes", fallback="").split(";") if i.strip()][:3]
+
+
+def gravar_recentes(recentes):
+    config = configparser.ConfigParser()
+    config.read(ARQUIVO_CONFIG)
+    if not config.has_section("ilha"):
+        config.add_section("ilha")
+    config.set("ilha", "recentes", ";".join(recentes[:3]))
+    PASTA_CONFIG.mkdir(parents=True, exist_ok=True)
+    with open(ARQUIVO_CONFIG, "w", encoding="utf-8") as arquivo:
+        arquivo.write("# DuiaOS — Ilha de Aplicativos.\n")
+        arquivo.write("# fixados: arquivos .desktop separados por ponto e vírgula (;)\n")
+        config.write(arquivo)
+
+
+def ler_opcoes():
+    config = configparser.ConfigParser()
+    config.read(pastas.PREFERENCIAS, encoding="utf-8")
+    return efeitos.ler_opcoes(dict(config.items("ilha")) if config.has_section("ilha") else {})
+
+
+def janela_ativa():
+    """app_id da janela que está na frente (ou "")."""
+    try:
+        saida = subprocess.run(["wlrctl", "toplevel", "list", "state:active"], capture_output=True,
+                               text=True, timeout=2, check=False).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+    return saida.splitlines()[0].split(":", 1)[0].strip() if saida.strip() else ""
+
+
+def tem_janela(*filtros):
+    try:
+        return subprocess.run(["wlrctl", "toplevel", "find", *filtros], capture_output=True, timeout=2,
+                              check=False).returncode == 0
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+
+
 def gravar_fixados(fixados):
+    recentes = ler_recentes() if ARQUIVO_CONFIG.exists() else []
     PASTA_CONFIG.mkdir(parents=True, exist_ok=True)
     with open(ARQUIVO_CONFIG, "w", encoding="utf-8") as arquivo:
         arquivo.write("# DuiaOS — Ilha de Aplicativos.\n")
         arquivo.write("# fixados: arquivos .desktop separados por ponto e vírgula (;)\n")
         arquivo.write(f"[ilha]\nversao = {VERSAO_CONFIG}\nfixados = " + ";".join(fixados) + "\n")
+        if recentes:
+            arquivo.write("recentes = " + ";".join(recentes) + "\n")
 
 
 def janelas_abertas():
@@ -193,14 +251,25 @@ class Ilha(QObject):
     mudou = Signal()
     centralMudou = Signal()
     downloadsMudou = Signal()
+    opcoesMudou = Signal()
+    efeito = Signal("QVariantMap")          # minimizar/restaurar: a Ilha desenha o efeito (EfeitoDeJanela.qml)
+    pulando = Signal(str)                   # o aplicativo está abrindo: o ícone pula
+    _efeito_pronto = Signal("QVariantMap")
 
     def __init__(self):
         super().__init__()
         self._downloads, self._downloads_visivel, self._ancora_downloads = [], False, 0.0
         self._lixeira_cheia = False
+        self._opcoes = ler_opcoes() if not DEMONSTRACAO else efeitos.ler_opcoes({})
+        self._capturas = {}                 # app_id → imagem e lugar da janela quando foi minimizada
+        self._minimizando = False
+        self._numero_efeito = 0
+        self._efeito_pronto.connect(self.efeito)
+        self._recentes = []
         if DEMONSTRACAO:
             self._preparar_demonstracao()
             return
+        self._recentes = ler_recentes()
         if not ARQUIVO_CONFIG.exists():
             gravar_fixados(FIXADOS_PADRAO)
         self._ids_fixados = []
@@ -213,9 +282,10 @@ class Ilha(QObject):
         self._central_visivel = False
         self._pedido_alternar = False
 
+        PASTA_CONFIG.mkdir(parents=True, exist_ok=True)
         self._vigia = QFileSystemWatcher([str(PASTA_CONFIG), str(ARQUIVO_CONFIG)], self)
-        self._vigia.directoryChanged.connect(self.recarregar_fixados)
-        self._vigia.fileChanged.connect(self.recarregar_fixados)
+        self._vigia.directoryChanged.connect(self._mudou_pasta_config)
+        self._vigia.fileChanged.connect(self._mudou_pasta_config)
         self.recarregar_fixados()
 
         self._timer = QTimer(self, interval=1500, timeout=self.atualizar_abertos)
@@ -223,7 +293,10 @@ class Ilha(QObject):
         self.atualizar_abertos()
 
         # Atalho Super+Espaço: o labwc envia SIGUSR1; o timer deixa o Python tratá-lo.
+        # Minimizar (botão amarelo, Super+M): SIGUSR2.
         signal.signal(signal.SIGUSR1, self._sinal_alternar)
+        self._pedido_minimizar = False
+        signal.signal(signal.SIGUSR2, self._sinal_minimizar)
         self._timer_sinal = QTimer(self, interval=150, timeout=self._verificar_sinal)
         self._timer_sinal.start()
 
@@ -262,8 +335,17 @@ class Ilha(QObject):
                       "papel-de-parede.png", "Música nova.mp3", "Relatório final.docx", "instalador.deb"]]
         self._downloads_visivel = "--downloads" in sys.argv
         self._ancora_downloads = 760.0
+        self._recentes = ["exemplo-gimp.desktop"]
+        self._opcoes = efeitos.ler_opcoes({"posicao": argumento("--posicao", "base"),
+                                           "recentes": "sim" if "--recentes" in sys.argv else "nao"})
+        if self._opcoes["recentes"]:
+            self._itens.append({"id": "exemplo-gimp.desktop", "nome": "GIMP", "icone": "", "exec": "", "classe": "",
+                                "terminal": False, "descricao": "", "busca": "gimp", "fixado": False, "aberto": False,
+                                "appId": "", "recente": True})
         if "--menu" in sys.argv:
-            self.abrirMenu("app", 3, 500.0)
+            self.abrirMenu("app", 3, -120.0)
+        if "--menu-ilha" in sys.argv:
+            self.abrirMenu("ilha", -1, 200.0)
 
     def atualizar_lixeira(self):
         cheia = not lixeira_vazia()
@@ -301,13 +383,15 @@ class Ilha(QObject):
     # ----- menu do botão direito
     @Slot(str, int, float)
     def abrirMenu(self, tipo, indice, ancora):
-        """tipo: app (indice em itens), central, aplicativos, downloads ou lixeira."""
+        """tipo: app (indice em itens), central, aplicativos, downloads, lixeira ou ilha (o fundo).
+        ancora: distância do centro da Ilha até o ícone, ao longo da Ilha."""
         self._downloads_visivel = False
         item = self._itens[indice] if tipo == "app" and 0 <= indice < len(self._itens) else {}
         fixo = item.get("id") in (WISE_DESKTOP, EXPLORADOR_DESKTOP)
         self._menu = {"tipo": tipo, "indice": indice, "nome": item.get("nome", ""), "aberto": bool(item.get("aberto")),
                       "fixado": bool(item.get("fixado")), "fixo": fixo, "podeFixar": bool(item.get("id")) and not fixo,
-                      "lixeiraCheia": self._lixeira_cheia}
+                      "lixeiraCheia": self._lixeira_cheia, "recente": bool(item.get("recente")),
+                      "janelas": item.get("janelas", 0)}
         self._ancora_downloads = ancora
         self.downloadsMudou.emit()
 
@@ -332,6 +416,18 @@ class Ilha(QObject):
                 self.alternarFixado(item["id"])
             elif acao == "fechar" and item.get("appId") and not DEMONSTRACAO:
                 iniciar(["wlrctl", "toplevel", "close", "app_id:" + item["appId"]])
+            elif acao == "minimizar" and item.get("appId"):
+                if not DEMONSTRACAO and tem_janela("app_id:" + item["appId"], "state:active"):
+                    self.minimizar(item["appId"])
+                elif not DEMONSTRACAO:
+                    iniciar(["wlrctl", "toplevel", "minimize", "app_id:" + item["appId"]])
+            elif acao == "mostrar-no-explorador":
+                comum.abrir_app_duiaos("explorador-de-arquivos", "aplicativos:") if not DEMONSTRACAO else None
+            elif acao == "esquecer" and item.get("recente"):
+                self._recentes = [r for r in self._recentes if r != item.get("id")]
+                if not DEMONSTRACAO:
+                    gravar_recentes(self._recentes)
+                self.montar()
         elif tipo == "central" and acao == "abrir":
             self.alternarCentral()
         elif tipo in ("aplicativos", "downloads", "lixeira") and acao == "abrir":
@@ -339,6 +435,12 @@ class Ilha(QObject):
         elif tipo == "lixeira" and acao == "esvaziar" and not DEMONSTRACAO:
             esvaziar_lixeira()
             self.atualizar_lixeira()
+        elif acao.startswith("opcao:"):
+            # opcao:CHAVE=VALOR, do menu do fundo da Ilha
+            chave, _, valor = acao[6:].partition("=")
+            self.definirOpcao(chave, valor)
+        elif acao == "configuracoes" and not DEMONSTRACAO:
+            comum.abrir_app_duiaos("configuracoes", "--secao", "barra")
 
     menu = Property("QVariantMap", lambda self: getattr(self, "_menu", {}) or {}, notify=downloadsMudou)
 
@@ -349,22 +451,45 @@ class Ilha(QObject):
             iniciar(["xdg-open", caminho])
 
     # ----- Ilha
+    def _mudou_pasta_config(self, _caminho=None):
+        """Mudou algo em ~/.config/duiaos: fixados (Ilha) ou preferências (opções)."""
+        for arquivo in (ARQUIVO_CONFIG, pastas.PREFERENCIAS):
+            if arquivo.exists() and str(arquivo) not in self._vigia.files():
+                self._vigia.addPath(str(arquivo))   # editores recriam o arquivo: volta a vigiá-lo
+        opcoes = ler_opcoes()
+        if opcoes != self._opcoes:
+            self._opcoes = opcoes
+            self.opcoesMudou.emit()
+            self.montar()
+        self.recarregar_fixados()
+
     def recarregar_fixados(self, _caminho=None):
-        # Editores recriam o arquivo: volta a vigiá-lo
         if ARQUIVO_CONFIG.exists() and str(ARQUIVO_CONFIG) not in self._vigia.files():
             self._vigia.addPath(str(ARQUIVO_CONFIG))
+        if pastas.PREFERENCIAS.exists() and str(pastas.PREFERENCIAS) not in self._vigia.files():
+            self._vigia.addPath(str(pastas.PREFERENCIAS))
         ids = [i for i in ler_fixados() if i not in (WISE_DESKTOP, EXPLORADOR_DESKTOP)]
         ids.insert(0, EXPLORADOR_DESKTOP)  # o Explorador de Arquivos fica sempre na Ilha
         if ler_desktop(WISE_DESKTOP):
             ids.insert(0, WISE_DESKTOP)   # o Wise vem sempre primeiro
         self._ids_fixados = ids
         self._fixados = [d for d in (entrada_de(i) for i in self._ids_fixados) if d]
+        self._recentes = ler_recentes()
         self.montar()
         self.buscar(self._consulta)
 
     def atualizar_abertos(self):
         abertos = janelas_abertas()
         if abertos != self._abertos:
+            # Aplicativo não fixado que fechou vira "recente" (até 3)
+            fechados = [a for a in self._abertos if a not in abertos]
+            for app_id in fechados:
+                self._capturas.pop(app_id, None)
+                id_desktop = next((i["id"] for i in self._itens if i.get("appId") == app_id and i.get("id")), "")
+                if id_desktop and id_desktop not in self._ids_fixados:
+                    self._recentes = [id_desktop] + [r for r in self._recentes if r != id_desktop]
+                    self._recentes = self._recentes[:3]
+                    gravar_recentes(self._recentes)
             self._abertos = abertos
             self.montar()
 
@@ -389,20 +514,151 @@ class Ilha(QObject):
                 "id": "", "nome": app_id, "icone": app_id, "exec": "", "classe": "",
                 "terminal": False, "descricao": "", "busca": ""}
             itens.append({**app, "fixado": False, "aberto": True, "appId": app_id})
+        # Recentes (opção): usados há pouco, nem fixados nem abertos
+        if self._opcoes.get("recentes"):
+            presentes = {i.get("id") for i in itens}
+            for id_desktop in self._recentes:
+                app = entrada_de(id_desktop) if not DEMONSTRACAO else {
+                    "id": id_desktop, "nome": "GIMP", "icone": "", "exec": "", "classe": "", "terminal": False,
+                    "descricao": "", "busca": "gimp"}
+                if app and id_desktop not in presentes:
+                    itens.append({**app, "fixado": False, "aberto": False, "appId": "", "recente": True})
         self._itens = itens
         self.mudou.emit()
 
     @Slot(int)
     def ativar(self, indice):
+        """Clique no ícone: abre; se já estiver aberto, traz para a frente (restaurando com o efeito
+        se estava minimizado) ou, com "clique_minimiza", minimiza o que já está na frente."""
         if not 0 <= indice < len(self._itens):
             return
         item = self._itens[indice]
         if item["aberto"] and item["appId"]:
-            iniciar(["wlrctl", "toplevel", "focus", "app_id:" + item["appId"]])
+            app_id = item["appId"]
+            if DEMONSTRACAO:
+                return
+            if self._opcoes["clique_minimiza"] and tem_janela("app_id:" + app_id, "state:active", "state:unminimized"):
+                self.minimizar(app_id)
+            elif app_id in self._capturas and tem_janela("app_id:" + app_id, "state:minimized"):
+                self.restaurar(app_id)
+            else:
+                iniciar(["wlrctl", "toplevel", "focus", "app_id:" + app_id])
         else:
-            iniciar(comando_de_exec(item))
+            if self._opcoes["animar_abrir"] and item.get("id"):
+                self.pulando.emit(item["id"])
+            if not DEMONSTRACAO:
+                iniciar(comando_de_exec(item))
             if item.get("id"):
                 registrar_uso("uso.aplicativo_aberto", aplicativo=item["id"], por="ilha")
+
+    @Slot(str, int)
+    def moverFixado(self, id_desktop, destino):
+        """Arrastar na Ilha: muda a ordem dos fixados (destino = posição entre os itens da Ilha)."""
+        fixos = [i for i in (WISE_DESKTOP, EXPLORADOR_DESKTOP) if i in self._ids_fixados]
+        fixados = [i for i in self._ids_fixados if i not in fixos]
+        if id_desktop not in fixados:
+            return
+        fixados.remove(id_desktop)
+        posicao = max(0, min(len(fixados), destino - len(fixos)))
+        fixados.insert(posicao, id_desktop)
+        if DEMONSTRACAO:
+            return
+        gravar_fixados(fixados)
+        self.recarregar_fixados()
+
+    # ----- opções
+    @Slot(str, str)
+    def definirOpcao(self, chave, valor):
+        texto = efeitos.texto_da_opcao(chave, valor)
+        if texto is None:
+            return
+        if DEMONSTRACAO:
+            self._opcoes = efeitos.ler_opcoes({**{k: str(v) for k, v in self._opcoes.items()}, chave: texto})
+            self.opcoesMudou.emit()
+            return
+        pastas.gravar_preferencia("ilha", chave, texto)
+        self._mudou_pasta_config()
+
+    @Slot(QObject, int, int, int, int)
+    def definirMascara(self, janela, x, y, largura, altura):
+        """Onde a Ilha recebe cliques: só na faixa visível; o resto da janela (espaço para a
+        ampliação ou a borda da Ilha escondida) deixa o clique passar para as janelas de baixo."""
+        if isinstance(janela, QWindow):
+            janela.setMask(QRegion(QRect(x, y, max(1, largura), max(1, altura))))
+
+    # ----- minimizar e restaurar com efeito
+    def _sinal_minimizar(self, _numero, _quadro):
+        self._pedido_minimizar = True
+
+    def minimizar(self, app_id=""):
+        """Minimiza a janela da frente com o efeito escolhido."""
+        if self._minimizando:
+            return
+        if self._opcoes["minimizar"] == "nenhum" or not shutil.which("grim") or not getattr(self, "_tela", ""):
+            iniciar(["wlrctl", "toplevel", "minimize", "state:active"])
+            return
+        self._minimizando = True
+        threading.Thread(target=self._minimizar_com_efeito, args=(app_id,), daemon=True).start()
+
+    def _minimizar_com_efeito(self, app_id):
+        inicio = time.monotonic()
+        try:
+            app_id = app_id or janela_ativa()
+            pasta = Path(os.environ.get("XDG_RUNTIME_DIR", "/tmp"))
+            grande = subprocess.Popen(["grim", "-o", self._tela, "-t", "ppm", "-"], stdout=subprocess.PIPE)
+            antes = subprocess.run(["grim", "-o", self._tela, "-s", "0.25", "-t", "ppm", "-"],
+                                   capture_output=True, timeout=3, check=False).stdout
+            imagem = grande.communicate(timeout=3)[0]
+            subprocess.run(["wlrctl", "toplevel", "minimize", "state:active"], timeout=2, check=False)
+            time.sleep(0.035)                     # o compositor desenha a tela sem a janela
+            depois = subprocess.run(["grim", "-o", self._tela, "-s", "0.25", "-t", "ppm", "-"],
+                                    capture_output=True, timeout=3, check=False).stdout
+            a, b = efeitos.ler_ppm(antes), efeitos.ler_ppm(depois)
+            if not a or not b or a[:2] != b[:2]:
+                return
+            regiao = efeitos.regiao_alterada(a[2], b[2], a[0], a[1], a[0] * 3, 3)
+            if not regiao:
+                return
+            # Pequena (0,25 da tela lógica) → lógica; grande → pixels reais da tela
+            x, y, w, h = (v * 4 for v in regiao)
+            figura = QImage.fromData(imagem)
+            escala = figura.width() / max(1, a[0] * 4)
+            recorte = figura.copy(QRect(round(x * escala), round(y * escala), round(w * escala), round(h * escala)))
+            self._numero_efeito += 1
+            arquivo = pasta / f"duiaos-janela-{self._numero_efeito % 8}.ppm"
+            recorte.save(str(arquivo), "PPM")
+            dados = {"direcao": "minimizar", "efeito": self._opcoes["minimizar"], "appId": app_id,
+                     "imagem": QUrl.fromLocalFile(str(arquivo)).toString() + f"?{self._numero_efeito}",
+                     "x": x, "y": y, "w": w, "h": h}
+            if app_id:
+                self._capturas[app_id] = dados
+            self._efeito_pronto.emit(dados)
+        except (OSError, subprocess.SubprocessError, ValueError) as erro:
+            print("Ilha: minimizar sem efeito:", erro, file=sys.stderr)
+        finally:
+            self._minimizando = False
+            if time.monotonic() - inicio > 1.5:
+                print("Ilha: o efeito de minimizar demorou", round(time.monotonic() - inicio, 2), "s", file=sys.stderr)
+
+    def restaurar(self, app_id):
+        """Traz de volta uma janela minimizada pela Ilha, com o efeito ao contrário."""
+        dados = self._capturas.get(app_id)
+        if not dados or self._opcoes["minimizar"] == "nenhum":
+            iniciar(["wlrctl", "toplevel", "focus", "app_id:" + app_id])
+            return
+        self.efeito.emit({**dados, "direcao": "restaurar", "efeito": self._opcoes["minimizar"]})
+
+    @Slot(str, str)
+    def efeitoTerminou(self, app_id, direcao):
+        """Fim do efeito de restaurar: agora a janela volta de verdade."""
+        if direcao == "restaurar" and app_id and not DEMONSTRACAO:
+            self._capturas.pop(app_id, None)
+            iniciar(["wlrctl", "toplevel", "focus", "app_id:" + app_id])
+
+    @Slot(str)
+    def definirTela(self, nome):
+        """Nome da saída (ex.: eDP-1) onde a Ilha está, para capturar a tela certa."""
+        self._tela = nome
 
     # ----- Central de Aplicativos
     def _sinal_alternar(self, _numero, _quadro):
@@ -413,6 +669,9 @@ class Ilha(QObject):
             self._pedido_alternar = False
             self._por_atalho = True
             self.alternarCentral()
+        if getattr(self, "_pedido_minimizar", False):
+            self._pedido_minimizar = False
+            self.minimizar()
 
     @Slot()
     def alternarCentral(self):
@@ -469,6 +728,30 @@ class Ilha(QObject):
     lixeiraCheia = Property(bool, lambda self: self._lixeira_cheia, notify=downloadsMudou)
     resultados = Property("QVariantList", lambda self: self._resultados, notify=mudou)
     centralVisivel = Property(bool, lambda self: self._central_visivel, notify=centralMudou)
+    opcoes = Property("QVariantMap", lambda self: self._opcoes, notify=opcoesMudou)
+    demonstracao = Property(bool, lambda self: DEMONSTRACAO, constant=True)
+
+
+def janela_de_exemplo():
+    """Imagem de uma janela de mentira (demonstração do efeito de minimizar)."""
+    from PySide6.QtGui import QColor, QPainter
+    import tempfile
+    imagem = QImage(640, 420, QImage.Format_RGB32)
+    imagem.fill(QColor("#FFFFFF"))
+    pintor = QPainter(imagem)
+    pintor.fillRect(0, 0, 640, 34, QColor("#EEF2F7"))
+    for i, cor in enumerate(("#FF5F57", "#FEBC2E", "#28C840")):
+        pintor.setBrush(QColor(cor))
+        pintor.setPen(QColor(cor))
+        pintor.drawEllipse(14 + i * 20, 11, 12, 12)
+    pintor.fillRect(0, 34, 160, 386, QColor("#F1F4F8"))
+    for linha in range(8):
+        pintor.fillRect(190, 70 + linha * 40, 400 - (linha % 3) * 60, 14, QColor("#C9D2DE"))
+    pintor.fillRect(190, 400 - 60, 180, 40, QColor("#2E6BE6"))
+    pintor.end()
+    arquivo = Path(tempfile.gettempdir()) / "duiaos-janela-exemplo.png"
+    imagem.save(str(arquivo))
+    return QUrl.fromLocalFile(str(arquivo)).toString()
 
 
 def argumento(nome, padrao=""):
@@ -493,6 +776,10 @@ def main():
     engine.rootContext().setContextProperty("ilha", ilha)
     engine.rootContext().setContextProperty("papelDeParede", comum.papel_de_parede())
     engine.rootContext().setContextProperty("capturaArquivo", argumento("--captura"))
+    engine.rootContext().setContextProperty("demoAmpliada", "--ampliada" in sys.argv)
+    engine.rootContext().setContextProperty("demoGenio", janela_de_exemplo() if "--genio" in sys.argv or "--escala" in sys.argv else "")
+    engine.rootContext().setContextProperty("demoEfeito", "escala" if "--escala" in sys.argv else "genio")
+    engine.rootContext().setContextProperty("demoProgresso", float(argumento("--progresso", "0.45")))
     engine.load(PASTA / ("Demonstracao.qml" if DEMONSTRACAO else "IlhaDeAplicativos.qml"))
     if not engine.rootObjects():
         sys.exit(1)
