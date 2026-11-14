@@ -714,32 +714,175 @@ Window {
         }
     }
 
+    // Duração em texto: 75 → "1 min 15 s"; 3600 → "1 h"
+    function duracao(segundos) {
+        segundos = Math.max(0, Math.round(segundos))
+        var h = Math.floor(segundos / 3600), m = Math.floor((segundos % 3600) / 60), s = segundos % 60
+        if (h > 0) return h + " h" + (m > 0 ? " " + m + " min" : "")
+        if (m > 0) return m + " min" + (s > 0 && m < 10 ? " " + s + " s" : "")
+        return s + " s"
+    }
+    function relogio(segundos) {
+        segundos = Math.max(0, Math.round(segundos))
+        var m = Math.floor(segundos / 60), s = segundos % 60
+        return m + ":" + (s < 10 ? "0" : "") + s
+    }
+
     Component {
         id: paginaAtualizacoes
         Pagina {
             id: pa
             readonly property var a: ajustes.atualizacao
             property bool verHistorico: false
+            property bool verRegistros: false
+            property real agora: Date.now() / 1000
+            Timer { interval: 1000; running: pa.a.etapa === "atualizando"; repeat: true; onTriggered: pa.agora = Date.now() / 1000 }
+            readonly property real decorrido: pa.a.inicio ? Math.max(0, pa.agora - pa.a.inicio) : 0
+            // Quanto falta: pela previsão do plano e pelo andamento, o que for maior
+            readonly property real restante: {
+                var porPrevisao = (pa.a.estimativa || 0) - pa.decorrido
+                var f = pa.a.fracao || 0
+                var porAndamento = f > 0.08 ? pa.decorrido * (1 - f) / f : porPrevisao
+                return Math.max(porPrevisao, porAndamento)
+            }
+            Component.onCompleted: ajustes.acompanharAgente()
+
             Destaque { icone: "reiniciar"; titulo: ({ inicio: "Atualizações do sistema", procurando: "Procurando atualizações…",
                                                        pronta: pa.a.quantidade + (pa.a.quantidade === 1 ? " pacote para atualizar" : " pacotes para atualizar"),
-                                                       "em-dia": "O sistema está em dia", atualizando: "Atualizando…",
-                                                       concluida: "Sistema atualizado", erro: "Não foi possível atualizar" })[pa.a.etapa] || "Atualizações do sistema"
-                       texto: pa.a.etapa === "pronta" ? "Download de " + pa.a.baixar + " · " + pa.a.reiniciarNome
+                                                       "em-dia": "O sistema está em dia", atualizando: "Atualizando o sistema",
+                                                       concluida: "Sistema atualizado", erro: "A atualização não terminou" })[pa.a.etapa] || "Atualizações do sistema"
+                       texto: pa.a.etapa === "pronta" ? "Download de " + pa.a.baixar + " · tempo previsto: cerca de " + janela.duracao(pa.a.estimativa || 60)
+                                + " · " + pa.a.reiniciarNome
                                 + (pa.a.quantidadeSeguranca > 0 ? " · " + pa.a.quantidadeSeguranca + (pa.a.quantidadeSeguranca === 1 ? " correção de segurança" : " correções de segurança") : "")
-                              : (pa.a.mensagem || "O DuiaOS, o Wise e os aplicativos instalados recebem correções e novidades por aqui.") }
+                              : (pa.a.etapa === "atualizando" ? "Você pode continuar usando o computador. Não desligue até terminar."
+                              : (pa.a.mensagem || "O DuiaOS, o Wise e os aplicativos instalados recebem correções e novidades por aqui.")) }
+
+            // ------------------------------------------------ andamento ao vivo
             Rectangle {
                 visible: pa.a.etapa === "atualizando" || pa.a.etapa === "procurando"
-                width: parent.width; height: 8; radius: 4; color: Tema.controleDesligado
-                Rectangle { width: parent.width * (pa.a.fracao || (pa.a.etapa === "procurando" ? 0.15 : 0.02)); height: parent.height; radius: 4; color: Tema.azulDuia
-                            Behavior on width { NumberAnimation { duration: 300 } } }
+                width: parent.width
+                height: colunaAndamento.implicitHeight + 28
+                radius: 12
+                color: Tema.cartao
+                border { color: Tema.borda; width: 1 }
+                Column {
+                    id: colunaAndamento
+                    anchors { left: parent.left; right: parent.right; top: parent.top; margins: 14 }
+                    spacing: 10
+                    Row {
+                        spacing: 12
+                        width: parent.width
+                        // Sinal de que está trabalhando: gira o tempo todo
+                        Item {
+                            width: 34; height: 34
+                            Rectangle { anchors.fill: parent; radius: 17; color: Tema.destaque }
+                            Icone {
+                                anchors.centerIn: parent; nome: "reiniciar"; tamanho: 20; cor: Tema.azulDuia
+                                RotationAnimator on rotation { from: 0; to: 360; duration: 1200; loops: Animation.Infinite; running: true }
+                            }
+                        }
+                        Column {
+                            width: parent.width - 46
+                            anchors.verticalCenter: parent.verticalCenter
+                            Text { width: parent.width; elide: Text.ElideRight; color: Tema.texto
+                                   text: pa.a.etapa === "procurando" ? (pa.a.mensagem || "Procurando…") : (pa.a.etapaAtual || "Instalando")
+                                   font { family: Tema.fonteTexto; pixelSize: 14; weight: Font.Bold } }
+                            Text { width: parent.width; elide: Text.ElideRight; color: Tema.textoSecundario; visible: pa.a.etapa === "atualizando"
+                                   text: pa.a.mensagem || ""; font { family: Tema.fonteTexto; pixelSize: 12 } }
+                        }
+                    }
+                    Rectangle {
+                        width: parent.width; height: 8; radius: 4; color: Tema.controleDesligado
+                        clip: true
+                        Rectangle { visible: pa.a.etapa === "atualizando"; width: parent.width * Math.max(0.02, pa.a.fracao || 0); height: parent.height; radius: 4; color: Tema.azulDuia
+                                    Behavior on width { NumberAnimation { duration: 400 } } }
+                        // Procurando: faixa que corre de um lado ao outro (sem porcentagem conhecida)
+                        Rectangle {
+                            visible: pa.a.etapa === "procurando"
+                            width: parent.width * 0.3; height: parent.height; radius: 4; color: Tema.azulDuia
+                            NumberAnimation on x { from: -parent.width * 0.3; to: parent.width; duration: 1400; loops: Animation.Infinite; running: pa.a.etapa === "procurando" }
+                        }
+                    }
+                    Row {
+                        visible: pa.a.etapa === "atualizando"
+                        width: parent.width
+                        spacing: 18
+                        Text { text: "Decorrido " + janela.relogio(pa.decorrido); color: Tema.texto; font { family: Tema.fonteCodigo; pixelSize: 12 } }
+                        Text { text: Math.round((pa.a.fracao || 0) * 100) + "%"; color: Tema.texto; font { family: Tema.fonteCodigo; pixelSize: 12 } }
+                        Text { color: pa.decorrido > (pa.a.estimativa || 0) * 1.5 && pa.a.estimativa > 0 ? Tema.aviso : Tema.textoSecundario
+                               text: pa.restante > 20 ? "Faltam cerca de " + janela.duracao(pa.restante)
+                                     : (pa.decorrido > (pa.a.estimativa || 0) ? "Demorando mais que o previsto" : "Quase lá")
+                               font { family: Tema.fonteTexto; pixelSize: 12 } }
+                    }
+                    Rectangle {
+                        visible: (pa.a.alerta || "") !== "" && pa.a.etapa === "atualizando"
+                        width: parent.width
+                        height: textoAlerta.implicitHeight + 16
+                        radius: 8
+                        color: Qt.rgba(0.91, 0.64, 0.24, 0.16)
+                        border { color: Tema.aviso; width: 1 }
+                        Text { id: textoAlerta; anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; margins: 10 }
+                               text: pa.a.alerta || ""; wrapMode: Text.WordWrap; color: Tema.texto; font { family: Tema.fonteTexto; pixelSize: 12 } }
+                    }
+                    Row {
+                        visible: pa.a.etapa === "atualizando"
+                        spacing: 8
+                        Botao { texto: "Ver o que está acontecendo"; icone: "documento"; visible: (pa.a.registro || "") !== ""
+                                onClicado: ajustes.abrirRegistro(pa.a.registro) }
+                        Botao { texto: "Cancelar"; onClicado: ajustes.cancelarAtualizacao() }
+                    }
+                }
             }
+
+            // ------------------------------------------------ resultado
+            Rectangle {
+                visible: pa.a.etapa === "concluida" || pa.a.etapa === "erro"
+                width: parent.width
+                height: colunaResultado.implicitHeight + 24
+                radius: 12
+                color: pa.a.etapa === "erro" ? Qt.rgba(0.85, 0.33, 0.31, 0.10) : Qt.rgba(0.18, 0.65, 0.48, 0.10)
+                border { color: pa.a.etapa === "erro" ? Tema.erro : Tema.sucesso; width: 1 }
+                Column {
+                    id: colunaResultado
+                    anchors { left: parent.left; right: parent.right; top: parent.top; margins: 12 }
+                    spacing: 6
+                    Text { width: parent.width; wrapMode: Text.WordWrap; color: Tema.texto; text: pa.a.mensagem || ""
+                           font { family: Tema.fonteTexto; pixelSize: 13; weight: Font.DemiBold } }
+                    Text { visible: (pa.a.duracao || 0) > 0; text: "Levou " + janela.duracao(pa.a.duracao || 0)
+                           color: Tema.textoSecundario; font { family: Tema.fonteTexto; pixelSize: 12 } }
+                    Botao { visible: (pa.a.registro || "") !== ""; texto: "Ver registro"; icone: "documento"; onClicado: ajustes.abrirRegistro(pa.a.registro) }
+                }
+            }
+
             Row {
                 spacing: 8
                 Botao { visible: ["inicio", "em-dia", "concluida", "erro"].indexOf(pa.a.etapa) >= 0; texto: "Procurar atualizações"; tipo: "primario"
                         onClicado: ajustes.procurarAtualizacoes() }
                 Botao { visible: pa.a.etapa === "pronta"; texto: "Atualizar agora"; tipo: "primario"; onClicado: ajustes.atualizarAgora() }
-                Botao { visible: pa.a.etapa === "atualizando"; texto: "Cancelar"; onClicado: ajustes.cancelarAtualizacao() }
                 Botao { texto: pa.verHistorico ? "Esconder o histórico" : "Histórico"; icone: "relogio"; onClicado: pa.verHistorico = !pa.verHistorico }
+                Botao { texto: pa.verRegistros ? "Esconder os registros" : "Registros"; icone: "documento"
+                        onClicado: { pa.verRegistros = !pa.verRegistros; if (pa.verRegistros) ajustes.listarRegistros() } }
+            }
+
+            // Registros: a saída completa de cada atualização
+            Grupo {
+                visible: pa.verRegistros
+                titulo: "Registros das atualizações"
+                Linha { visible: ajustes.registros.length === 0; titulo: "Nenhuma atualização registrada ainda."; ultima: true }
+                Repeater {
+                    model: pa.verRegistros ? ajustes.registros : []
+                    Linha {
+                        required property var modelData
+                        required property int index
+                        icone: modelData.resultado === "ok" ? "check" : (modelData.resultado === "cancelada" ? "fechar" : "info")
+                        titulo: new Date(modelData.quando * 1000).toLocaleString(Qt.locale("pt_BR"), "dd/MM/yyyy HH:mm")
+                                + "  ·  " + ({ ok: "Concluída", erro: "Com erro", recusada: "Recusada", cancelada: "Cancelada", interrompida: "Interrompida" })[modelData.resultado]
+                                + (modelData.duracao_s ? "  ·  " + janela.duracao(modelData.duracao_s) : "")
+                        descricao: modelData.mensagem
+                        ultima: index === ajustes.registros.length - 1
+                        Botao { texto: "Abrir"; height: 28; visible: (modelData.nome || "") !== ""; onClicado: ajustes.abrirRegistro(modelData.nome) }
+                    }
+                }
             }
 
             // Do DuiaOS: uma ficha por atualização
@@ -777,7 +920,38 @@ Window {
             Repeater { model: pa.verHistorico ? ajustes.historicoAtualizacoes : []; FichaAtualizacao { required property var modelData; f: modelData } }
 
             Rotulo { width: parent.width; secundario: true
-                     text: "Quem atualiza é o agente do sistema, que confere o que vai mudar e não remove nada essencial. Também dá para pedir ao Wise: “atualiza o sistema”." }
+                     text: "Quem atualiza é o agente do sistema: ele confere o que vai mudar, não remove nada essencial, conclui sozinho uma instalação que ficou pela metade e, se uma etapa ficar parada por 30 minutos, interrompe essa etapa, repara o sistema e mostra o motivo aqui. Também dá para pedir ao Wise: “atualiza o sistema”." }
+        }
+    }
+
+    // Registro completo de uma atualização (ao vivo enquanto ela roda)
+    Rectangle {
+        anchors.fill: parent
+        z: 56
+        visible: ajustes.registroAberto.titulo !== undefined
+        color: Qt.rgba(0.06, 0.09, 0.14, 0.35)
+        MouseArea { anchors.fill: parent; onClicked: ajustes.fecharRegistro() }
+        Timer {
+            interval: 2000; repeat: true
+            running: parent.visible && ajustes.atualizacao.etapa === "atualizando" && ajustes.registroAberto.nome === ajustes.atualizacao.registro
+            onTriggered: ajustes.abrirRegistro(ajustes.registroAberto.nome)
+        }
+        Cartao {
+            anchors.centerIn: parent
+            width: Math.min(parent.width - 60, 820); height: Math.min(parent.height - 60, 560)
+            cor: Tema.cartao
+            MouseArea { anchors.fill: parent }
+            Titulo { id: tituloLog; x: 20; y: 16; nivel: 2; text: ajustes.registroAberto.titulo || "" }
+            Flickable {
+                id: rolarLog
+                anchors { left: parent.left; right: parent.right; top: tituloLog.bottom; bottom: fecharLog.top; margins: 20; topMargin: 12 }
+                contentHeight: textoLog.height
+                clip: true
+                onContentHeightChanged: if (ajustes.atualizacao.etapa === "atualizando") contentY = Math.max(0, contentHeight - height)
+                TextEdit { id: textoLog; width: parent.width; readOnly: true; selectByMouse: true; wrapMode: Text.Wrap
+                           text: ajustes.registroAberto.texto || ""; color: Tema.texto; font { family: Tema.fonteCodigo; pixelSize: 11 } }
+            }
+            Botao { id: fecharLog; anchors { right: parent.right; bottom: parent.bottom; margins: 16 } texto: "Fechar"; onClicado: ajustes.fecharRegistro() }
         }
     }
 

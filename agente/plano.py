@@ -173,3 +173,76 @@ def tamanhos(saida_cache_show):
         elif linha.startswith("Installed-Size:"):
             espaco += int(linha.split(":", 1)[1].strip() or 0) * 1024
     return baixar, espaco
+
+
+# ------------------------------------------------- andamento e travamentos
+# (Central de Atualizações: tempo previsto, etapa atual, motivo de um erro)
+
+LENTOS = ("linux-image-", "linux-headers-", "initramfs-tools", "dracut", "grub-", "shim-", "systemd", "libc6",
+          "nvidia-", "dkms", "duiaos-ollama")
+
+ETAPAS = [
+    # (trecho do comando, o que a pessoa lê)
+    ("update-initramfs", "Preparando a inicialização do sistema (initramfs)"),
+    ("mkinitramfs", "Preparando a inicialização do sistema (initramfs)"),
+    ("dracut", "Preparando a inicialização do sistema (initramfs)"),
+    ("os-prober", "Procurando outros sistemas no disco (Windows) para o menu de inicialização"),
+    ("update-grub", "Atualizando o menu de inicialização (GRUB)"),
+    ("grub-mkconfig", "Atualizando o menu de inicialização (GRUB)"),
+    ("grub-install", "Instalando o carregador de inicialização (GRUB)"),
+    ("dkms", "Preparando módulos do kernel (DKMS)"),
+    ("depmod", "Organizando os módulos do kernel"),
+    ("zstd", "Compactando arquivos do kernel"),
+    ("ldconfig", "Atualizando o cache de bibliotecas"),
+    ("systemctl", "Reiniciando serviços"),
+    ("deb-systemd-invoke", "Reiniciando serviços"),
+    ("update-mime-database", "Atualizando os tipos de arquivo"),
+    ("gtk-update-icon-cache", "Atualizando os ícones"),
+    ("fc-cache", "Atualizando as fontes"),
+    ("man-db", "Atualizando os manuais"),
+    ("mandb", "Atualizando os manuais"),
+    ("http", "Baixando pacotes"),
+    ("dpkg", "Instalando pacotes"),
+]
+
+
+def estimar_segundos(mudancas, baixar_bytes, velocidade=1_500_000):
+    """Tempo previsto (segundos): download a ~1,5 MB/s, ~3 s por pacote e +3 min por pacote lento (kernel etc.)."""
+    pacotes = [m["pacote"] for lista in mudancas.values() for m in lista]
+    lentos = sum(1 for p in pacotes if p.startswith(LENTOS))
+    return int(20 + (baixar_bytes or 0) / velocidade + 3 * len(pacotes) + 180 * lentos)
+
+
+def descrever_processo(linha_de_comando):
+    """Linha de comando do processo que está rodando agora → etapa em português ('' se não sei)."""
+    texto = linha_de_comando.lower()
+    for trecho, etapa in ETAPAS:
+        if trecho in texto:
+            return etapa
+    return ""
+
+
+MOTIVOS = [
+    # (trecho na saída do apt/dpkg, motivo para a pessoa)
+    ("could not get lock", "Outro programa estava instalando pacotes ao mesmo tempo. Espere ele terminar e tente de novo."),
+    ("dpkg was interrupted", "Uma instalação anterior ficou pela metade. O DuiaOS concluiu o que faltava; tente de novo."),
+    ("no space left on device", "Acabou o espaço no disco. Libere espaço (Lixeira, Downloads) e tente de novo."),
+    ("temporary failure resolving", "Sem internet: não foi possível baixar os pacotes. Confira a conexão e tente de novo."),
+    ("failed to fetch", "Alguns pacotes não puderam ser baixados (internet instável ou servidor fora do ar). Tente de novo."),
+    ("hash sum mismatch", "Um pacote chegou corrompido no download. Tente de novo daqui a pouco."),
+    ("unmet dependencies", "Há pacotes com dependências que não se resolvem agora. Tente de novo mais tarde."),
+    ("sub-process /usr/bin/dpkg returned an error", "A instalação de um pacote falhou. O DuiaOS tentou reparar; veja o registro."),
+    ("errors were encountered while processing", "A instalação de um pacote falhou. O DuiaOS tentou reparar; veja o registro."),
+]
+
+
+def explicar_erro(saida):
+    """Motivo, em português, de um apt que terminou com erro (pelo texto da saída)."""
+    texto = saida.lower()
+    for trecho, motivo in MOTIVOS:
+        if trecho in texto:
+            pacote = re.search(r"errors were encountered while processing:\s*\n\s*(\S+)", saida, re.I)
+            if pacote and "pacote falhou" in motivo:
+                return motivo.replace("de um pacote", f"do pacote {pacote.group(1)}")
+            return motivo
+    return "A atualização terminou com erro. Veja o registro para os detalhes."

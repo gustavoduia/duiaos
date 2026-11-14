@@ -164,7 +164,7 @@ def detalhar_plano(plano):
     if any(p["pacote"].startswith(("linux-image", "systemd", "libc6")) for p in debian):
         reiniciar = "computador"
     nomes = {"nao": "Não é preciso reiniciar", "sessao": "Saia e entre de novo na sessão", "computador": "Reinicie o computador"}
-    return {"etapa": "pronta", "plano": plano["id"], "quantidade": len(todas),
+    return {"etapa": "pronta", "plano": plano["id"], "quantidade": len(todas), "estimativa": plano.get("estimativa_s", 0),
             "baixar": tipos.tamanho_legivel(plano.get("baixar_bytes", 0)), "reiniciar": reiniciar, "reiniciarNome": nomes[reiniciar],
             "duiaos": fichas, "debian": lista_debian, "quantidadeSeguranca": sum(1 for p in lista_debian if p["seguranca"]),
             "duiaosSemFicha": [f"{m['pacote']} {m.get('para', '')}" for m in duiaos if m["pacote"] not in com_ficha]}
@@ -186,10 +186,18 @@ class Ajustes(QObject):
         self._data = {"fuso": "", "automatica": True}
         self._apps_por_categoria = {}
         self._papeis = sessao.papeis_do_sistema()
+        self._atualizacao = {"etapa": "inicio"}
         self._pronto.connect(self._ao_pronto)
         if DEMONSTRACAO:
             self._demonstracao()
-            if self._secao == "atualizacoes":
+            if self._secao == "atualizacoes" and "--atualizando" in sys.argv:
+                import time as _tempo
+                self._atualizacao = {"etapa": "atualizando", "fracao": 0.62, "mensagem": "Installed linux-image-6.12.117+deb13-amd64 (amd64)",
+                                     "etapaAtual": "Preparando a inicialização do sistema (initramfs)", "inicio": int(_tempo.time()) - 431,
+                                     "estimativa": 290, "registro": "20261114-184900-0123456789abcdef.log",
+                                     "alerta": "Está demorando: “Preparando a inicialização do sistema (initramfs)” há 5 min sem novidade. "
+                                               "Isso pode ser normal com o kernel; o DuiaOS espera até 30 min."}
+            elif self._secao == "atualizacoes":
                 QTimer.singleShot(100, self.procurarAtualizacoes)
         else:
             self._em_fundo("sobre", ler_sobre)
@@ -591,7 +599,13 @@ class Ajustes(QObject):
         def terminou(v):
             self._vigias.remove(v)
             if v.isError():
-                self._atualizacao = {**self._atualizacao, "etapa": "erro", "mensagem": v.error().message()}
+                if v.error().name().endswith(".Ocupado"):
+                    # Já há uma atualização rodando (de outra janela ou do Wise): acompanha ela, sem começar outra
+                    self.acompanharAgente()
+                elif metodo in ("Registros", "LerRegistro", "Estado"):
+                    self._registro_aberto = {"titulo": "Registro", "texto": v.error().message()} if metodo == "LerRegistro" else getattr(self, "_registro_aberto", {})
+                else:
+                    self._atualizacao = {**self._atualizacao, "etapa": "erro", "mensagem": v.error().message()}
                 self.atualizacaoMudou.emit()
             elif ao_responder:
                 ao_responder(v.reply().arguments())
@@ -612,14 +626,75 @@ class Ajustes(QObject):
             estado = json.loads(texto)
         except ValueError:
             return
+        self._aplicar_estado(estado)
+
+    def _aplicar_estado(self, estado, ao_abrir=False):
+        """Estado do duiaos-agente → tela: andamento (com início, previsão, etapa e alerta) ou o resultado."""
+        import time as _tempo
         tarefa, ultima = estado.get("tarefa"), estado.get("ultima")
         if tarefa and tarefa.get("acao") == "atualizar_sistema":
             self._atualizacao = {**self._atualizacao, "etapa": "atualizando", "fracao": tarefa.get("fracao", 0.0),
-                                 "mensagem": tarefa.get("mensagem", "")}
-        elif ultima and ultima.get("acao") == "atualizar_sistema" and self._atualizacao.get("etapa") == "atualizando":
-            ok = ultima.get("resultado") == "ok"
-            self._atualizacao = {"etapa": "concluida" if ok else "erro", "mensagem": ultima.get("mensagem", ""), "fracao": 1.0}
+                                 "mensagem": tarefa.get("mensagem", ""), "etapaAtual": tarefa.get("etapa", ""),
+                                 "alerta": tarefa.get("alerta", ""), "inicio": tarefa.get("inicio", 0),
+                                 "estimativa": tarefa.get("estimativa_s", 0), "registro": tarefa.get("registro", ""),
+                                 "estadoAgente": tarefa.get("estado", "")}
+        elif ultima and ultima.get("acao") == "atualizar_sistema" and (
+                self._atualizacao.get("etapa") == "atualizando"
+                or (ao_abrir and _tempo.time() - ultima.get("quando", 0) < 3600 and self._atualizacao.get("etapa") == "inicio")):
+            resultado = ultima.get("resultado")
+            etapa = {"ok": "concluida", "cancelada": "inicio"}.get(resultado, "erro")
+            self._atualizacao = {"etapa": etapa, "mensagem": ultima.get("mensagem", ""), "fracao": 1.0,
+                                 "registro": ultima.get("registro", ""), "duracao": ultima.get("duracao_s", 0),
+                                 "resultado": resultado}
         self.atualizacaoMudou.emit()
+
+    @Slot()
+    def acompanharAgente(self):
+        """Ao abrir a página: mostra a atualização que estiver rodando (ou a última, se recente)."""
+        if DEMONSTRACAO:
+            return
+        self._ligar_agente()
+        import json
+        self._agente("Estado", ao_responder=lambda a: self._aplicar_estado(json.loads(a[0]), ao_abrir=True), tempo=20000)
+
+    @Slot()
+    def listarRegistros(self):
+        import json
+        if DEMONSTRACAO:
+            self._registros = [{"nome": "20261114-184900-0123456789abcdef.log", "quando": 1763156940, "acao": "atualizar_sistema",
+                                "resultado": "erro", "duracao_s": 1820,
+                                "mensagem": "A etapa “Preparando a inicialização do sistema (initramfs)” ficou parada por 30 minutos e foi interrompida."},
+                               {"nome": "20261114-151200-fedcba9876543210.log", "quando": 1763143920, "acao": "atualizar_sistema",
+                                "resultado": "ok", "duracao_s": 214, "mensagem": "Sistema atualizado."}]
+            self.atualizacaoMudou.emit()
+            return
+        def recebeu(argumentos):
+            self._registros = json.loads(argumentos[0])
+            self.atualizacaoMudou.emit()
+        self._agente("Registros", ao_responder=recebeu, tempo=20000)
+
+    @Slot(str)
+    def abrirRegistro(self, nome):
+        self._registro_aberto = {"titulo": "Registro " + nome.removesuffix(".log"), "nome": nome, "texto": "Carregando…"}
+        self.atualizacaoMudou.emit()
+        if DEMONSTRACAO:
+            self._registro_aberto["texto"] = ("18:49:00 DuiaOS — atualizar_sistema {}\n18:49:31 [andamento 62%] Installed linux-image-6.12.117+deb13-amd64\n"
+                                              "18:54:31 (5 min sem novidade)\n19:19:33 [vigia] 30 min sem saída; interrompendo a etapa: update-initramfs\n")
+            self.atualizacaoMudou.emit()
+            return
+        def recebeu(argumentos):
+            if getattr(self, "_registro_aberto", {}).get("nome") == nome:
+                self._registro_aberto = {**self._registro_aberto, "texto": argumentos[0]}
+                self.atualizacaoMudou.emit()
+        self._agente("LerRegistro", nome, ao_responder=recebeu, tempo=20000)
+
+    @Slot()
+    def fecharRegistro(self):
+        self._registro_aberto = {}
+        self.atualizacaoMudou.emit()
+
+    registros = Property("QVariantList", lambda self: getattr(self, "_registros", []), notify=atualizacaoMudou)
+    registroAberto = Property("QVariantMap", lambda self: getattr(self, "_registro_aberto", {}) or {}, notify=atualizacaoMudou)
 
     @Slot()
     def procurarAtualizacoes(self):
@@ -628,7 +703,7 @@ class Ajustes(QObject):
         if DEMONSTRACAO:
             catalogo = _catalogo_do_repositorio()["atualizacoes"]
             self._atualizacao = {
-                "etapa": "pronta", "plano": "demo", "quantidade": 7, "baixar": "148,2 MB", "reiniciar": "computador",
+                "etapa": "pronta", "plano": "demo", "quantidade": 7, "estimativa": 290, "baixar": "148,2 MB", "reiniciar": "computador",
                 "reiniciarNome": "Reinicie o computador",
                 "duiaos": catalogo[:3],
                 "debian": [{"pacote": "firefox-esr", "de": "128.5.0esr-1~deb13u1", "para": "128.6.0esr-1~deb13u1", "seguranca": True,
@@ -657,9 +732,12 @@ class Ajustes(QObject):
     @Slot()
     def atualizarAgora(self):
         plano = self._atualizacao.get("plano")
-        if not plano:
-            return
-        self._atualizacao = {**self._atualizacao, "etapa": "atualizando", "fracao": 0.0, "mensagem": "Começando"}
+        if not plano or self._atualizacao.get("etapa") == "atualizando":
+            return                                     # um clique só: o mesmo plano não é enviado duas vezes
+        import time as _tempo
+        self._atualizacao = {**self._atualizacao, "etapa": "atualizando", "fracao": 0.0, "mensagem": "Começando",
+                             "inicio": int(_tempo.time()), "estimativa": self._atualizacao.get("estimativa", 0),
+                             "etapaAtual": "Conferindo o que vai mudar", "alerta": "", "plano": ""}
         self.atualizacaoMudou.emit()
         if not DEMONSTRACAO:
             self._agente("Executar", plano)

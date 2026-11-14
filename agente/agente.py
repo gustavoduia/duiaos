@@ -15,7 +15,15 @@ sistema, instalar e remover aplicativos pelo apt. Fala pelo D-Bus do sistema
       recusa (a pessoa aprovou outra coisa). Depois executa e confere.
   Estado() -> {"tarefa": {...} ou null, "ultima": {...} ou null}
   Cancelar()   só enquanto baixa (parar no meio da instalação estraga pacotes)
+  Registros() -> [{nome, quando, acao, resultado, mensagem}]   os últimos registros completos
+  LerRegistro(nome) -> texto   a saída inteira do apt/dpkg de uma execução
   sinal Mudou(json)   o mesmo de Estado, no máximo 2 vezes por segundo
+
+Andamento e travamentos (ADR 047): a tarefa traz início, tempo previsto, etapa atual (o processo que
+o dpkg está rodando, em português) e um alerta quando nada acontece há 5 minutos. Com 30 minutos
+parada, a etapa é interrompida (nunca o dpkg no meio de um arquivo), o dpkg é reparado
+("dpkg --configure -a") e o motivo aparece na tela. Uma instalação que ficou pela metade é concluída
+antes da próxima; um plano só roda uma vez, e se não houver mais nada a fazer ele não roda o apt.
 
 Quem aprova é a pessoa, na interface do Wise (ou de outro programa do
 sistema); este serviço confere que a ação é permitida e registra tudo em
@@ -47,6 +55,9 @@ CAMINHO = "/org/duiaos/Agente1"
 VALIDADE_PLANO = 600            # segundos
 INTERVALO_UPDATE = 300          # apt-get update no máximo a cada 5 min
 REGISTRO = Path(os.environ.get("LOGS_DIRECTORY", "/var/log/duiaos-agente")) / "acoes.jsonl"
+AVISO_PARADO = 300              # sem nenhuma saída por 5 min: alerta na tela
+LIMITE_PARADO = 1800            # 30 min: interrompe a etapa parada e repara
+NOME_REGISTRO = __import__("re").compile(r"^\d{8}-\d{6}-[0-9a-f]{16}\.log$")
 
 XML = """
 <node>
@@ -59,6 +70,11 @@ XML = """
     <method name="Executar"><arg name="id" type="s" direction="in"/></method>
     <method name="Estado"><arg name="json" type="s" direction="out"/></method>
     <method name="Cancelar"/>
+    <method name="Registros"><arg name="json" type="s" direction="out"/></method>
+    <method name="LerRegistro">
+      <arg name="nome" type="s" direction="in"/>
+      <arg name="texto" type="s" direction="out"/>
+    </method>
     <signal name="Mudou"><arg name="json" type="s"/></signal>
   </interface>
 </node>
@@ -103,25 +119,54 @@ class Apt:
     def instalados(self):
         return self.rodar(["dpkg-query", "-W", "-f", "${Package}\t${Essential}\t${Priority}\n"], tempo=60)[1]
 
-    def executar(self, comando, ao_progresso, ao_processo):
-        """Roda o apt de verdade; ao_progresso(fracao, mensagem). Devolve (código, fim da saída)."""
+    def executar(self, comando, ao_progresso, ao_processo, ao_linha=lambda _l: None):
+        """Roda o apt de verdade; ao_progresso(fracao, mensagem); ao_linha(texto) a cada linha (registro).
+        Devolve (código, fim da saída)."""
         leitura, escrita = os.pipe()
         processo = subprocess.Popen(["apt-get", *OPCOES_APT, "-o", f"APT::Status-Fd={escrita}", *comando],
                                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=AMBIENTE_APT,
-                                    pass_fds=(escrita,), text=True)
+                                    pass_fds=(escrita,), text=True, errors="replace")
         os.close(escrita)
         ao_processo(processo)
         saida = []
-        leitor = threading.Thread(target=lambda: saida.extend(processo.stdout), daemon=True)
+
+        def ler():
+            for linha in processo.stdout:
+                saida.append(linha)
+                del saida[:-400]
+                ao_linha(linha.rstrip("\n"))
+        leitor = threading.Thread(target=ler, daemon=True)
         leitor.start()
         with os.fdopen(leitura, "r", errors="replace") as status:
             for linha in status:
                 fracao, mensagem = pl.ler_progresso(linha)
                 if fracao is not None:
                     ao_progresso(fracao, mensagem)
+                    ao_linha(f"[andamento {round(fracao * 100)}%] {mensagem}")
         codigo = processo.wait()
         leitor.join(5)
-        return codigo, "".join(saida[-40:])
+        return codigo, "".join(saida[-80:])
+
+    def auditar(self):
+        """Pacotes que ficaram pela metade ('dpkg --audit'); vazio quando está tudo certo."""
+        return self.rodar(["dpkg", "--audit"], tempo=120)[1].strip()
+
+    def reparar(self, ao_linha):
+        """Conclui instalações pela metade: dpkg --configure -a e apt-get -f install."""
+        for comando in (["dpkg", "--force-confdef", "--force-confold", "--configure", "-a"],
+                        ["apt-get", *OPCOES_APT, "-f", "install"]):
+            ao_linha("[reparo] " + " ".join(comando))
+            try:
+                r = subprocess.run(comando, capture_output=True, text=True, env=AMBIENTE_APT, timeout=LIMITE_PARADO,
+                                   check=False, errors="replace")
+            except subprocess.TimeoutExpired:
+                ao_linha("[reparo] passou do tempo limite")
+                return False
+            for linha in (r.stdout + r.stderr).splitlines():
+                ao_linha(linha)
+            if r.returncode != 0:
+                return False
+        return True
 
 
 class AptDeMentira(Apt):
@@ -147,11 +192,47 @@ class AptDeMentira(Apt):
     def instalados(self):
         return "libc6\tyes\trequired\nduiaos-shell\tno\toptional\n"
 
-    def executar(self, comando, ao_progresso, ao_processo):
+    def executar(self, comando, ao_progresso, ao_processo, ao_linha=lambda _l: None):
         for i in range(1, 11):
             time.sleep(0.05)
             ao_progresso(i / 10, f"Passo {i} de 10")
+            ao_linha(f"Passo {i} de 10")
         return 0, "ok"
+
+    def auditar(self):
+        return ""
+
+    def reparar(self, ao_linha):
+        ao_linha("[reparo] nada a reparar")
+        return True
+
+
+class _JaFeito(Exception):
+    """A simulação de agora não tem mais nada a instalar: o plano não roda o apt de novo."""
+
+
+def descendentes(pid, proc="/proc"):
+    """Processos abaixo de pid: [(pid, início, linha de comando)], do mais antigo ao mais novo."""
+    filhos_de, info = {}, {}
+    for entrada in os.listdir(proc):
+        if not entrada.isdigit():
+            continue
+        try:
+            stat = Path(proc, entrada, "stat").read_text()
+            campos = stat[stat.rindex(")") + 2:].split()
+            pai, inicio = int(campos[1]), int(campos[19])
+            comando = Path(proc, entrada, "cmdline").read_bytes().replace(b"\0", b" ").decode(errors="replace").strip()
+        except (OSError, ValueError, IndexError):
+            continue
+        filhos_de.setdefault(pai, []).append(int(entrada))
+        info[int(entrada)] = (int(entrada), inicio, comando)
+    achados, fila = [], [pid]
+    while fila:
+        atual = fila.pop()
+        for filho in filhos_de.get(atual, []):
+            achados.append(info[filho])
+            fila.append(filho)
+    return sorted(achados, key=lambda p: p[1])
 
 
 class Agente:
@@ -168,16 +249,46 @@ class Agente:
         self._ultimo_update = 0.0
         self._ultimo_sinal = 0.0
         self.ultimo_uso = time.monotonic()
+        self.pasta_registros = self.registro.parent / "registros"
+        self.arquivo_estado = self.registro.parent / "estado.json"
+        self._travou = ""
+        self._carregar_estado()
 
     # --------------------------------------------------------------- estado
     def estado(self):
-        return {"tarefa": self.tarefa, "ultima": self.ultima}
+        return {"tarefa": self.tarefa, "ultima": self.ultima, "agora": int(time.time())}
+
+    def _carregar_estado(self):
+        """A última ação sobrevive ao agente sair; uma tarefa que estava rodando quando ele parou vira 'interrompida'."""
+        try:
+            dados = json.loads(self.arquivo_estado.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return
+        self.ultima = dados.get("ultima")
+        tarefa = dados.get("tarefa")
+        if tarefa:
+            self.ultima = {"id": tarefa.get("id"), "acao": tarefa.get("acao"), "argumentos": tarefa.get("argumentos"),
+                           "resultado": "interrompida", "registro": tarefa.get("registro", ""), "quando": int(time.time()),
+                           "mensagem": "A atualização foi interrompida no meio (o computador desligou ou o agente parou). "
+                                       "Na próxima, o DuiaOS conclui o que ficou pela metade antes de continuar."}
+            self._salvar_estado()
+
+    def _salvar_estado(self):
+        try:
+            self.arquivo_estado.parent.mkdir(parents=True, exist_ok=True)
+            temporario = self.arquivo_estado.with_suffix(".tmp")
+            temporario.write_text(json.dumps({"tarefa": self.tarefa, "ultima": self.ultima}, ensure_ascii=False),
+                                  encoding="utf-8")
+            os.replace(temporario, self.arquivo_estado)
+        except OSError:
+            pass
 
     def mudou(self, forcar=True):
         agora = time.monotonic()
         if not forcar and agora - self._ultimo_sinal < 0.5:
             return
         self._ultimo_sinal = agora
+        self._salvar_estado()
         dados = json.dumps(self.estado(), ensure_ascii=False)
         def emitir():
             if self.conexao is not None:
@@ -229,6 +340,7 @@ class Agente:
         self.planos = {k: v for k, v in self.planos.items() if agora - v["quando"] < VALIDADE_PLANO}
         plano = {"id": secrets.token_hex(8), "acao": acao, "argumentos": argumentos, "resumo": resumo,
                  "mudancas": mudancas, "baixar_bytes": baixar, "espaco_bytes": espaco,
+                 "estimativa_s": pl.estimar_segundos(mudancas, baixar),
                  "recusa": {"codigo": recusa.codigo, "mensagem": str(recusa)} if recusa else None}
         if not recusa:
             self.planos[plano["id"]] = {**plano, "uid": uid, "quando": agora}
@@ -250,47 +362,173 @@ class Agente:
             raise Recusa("NaoAutorizado", "Sem autorização para esta ação (use a sessão no computador ou sudo).")
         if self.tarefa:
             raise Recusa("Ocupado", "Já estou fazendo outra ação no sistema. Espere ela terminar.")
-        del self.planos[id_plano]
+        del self.planos[id_plano]                 # um plano roda uma vez só
+        agora = time.time()
         self.tarefa = {"id": id_plano, "acao": plano["acao"], "argumentos": plano["argumentos"],
                        "resumo": plano["resumo"], "estado": "conferindo", "fracao": 0.0, "mensagem": "",
-                       "uid": uid, "inicio": int(time.time())}
+                       "uid": uid, "inicio": int(agora), "estimativa_s": plano.get("estimativa_s", 0),
+                       "atividade": int(agora), "etapa": "Conferindo o que vai mudar", "alerta": "",
+                       "registro": time.strftime("%Y%m%d-%H%M%S", time.localtime(agora)) + f"-{id_plano}.log"}
         self.mudou()
         threading.Thread(target=self._rodar, args=(plano,), daemon=True).start()
+
+    def _escrever(self, arquivo):
+        def escrever(linha):
+            if self.tarefa:
+                self.tarefa["atividade"] = int(time.time())
+            try:
+                arquivo.write(time.strftime("%H:%M:%S ") + linha + "\n")
+                arquivo.flush()
+            except (OSError, ValueError):
+                pass
+        return escrever
+
+    def _abrir_registro(self, nome):
+        try:
+            self.pasta_registros.mkdir(parents=True, exist_ok=True)
+            return open(self.pasta_registros / nome, "w", encoding="utf-8")
+        except OSError:
+            return open(os.devnull, "w", encoding="utf-8")
 
     def _rodar(self, plano):
         acao, argumentos = plano["acao"], plano["argumentos"]
         resultado, mensagem, detalhe = "erro", "", ""
+        arquivo = self._abrir_registro(self.tarefa["registro"])
+        escrever = self._escrever(arquivo)
+        escrever(f"DuiaOS — {acao} {json.dumps(argumentos, ensure_ascii=False)} (plano {plano['id']})")
+        escrever(f"Resumo aprovado: {plano['resumo']}")
+        self._travou = ""
         try:
             with self._trava:
+                # Idempotência: uma instalação que ficou pela metade é concluída antes de tudo
+                pendente = self.apt.auditar()
+                if pendente:
+                    self.tarefa.update(estado="reparando", etapa="Concluindo uma instalação anterior que ficou pela metade")
+                    self.mudou()
+                    escrever("[reparo] dpkg --audit mostrou pacotes pela metade:\n" + pendente)
+                    self.apt.reparar(escrever)
                 # Confere de novo: a pessoa aprovou ESTE impacto
                 mudancas, _resumo, recusa, _b, _e = self._simular(acao, argumentos)
+                if recusa and recusa.codigo in ("NadaAFazer", "JaInstalado"):
+                    escrever("Nada mais a fazer: " + str(recusa))
+                    raise _JaFeito()
                 if recusa:
                     raise recusa
+                if not any(mudancas.values()):
+                    escrever("Nada mais a fazer: já está tudo instalado.")
+                    raise _JaFeito()
                 if self._assinatura(mudancas) != self._assinatura(plano["mudancas"]):
                     raise Recusa("Mudou", "O que esta ação faria mudou desde a aprovação. Peça de novo.")
-                self.tarefa.update(estado="executando", mensagem="Começando")
+                self.tarefa.update(estado="executando", mensagem="Começando", etapa="Baixando pacotes")
                 self.mudou()
-                codigo, detalhe = self.apt.executar(pl.comando_apt(acao, argumentos), self._progresso,
-                                                    self._guardar_processo)
+                parar = threading.Event()
+                vigia = threading.Thread(target=self._vigiar, args=(parar, escrever), daemon=True)
+                vigia.start()
+                try:
+                    codigo, detalhe = self.apt.executar(pl.comando_apt(acao, argumentos), self._progresso,
+                                                        self._guardar_processo, escrever)
+                finally:
+                    parar.set()
+                    vigia.join(5)
                 self._processo = None
+                escrever(f"apt-get terminou com o código {codigo}")
                 if self.tarefa.get("cancelado"):
                     resultado, mensagem = "cancelada", "Cancelado antes de instalar. Nada mudou."
                 elif codigo != 0:
-                    mensagem = f"O apt terminou com erro (detalhes em {self.registro})."
+                    mensagem = self._travou or pl.explicar_erro(detalhe)
+                    if self.apt.auditar():
+                        self.tarefa.update(estado="reparando", etapa="Reparando os pacotes que ficaram pela metade")
+                        self.mudou()
+                        reparado = self.apt.reparar(escrever)
+                        mensagem += (" O sistema foi reparado; pode tentar de novo." if reparado else
+                                     " Não foi possível reparar sozinho; veja o registro.")
                 else:
-                    self.tarefa.update(estado="verificando", fracao=1.0, mensagem="Conferindo")
+                    self.tarefa.update(estado="verificando", fracao=1.0, mensagem="Conferindo", etapa="Conferindo o resultado")
                     self.mudou()
                     resultado, mensagem = self._verificar(acao, argumentos)
+        except _JaFeito:
+            resultado, mensagem = "ok", "Já estava tudo instalado: nada foi feito de novo."
         except Recusa as erro:
             resultado, mensagem = "recusada", str(erro)
         except Exception as erro:  # noqa: BLE001
             mensagem = f"Falha interna: {erro}"[:300]
+        escrever(f"Resultado: {resultado} — {mensagem}")
+        arquivo.close()
+        duracao = int(time.time() - self.tarefa["inicio"]) if self.tarefa else 0
         self.ultima = {"id": plano["id"], "acao": acao, "argumentos": argumentos, "resultado": resultado,
-                       "mensagem": mensagem, "quando": int(time.time())}
+                       "mensagem": mensagem, "quando": int(time.time()), "duracao_s": duracao,
+                       "registro": self.tarefa["registro"] if self.tarefa else ""}
         self.registrar("executado", uid=self.tarefa["uid"] if self.tarefa else None, acao=acao,
                        argumentos=argumentos, resultado=resultado, mensagem=mensagem, saida=detalhe[-2000:])
+        self._indexar(self.ultima)
         self.tarefa = None
         self.mudou()
+
+    def _vigiar(self, parar, escrever):
+        """Etapa atual, alerta de 'está demorando' e, com LIMITE_PARADO sem saída, interrompe a etapa parada."""
+        interrompidos = 0
+        while not parar.wait(2):
+            tarefa, processo = self.tarefa, self._processo
+            if not tarefa or processo is None:
+                continue
+            filhos = descendentes(processo.pid)
+            ultimo = filhos[-1] if filhos else None
+            etapa = (pl.descrever_processo(ultimo[2]) if ultimo else "") or tarefa.get("etapa", "")
+            parado = int(time.time()) - tarefa.get("atividade", int(time.time()))
+            alerta = ""
+            if parado >= AVISO_PARADO:
+                alerta = (f"Está demorando: “{etapa or 'instalação'}” há {parado // 60} min sem novidade. "
+                          f"Isso pode ser normal com o kernel; o DuiaOS espera até {LIMITE_PARADO // 60} min.")
+            if parado >= LIMITE_PARADO and ultimo:
+                interrompidos += 1
+                alvo = ultimo[0] if interrompidos < 3 else processo.pid
+                nome = ultimo[2][:120]
+                escrever(f"[vigia] {parado // 60} min sem saída; interrompendo {'a etapa' if interrompidos < 3 else 'o apt'}: {nome}")
+                self._travou = (f"A etapa “{etapa or nome}” ficou parada por {parado // 60} minutos e foi interrompida.")
+                try:
+                    os.kill(alvo, signal.SIGTERM)
+                    time.sleep(20)
+                    os.kill(alvo, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+                tarefa["atividade"] = int(time.time())
+            if etapa != tarefa.get("etapa") or alerta != tarefa.get("alerta"):
+                tarefa["etapa"], tarefa["alerta"] = etapa, alerta
+                self.mudou(forcar=False)
+
+    # ------------------------------------------------------------ registros
+    def _indexar(self, ultima):
+        try:
+            self.pasta_registros.mkdir(parents=True, exist_ok=True)
+            with open(self.pasta_registros / "indice.jsonl", "a", encoding="utf-8") as indice:
+                indice.write(json.dumps({"nome": ultima.get("registro", ""), "quando": ultima["quando"],
+                                         "acao": ultima["acao"], "resultado": ultima["resultado"],
+                                         "mensagem": ultima["mensagem"], "duracao_s": ultima.get("duracao_s", 0)},
+                                        ensure_ascii=False) + "\n")
+        except OSError:
+            pass
+
+    def registros(self):
+        try:
+            linhas = (self.pasta_registros / "indice.jsonl").read_text(encoding="utf-8").splitlines()
+        except OSError:
+            return []
+        lista = []
+        for linha in reversed(linhas[-50:]):
+            try:
+                lista.append(json.loads(linha))
+            except ValueError:
+                continue
+        return lista
+
+    def ler_registro(self, nome):
+        if not NOME_REGISTRO.match(nome or ""):
+            raise Recusa("Invalido", "Registro desconhecido.")
+        try:
+            dados = (self.pasta_registros / nome).read_bytes()
+        except OSError:
+            raise Recusa("Invalido", "Este registro não existe mais.")
+        return dados[-400_000:].decode("utf-8", errors="replace")
 
     def _progresso(self, fracao, mensagem):
         if self.tarefa:
@@ -369,6 +607,10 @@ class Agente:
                 elif metodo == "Cancelar":
                     self.cancelar()
                     valor = None
+                elif metodo == "Registros":
+                    valor = GLib.Variant("(s)", (json.dumps(self.registros(), ensure_ascii=False),))
+                elif metodo == "LerRegistro":
+                    valor = GLib.Variant("(s)", (self.ler_registro(parametros.unpack()[0]),))
                 else:
                     raise Recusa("Invalido", f"Método desconhecido: {metodo}")
                 GLib.idle_add(lambda: (invocacao.return_value(valor), False)[1])

@@ -92,6 +92,7 @@ class TesteTelas(unittest.TestCase):
                       "barra", "usuario", "data", "teclado", "padroes", "atualizacoes", "privacidade", "ia", "sobre"):
             with self.subTest(secao=secao):
                 self.abrir("configuracoes-" + secao, ["apps/configuracoes/main.py", "--demonstracao", "--secao", secao])
+        self.abrir("configuracoes-atualizando", ["apps/configuracoes/main.py", "--demonstracao", "--secao", "atualizacoes", "--atualizando"])
 
 
 if __name__ == "__main__":
