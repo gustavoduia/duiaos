@@ -23,6 +23,8 @@ from pathlib import Path
 PASTA = Path(__file__).resolve().parent
 sys.path.insert(0, str(PASTA.parent / "comum"))
 
+import papel  # noqa: E402
+import pastas  # noqa: E402
 import sistema  # noqa: E402
 
 DEMONSTRACAO = "--demonstracao" in sys.argv
@@ -102,8 +104,33 @@ class Bloqueio(QObject):
     usuario = Property("QVariantMap", lambda self: self._usuario, constant=True)
     opcoesEnergia = Property("QVariantList", lambda self: self._opcoes, constant=True)
     versao = Property(str, lambda self: sistema.versao(), constant=True)
-    papelDeParede = Property(str, lambda self: sistema.papel_de_parede(), constant=True)
+    papelDeParede = Property(str, lambda self: _url(self._papel()["arquivo"]) or sistema.papel_de_parede(), constant=True)
+    ajusteFundo = Property(str, lambda self: self._papel()["ajuste"], constant=True)
+    corFundo = Property(str, lambda self: self._papel()["cor"], constant=True)
+    desfocarFundo = Property(bool, lambda self: self._papel()["desfocar"], constant=True)
+
+    def _papel(self):
+        """Papel de parede desta tela (shell/comum/papel.py), lido uma vez."""
+        if not hasattr(self, "_papel_lido"):
+            try:
+                self._papel_lido = papel.ler_bloqueio(pastas.PREFERENCIAS, sessao_papel_padrao())
+            except Exception:                      # nunca deixar a tela sem abrir por causa do fundo
+                self._papel_lido = {"arquivo": "", "ajuste": "preencher", "cor": "#E8F0FE", "desfocar": False}
+        return self._papel_lido
     ocupado = Property(bool, lambda self: self._ocupado, notify=mudou)
+
+
+def sessao_papel_padrao():
+    """O papel do DuiaOS instalado (ou o do repositório, para testes)."""
+    for caminho in sistema.PAPEIS_DE_PAREDE:
+        if caminho.is_file():
+            return caminho
+    return papel.PAPEL_PADRAO
+
+
+def _url(arquivo):
+    from pathlib import Path as _Path
+    return _Path(arquivo).as_uri() if arquivo and _Path(arquivo).is_file() else ""
 
 
 def main():

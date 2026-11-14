@@ -506,45 +506,216 @@ Window {
     }
 
     // -------------------------------------------------------- Papel de parede
+    // Abas de escolha (segmentos), no estilo do macOS
+    component Segmentos: Rectangle {
+        id: seg
+        property var opcoes: []            // [{valor, rotulo}]
+        property string valor: ""
+        signal escolhido(string valor)
+        width: linhaSeg.implicitWidth + 6; height: 32; radius: 9
+        color: Tema.controleDesligado
+        Row {
+            id: linhaSeg
+            anchors.centerIn: parent
+            spacing: 2
+            Repeater {
+                model: seg.opcoes
+                Rectangle {
+                    required property var modelData
+                    width: textoSeg.implicitWidth + 28; height: 26; radius: 7
+                    color: seg.valor === modelData.valor ? Tema.cartao : (areaSeg.containsMouse ? Tema.realce : "transparent")
+                    border { color: seg.valor === modelData.valor ? Tema.borda : "transparent"; width: 1 }
+                    Text { id: textoSeg; anchors.centerIn: parent; text: modelData.rotulo; color: Tema.texto
+                           font { family: Tema.fonteTexto; pixelSize: 12; weight: seg.valor === modelData.valor ? Font.DemiBold : Font.Normal } }
+                    MouseArea { id: areaSeg; anchors.fill: parent; hoverEnabled: true; onClicked: seg.escolhido(modelData.valor) }
+                }
+            }
+        }
+    }
+
+    // --------------------------------------------------------- Papel de parede
     Component {
         id: paginaPapel
         Pagina {
             id: pp
             property var imagens: ajustes.imagensDoUsuario()
-            Rectangle {
-                width: Math.min(parent.width, 420); height: width * 0.6; radius: 14
-                clip: true
-                color: Tema.controleDesligado
-                border { color: Tema.borda; width: 1 }
-                Fundo { anchors.fill: parent; anchors.margins: 1; arquivo: ajustes.papelAtual; corFundo: ajustes.corAtual }
+            readonly property var i: ajustes.papelInfo
+            readonly property var a: i.atual || ({})
+            readonly property bool naArea: i.alvo === "area"
+            readonly property bool variasTelas: (i.telas || []).length > 1
+            readonly property var opcoesAjuste: [{ valor: "preencher", rotulo: "Preencher a tela" }, { valor: "ajustar", rotulo: "Ajustar à tela" },
+                                                 { valor: "esticar", rotulo: "Esticar" }, { valor: "centralizar", rotulo: "Centralizar" },
+                                                 { valor: "lado-a-lado", rotulo: "Lado a lado" }]
+            function escolher(arquivo) { ajustes.definirPapel(arquivo) }
+            function atualEh(arquivo) { return (pp.a.arquivo || "") === arquivo }
+
+            Segmentos {
+                opcoes: [{ valor: "area", rotulo: "Área de trabalho" }, { valor: "bloqueio", rotulo: "Tela de Bloqueio" },
+                         { valor: "entrada", rotulo: "Tela de Entrada" }]
+                valor: pp.i.alvo; onEscolhido: (v) => ajustes.escolherAlvoPapel(v)
             }
-            Botao { texto: "Importar imagem ou vídeo…"; icone: "mais"; tipo: "primario"
+
+            // Telas (área de trabalho com mais de um monitor)
+            Grupo {
+                visible: pp.naArea
+                Linha {
+                    icone: "monitor"; titulo: "Com mais de uma tela"
+                    descricao: pp.variasTelas ? (pp.i.telas.length + " telas ligadas") : "Só uma tela ligada agora; vale quando ligar outra"
+                    ultima: pp.i.modoTelas !== "separado"
+                    Seletor { width: 230
+                              opcoes: [{ valor: "mesmo", rotulo: "O mesmo em todas" }, { valor: "separado", rotulo: "Um para cada tela" },
+                                       { valor: "estender", rotulo: "Uma imagem por todas" }]
+                              valor: pp.i.modoTelas; onEscolhido: (v) => ajustes.definirModoTelas(v) }
+                }
+                Linha {
+                    visible: pp.i.modoTelas === "separado"
+                    icone: "monitor"; titulo: "Tela que está mudando"; ultima: true
+                    Segmentos {
+                        anchors.verticalCenter: parent.verticalCenter
+                        opcoes: (pp.i.telas || []).map(function (t) { return { valor: t.nome, rotulo: t.rotulo } })
+                        valor: pp.i.tela; onEscolhido: (v) => ajustes.escolherTelaPapel(v)
+                    }
+                }
+            }
+
+            // Pré-visualização: as telas como estão na mesa (cada uma com o seu papel)
+            Item {
+                id: previa
+                width: Math.min(parent.width, 560)
+                readonly property var telas: pp.naArea && pp.i.modoTelas !== "mesmo" && pp.variasTelas ? pp.i.telas : []
+                readonly property real x0: telas.length ? Math.min.apply(null, telas.map(function (t) { return t.x })) : 0
+                readonly property real y0: telas.length ? Math.min.apply(null, telas.map(function (t) { return t.y })) : 0
+                readonly property real larguraTotal: telas.length ? Math.max.apply(null, telas.map(function (t) { return t.x + t.largura })) - x0 : 16
+                readonly property real alturaTotal: telas.length ? Math.max.apply(null, telas.map(function (t) { return t.y + t.altura })) - y0 : 10
+                readonly property real escala: telas.length ? Math.min(width / larguraTotal, 260 / alturaTotal) : 1
+                height: telas.length ? alturaTotal * escala : Math.min(width, 420) * 0.6
+                // Uma tela só (ou o mesmo em todas, ou Bloqueio/Entrada)
+                Rectangle {
+                    visible: previa.telas.length === 0
+                    width: Math.min(previa.width, 420); height: width * 0.6; radius: 14
+                    clip: true
+                    color: Tema.controleDesligado
+                    border { color: Tema.borda; width: 1 }
+                    Fundo { anchors.fill: parent; anchors.margins: 1; arquivo: pp.a.arquivo || ""; corFundo: pp.a.cor || "#E8F0FE"
+                            ajuste: pp.a.ajuste || "preencher"; escala: width / 1920; tocando: pp.naArea }
+                    // Desfoque e o cartão de senha, para dar a ideia das Telas de Entrada e de Bloqueio
+                    Loader { anchors.fill: parent; active: !pp.naArea && pp.a.desfocar === true; source: active ? "file://" + caminhoComum + "/FundoDesfocado.qml" : ""
+                             onLoaded: item.fonte = parent.children[0] }
+                    Rectangle { visible: !pp.naArea; anchors.centerIn: parent; width: parent.width * 0.32; height: parent.height * 0.42; radius: 12
+                                color: Qt.rgba(1, 1, 1, 0.82)
+                                Rectangle { anchors { horizontalCenter: parent.horizontalCenter; top: parent.top; topMargin: parent.height * 0.14 }
+                                            width: parent.width * 0.3; height: width; radius: width / 2; color: Tema.azulDuia }
+                                Rectangle { anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: parent.height * 0.14 }
+                                            width: parent.width * 0.8; height: parent.height * 0.14; radius: 4; color: "white"; border.color: Tema.borda } }
+                }
+                // Várias telas
+                Repeater {
+                    model: previa.telas
+                    Rectangle {
+                        required property var modelData
+                        readonly property var p: pp.i.porTela[modelData.nome] || pp.a
+                        x: (modelData.x - previa.x0) * previa.escala + 2; y: (modelData.y - previa.y0) * previa.escala + 2
+                        width: modelData.largura * previa.escala - 4; height: modelData.altura * previa.escala - 4
+                        radius: 8; clip: true
+                        color: Tema.controleDesligado
+                        border { color: pp.i.modoTelas === "separado" && pp.i.tela === modelData.nome ? Tema.azulDuia : Tema.borda
+                                 width: pp.i.modoTelas === "separado" && pp.i.tela === modelData.nome ? 3 : 1 }
+                        Fundo {
+                            anchors.fill: parent; anchors.margins: parent.border.width
+                            readonly property var papel: pp.i.modoTelas === "estender" ? pp.a : parent.p
+                            arquivo: papel.arquivo || ""; corFundo: papel.cor || "#E8F0FE"; ajuste: papel.ajuste || "preencher"
+                            escala: previa.escala; tocando: false
+                            estendido: pp.i.modoTelas === "estender" ? { largura: previa.larguraTotal, altura: previa.alturaTotal,
+                                                                         dx: modelData.x - previa.x0, dy: modelData.y - previa.y0 } : null
+                        }
+                        Text { anchors { left: parent.left; bottom: parent.bottom; margins: 8 } text: modelData.rotulo; color: "white"
+                               style: Text.Outline; styleColor: Qt.rgba(0, 0, 0, 0.35); font { family: Tema.fonteTexto; pixelSize: 11; weight: Font.DemiBold } }
+                        MouseArea { anchors.fill: parent; enabled: pp.i.modoTelas === "separado"; cursorShape: Qt.PointingHandCursor
+                                    onClicked: ajustes.escolherTelaPapel(modelData.nome) }
+                    }
+                }
+            }
+            Rotulo { visible: (pp.i.tamanhoImagem || "") !== ""; width: parent.width; secundario: true
+                     text: "Imagem de " + pp.i.tamanhoImagem + " pixels" + ((pp.i.telas || []).length ? " · tela de " + pp.i.telas[0].largura + " × " + pp.i.telas[0].altura : "") }
+
+            // Opções do alvo
+            Grupo {
+                Linha {
+                    visible: pp.i.alvo === "bloqueio"
+                    icone: "cadeado"; titulo: "Imagem"
+                    descricao: pp.i.bloqueioModo === "area" ? "A mesma da área de trabalho" : "Uma imagem só da Tela de Bloqueio"
+                    Botao { visible: pp.i.bloqueioModo !== "area"; texto: "Usar o da área de trabalho"; height: 28; onClicado: ajustes.usarPapelDaArea() }
+                }
+                Linha {
+                    visible: pp.i.alvo === "entrada"
+                    icone: "usuarios"; titulo: "Imagem"
+                    descricao: (pp.a.modo === "padrao" ? "A do DuiaOS" : "Escolhida neste computador") + ". Vale para todas as contas; só um administrador muda."
+                    Botao { texto: "Usar o da área de trabalho"; height: 28; onClicado: ajustes.usarPapelDaArea() }
+                    Botao { visible: pp.a.modo !== "padrao"; texto: "Voltar ao do DuiaOS"; height: 28; onClicado: ajustes.entradaPadrao() }
+                }
+                Linha {
+                    icone: "imagem"; titulo: "Como a imagem ocupa a tela"
+                    descricao: ({ preencher: "Cobre a tela inteira, cortando o que sobra", ajustar: "A imagem inteira aparece; sobra a cor nas bordas",
+                                  esticar: "Ocupa a tela, deformando se as proporções forem diferentes", centralizar: "Tamanho original, no meio da tela",
+                                  "lado-a-lado": "Repetida, como azulejos" })[pp.a.ajuste || "preencher"]
+                    Seletor { width: 200; opcoes: pp.opcoesAjuste; valor: pp.a.ajuste || "preencher"; onEscolhido: (v) => ajustes.definirAjuste(v) }
+                }
+                Linha {
+                    visible: (pp.a.arquivo || "") !== "" && ["ajustar", "centralizar"].indexOf(pp.a.ajuste) >= 0
+                    icone: "paleta"; titulo: "Cor em volta da imagem"
+                    Row {
+                        spacing: 6; anchors.verticalCenter: parent.verticalCenter
+                        Repeater { model: ["#E8F0FE", "#FFFFFF", "#1A3A73", "#0F1724", "#000000", "#5B6675"]
+                                   Rectangle { required property string modelData; width: 22; height: 22; radius: 11; color: modelData
+                                               border { color: (pp.a.cor || "").toUpperCase() === modelData ? Tema.azulDuia : Tema.borda; width: 2 }
+                                               MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: ajustes.definirCorDasBordas(modelData) } } }
+                    }
+                }
+                Linha {
+                    visible: pp.naArea
+                    icone: "recentes"; titulo: "Trocar sozinho"; descricao: "Entre as imagens do DuiaOS e as que você importou"
+                    ultima: true
+                    Seletor { width: 200
+                              opcoes: [{ valor: "0", rotulo: "Nunca" }, { valor: "15", rotulo: "A cada 15 minutos" }, { valor: "30", rotulo: "A cada 30 minutos" },
+                                       { valor: "60", rotulo: "A cada hora" }, { valor: "180", rotulo: "A cada 3 horas" }, { valor: "1440", rotulo: "Uma vez por dia" }]
+                              valor: String(pp.i.alternar); onEscolhido: (v) => ajustes.definirAlternar(parseInt(v)) }
+                }
+                Linha {
+                    visible: !pp.naArea
+                    icone: "olho"; titulo: "Desfocar o fundo"; descricao: "Deixa o cartão da senha em destaque"; ultima: true
+                    Interruptor { ligado: pp.a.desfocar === true; onAlternado: (l) => ajustes.definirDesfocar(l) }
+                }
+            }
+
+            Botao { texto: pp.naArea ? "Importar imagem ou vídeo…" : "Importar imagem…"; icone: "mais"; tipo: "primario"
                     onClicado: { escolherArquivo.destino = "papel"; escolherArquivo.open() } }
             Rotulo { width: parent.width; secundario: true
-                     text: "Aceita fotos (JPG, PNG, WebP), imagens com movimento (GIF) e vídeos (MP4, WebM, MKV, MOV), que tocam sem som e em laço." }
+                     text: pp.naArea ? "Aceita fotos (JPG, PNG, WebP), imagens com movimento (GIF) e vídeos (MP4, WebM, MKV, MOV), que tocam sem som e em laço."
+                                     : "As Telas de Entrada e de Bloqueio usam fotos (JPG, PNG ou WebP)." }
             Titulo { nivel: 3; text: "Do DuiaOS"; visible: ajustes.papeis.length > 0 }
             Flow { width: parent.width; spacing: 12
                    Repeater { model: ajustes.papeis
-                              MiniaturaFundo { required property string modelData; arquivo: modelData; atual: ajustes.papelAtual === modelData
-                                               onEscolhida: ajustes.definirPapel(modelData) } } }
+                              MiniaturaFundo { required property string modelData; arquivo: modelData; atual: pp.atualEh(modelData)
+                                               onEscolhida: pp.escolher(modelData) } } }
             Titulo { nivel: 3; text: "Importados"; visible: ajustes.fundosImportados.length > 0 }
             Flow { width: parent.width; spacing: 12
                    Repeater { model: ajustes.fundosImportados
-                              MiniaturaFundo { required property string modelData; arquivo: modelData; atual: ajustes.papelAtual === modelData
-                                               onEscolhida: ajustes.definirPapel(modelData) } } }
+                              MiniaturaFundo { required property string modelData; arquivo: modelData; atual: pp.atualEh(modelData)
+                                               visible: pp.naArea || /\.(jpe?g|png|webp)$/i.test(modelData)
+                                               onEscolhida: pp.escolher(modelData) } } }
             Titulo { nivel: 3; text: "Cores" }
             Flow {
                 width: parent.width; spacing: 12
                 Repeater { model: ["#E8F0FE", "#1A3A73", "#0F1724", "#2E6BE6", "#2FA67A", "#F4E9DA", "#E8A33D", "#5B6675"]
                            MiniaturaFundo { required property string modelData; cor: modelData; width: 82
-                                            atual: ajustes.papelAtual === "" && ajustes.corAtual === modelData
-                                            onEscolhida: ajustes.definirPapel(modelData) } }
+                                            atual: (pp.a.arquivo || "") === "" && (pp.a.cor || "").toUpperCase() === modelData
+                                            onEscolhida: pp.escolher(modelData) } }
             }
             Titulo { nivel: 3; text: "Da pasta Imagens"; visible: pp.imagens.length > 0 }
             Flow { width: parent.width; spacing: 12
                    Repeater { model: pp.imagens
-                              MiniaturaFundo { required property string modelData; arquivo: modelData; atual: ajustes.papelAtual === modelData
-                                               onEscolhida: ajustes.definirPapel(modelData) } } }
+                              MiniaturaFundo { required property string modelData; arquivo: modelData; atual: pp.atualEh(modelData)
+                                               onEscolhida: pp.escolher(modelData) } } }
         }
     }
 

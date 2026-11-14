@@ -1,6 +1,6 @@
 // DuiaOS — conteúdo da Barra de Recursos (sem a janela, para servir também à demonstração).
 //
-// Esquerda: símbolo (Menu do DuiaOS), botão Wise e o aplicativo em uso.
+// Esquerda: símbolo (Menu do DuiaOS) e o aplicativo em uso (o Wise fica nos ícones da direita).
 // Direita: seta do balão (ícones que não couberam), até 4 ícones de controle,
 // Central de Controle e relógio (calendário).
 import QtQuick
@@ -158,23 +158,6 @@ Rectangle {
                 Accessible.name: "Menu do DuiaOS"
                 onClicado: barra.abrir("menu", botaoMenu)
                 Simbolo { width: 17; height: 17 }
-            }
-            Rectangle {
-                id: botaoWise
-                visible: sistema.wise
-                anchors.verticalCenter: parent.verticalCenter
-                width: textoWise.implicitWidth + 20
-                height: 22
-                radius: 11
-                color: areaWise.pressed ? Tema.azulNoite : (areaWise.containsMouse ? Tema.azulEscuro : Tema.azulDuia)
-                Text {
-                    id: textoWise
-                    anchors.centerIn: parent
-                    text: "Wise"
-                    font { family: Tema.fonteTexto; pixelSize: 12; weight: Font.DemiBold }
-                    color: "white"
-                }
-                MouseArea { id: areaWise; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: sistema.abrirWise() }
             }
             Text {
                 anchors.verticalCenter: parent.verticalCenter

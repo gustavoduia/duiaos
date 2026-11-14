@@ -19,6 +19,9 @@ Item {
     property var opcoesEnergia: []       // [{id, titulo, descricao}]
     property string versao: "DuiaOS"
     property string papelDeParede: ""
+    property string ajusteFundo: "preencher"     // shell/comum/papel.py
+    property color corFundo: Estilo.fundo
+    property bool desfocar: false
     property bool somenteFundo: false    // monitores extras: só o fundo e o relógio
 
     signal entrar(string usuario, string senha)
@@ -44,13 +47,25 @@ Item {
     }
 
     // ------------------------------------------------------------ fundo
-    Rectangle { anchors.fill: parent; color: Estilo.fundo }
+    Rectangle { anchors.fill: parent; color: tela.corFundo }
     Image {
+        id: imagemFundo
         anchors.fill: parent
         source: tela.papelDeParede
-        fillMode: Image.PreserveAspectCrop
+        fillMode: tela.ajusteFundo === "ajustar" ? Image.PreserveAspectFit
+                  : tela.ajusteFundo === "esticar" ? Image.Stretch
+                  : tela.ajusteFundo === "centralizar" ? Image.Pad
+                  : tela.ajusteFundo === "lado-a-lado" ? Image.Tile : Image.PreserveAspectCrop
         asynchronous: false
         smooth: true
+    }
+    // Desfoque por cima da imagem (que continua embaixo: sem placa de vídeo, fica a imagem nítida)
+    Loader {
+        id: desfoque
+        anchors.fill: parent
+        active: tela.desfocar && tela.papelDeParede !== ""
+        source: active ? Qt.resolvedUrl("FundoDesfocado.qml") : ""
+        onLoaded: item.fonte = imagemFundo
     }
     // Véu claro: suaviza o papel de parede e destaca o cartão
     Rectangle { anchors.fill: parent; color: Estilo.fundo; opacity: 0.35 }

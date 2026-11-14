@@ -54,6 +54,9 @@ fundos com GIF/vídeo, Atualizações nas Configurações, foto da conta, menu d
    Entrada/Bloqueio, Central de IA e "Ajude a melhorar"; janelas presas aos cantos.
 
 ## 5. Decisões recentes (detalhe nos ADRs)
+- 14/11: **Papéis de parede completos** e **testes das janelas reais** (ADR 051; fichas 0009 e 0010). A Ilha
+  sumiu no Dell depois da 0008 (QML não carregava: `Behavior` numa propriedade `readonly`); corrigido e coberto
+  por `shell/testes/test_janelas_reais.py`. Botão "Wise" da Barra removido.
 - 14/11: **Ilha como o Dock do macOS** (ADR 050, ficha DUIA-2026-0008): ampliação, tamanho, posição, ocultar,
   menus, arrastar e minimizar com gênio/escala feito pela própria Ilha (grim + wlrctl), sem animação do labwc.
   **Sem teste no Dell**: conferir o efeito real, a máscara de cliques e o botão amarelo.

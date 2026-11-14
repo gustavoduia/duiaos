@@ -6,6 +6,9 @@ import DuiaOS
 Item {
     id: raiz
     property bool mostrarIcones: true
+    property string nomeTela: ""             // saída (eDP-1, HDMI-A-1…): cada tela pode ter o seu papel
+    property var estendido: null             // {largura, altura, dx, dy}: uma imagem por todas as telas
+    readonly property var meuPapel: { area.papeis; return area.papelDaTela(nomeTela) }
     property var selecao: ({})
     property string renomeando: ""
     focus: true
@@ -46,8 +49,10 @@ Item {
 
     Fundo {
         anchors.fill: parent
-        arquivo: area.arquivoPapel
-        corFundo: area.corPapel
+        arquivo: raiz.meuPapel.arquivo || ""
+        corFundo: raiz.meuPapel.cor || "#E8F0FE"
+        ajuste: raiz.meuPapel.ajuste || "preencher"
+        estendido: area.papeis.telas === "estender" ? raiz.estendido : null
     }
 
     // Clique no vazio: esquerdo limpa a seleção, direito abre o menu da área de trabalho

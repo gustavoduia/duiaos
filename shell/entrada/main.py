@@ -24,6 +24,7 @@ from pathlib import Path
 PASTA = Path(__file__).resolve().parent
 sys.path.insert(0, str(PASTA.parent / "comum"))
 
+import papel  # noqa: E402
 import sistema  # noqa: E402
 
 DEMONSTRACAO = "--demonstracao" in sys.argv
@@ -224,9 +225,26 @@ class Entrada(QObject):
     usuarioInicial = Property(int, lambda self: self._usuario_inicial, constant=True)
     opcoesEnergia = Property("QVariantList", lambda self: self._opcoes, constant=True)
     versao = Property(str, lambda self: sistema.versao(), constant=True)
-    papelDeParede = Property(str, lambda self: sistema.papel_de_parede(), constant=True)
+    papelDeParede = Property(str, lambda self: _url(self._papel()["arquivo"]) or sistema.papel_de_parede(), constant=True)
+    ajusteFundo = Property(str, lambda self: self._papel()["ajuste"], constant=True)
+    corFundo = Property(str, lambda self: self._papel()["cor"], constant=True)
+    desfocarFundo = Property(bool, lambda self: self._papel()["desfocar"], constant=True)
+
+    def _papel(self):
+        """Papel de parede desta tela (shell/comum/papel.py), lido uma vez."""
+        if not hasattr(self, "_papel_lido"):
+            try:
+                self._papel_lido = papel.ler_entrada(papel.ENTRADA_CONF, next((c for c in sistema.PAPEIS_DE_PAREDE if c.is_file()), papel.PAPEL_PADRAO))
+            except Exception:                      # nunca deixar a tela sem abrir por causa do fundo
+                self._papel_lido = {"arquivo": "", "ajuste": "preencher", "cor": "#E8F0FE", "desfocar": False}
+        return self._papel_lido
     demonstracao = Property(bool, lambda self: DEMONSTRACAO, constant=True)
     ocupado = Property(bool, lambda self: self._ocupado, notify=mudou)
+
+
+def _url(arquivo):
+    from pathlib import Path as _Path
+    return _Path(arquivo).as_uri() if arquivo and _Path(arquivo).is_file() else ""
 
 
 def main():

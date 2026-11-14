@@ -28,9 +28,16 @@ if ! python3 "${DUIAOS_SHELL}/comum/sessao.py" aplicar >/tmp/duiaos-sessao.log 2
     before-sleep "${DUIAOS_SHELL}/bloqueio/bloquear" lock "${DUIAOS_SHELL}/bloqueio/bloquear" >/dev/null 2>&1 &
 fi
 
-# Barra de Recursos e Ilha de Aplicativos
-python3 "${DUIAOS_SHELL}/barra-de-recursos/main.py" >/tmp/duiaos-barra-de-recursos.log 2>&1 &
-python3 "${DUIAOS_SHELL}/ilha-de-aplicativos/main.py" >/tmp/duiaos-ilha-de-aplicativos.log 2>&1 &
+# Barra de Recursos e Ilha de Aplicativos: se fecharem ou travarem, voltam em 3 segundos
+# (o registro fica em /tmp e, com o duiaos_registro, no journal)
+for COMPONENTE in barra-de-recursos ilha-de-aplicativos; do
+  (
+    while kill -0 "${LABWC_PID}" 2>/dev/null; do
+      python3 "${DUIAOS_SHELL}/${COMPONENTE}/main.py" >>"/tmp/duiaos-${COMPONENTE}.log" 2>&1
+      sleep 3
+    done
+  ) &
+done
 
 # Acessibilidade do sistema (AT-SPI, ADR 035): leitores de tela e o Wise leem e
 # usam as janelas por ela. Avisa os aplicativos que há quem leia (Firefox e

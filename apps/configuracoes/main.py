@@ -54,6 +54,7 @@ PASTA_FUNDOS = pastas.DADOS / "duiaos" / "fundos"          # imagens e vídeos i
 EXTENSOES_FUNDO = (".jpg", ".jpeg", ".png", ".webp", ".gif", ".mp4", ".webm", ".mkv", ".mov", ".m4v")
 AGENTE = ("org.duiaos.Agente1", "/org/duiaos/Agente1")
 AJUDANTE_CONTA = "/usr/lib/duiaos/conta"
+AJUDANTE_PAPEL_ENTRADA = "/usr/lib/duiaos/papel-entrada"
 ARQUIVO_PEDIDO = Path(os.environ.get("XDG_RUNTIME_DIR", "/tmp")) / "duiaos-configuracoes.secao"
 
 # Aplicativos padrão: categoria → (rótulo, tipos MIME)
@@ -236,6 +237,11 @@ class Ajustes(QObject):
     def _ao_pronto(self, nome, resultado):
         if isinstance(resultado, Exception):
             return
+        if nome == "aviso-papel":
+            if resultado:
+                self.aviso.emit(resultado)
+            self.mudou.emit()
+            return
         if nome == "aviso":
             if resultado:
                 self.aviso.emit(resultado)
@@ -309,16 +315,222 @@ class Ajustes(QObject):
     luzFim = Property(str, lambda self: pastas.ler_preferencia("luz-noturna", "fim", "06:30"), notify=mudou)
 
     # ---------------------------------------------------- papel de parede
+    # Alvo (ADR 051): "area" (área de trabalho: todas as telas, uma tela escolhida ou estendida),
+    # "bloqueio" (Tela de Bloqueio) ou "entrada" (Tela de Entrada, de todas as contas).
+    def _secao_area(self):
+        import papel
+        area = papel.ler_area(pastas.PREFERENCIAS, sessao.PAPEL_PADRAO)
+        tela = getattr(self, "_tela_papel", "")
+        return f"papel-de-parede:{tela}" if area["telas"] == "separado" and tela else "papel-de-parede"
+
+    @Slot(str)
+    def escolherAlvoPapel(self, alvo):
+        if alvo in ("area", "bloqueio", "entrada"):
+            self._alvo_papel = alvo
+            self.mudou.emit()
+
+    @Slot(str)
+    def escolherTelaPapel(self, nome):
+        self._tela_papel = nome
+        self.mudou.emit()
+
+    def _gravar_papel(self, chave, valor):
+        """Grava uma opção do papel do alvo escolhido."""
+        alvo = getattr(self, "_alvo_papel", "area")
+        if alvo == "area":
+            pastas.gravar_preferencia(self._secao_area(), chave, valor)
+        elif alvo == "bloqueio":
+            pastas.gravar_preferencia("papel-bloqueio", "modo", "proprio")
+            pastas.gravar_preferencia("papel-bloqueio", chave, valor)
+        self.mudou.emit()          # a Área de Trabalho vê a preferência mudar e troca o fundo na hora
+
     @Slot(str)
     def definirPapel(self, arquivo):
+        """Uma imagem, vídeo ou cor (#RRGGBB) para o alvo escolhido."""
+        import papel
         if arquivo.startswith("file://"):
             arquivo = arquivo[7:]
-        if arquivo.startswith("#"):
-            pastas.gravar_preferencia("papel-de-parede", "cor", arquivo)
-            pastas.gravar_preferencia("papel-de-parede", "arquivo", "")
+        alvo = getattr(self, "_alvo_papel", "area")
+        cor = arquivo.startswith("#")
+        if alvo in ("bloqueio", "entrada") and not cor and not arquivo.lower().endswith(papel.EXTENSOES_IMAGEM):
+            self.aviso.emit("As Telas de Entrada e de Bloqueio usam fotos (JPG, PNG ou WebP), não vídeos nem GIFs.")
+            return
+        if alvo == "entrada":
+            atual = self._papel_entrada()
+            if cor:
+                self._entrada("imagem-cor", atual["ajuste"], arquivo, atual["desfocar"])
+            else:
+                self._entrada("imagem", atual["ajuste"], atual["cor"], atual["desfocar"], arquivo)
+            return
+        if cor:
+            self._gravar_papel("cor", arquivo)
+            self._gravar_papel("arquivo", "")
         else:
-            pastas.gravar_preferencia("papel-de-parede", "arquivo", arquivo)
-        self.mudou.emit()          # a Área de Trabalho vê a preferência mudar e troca o fundo na hora
+            self._gravar_papel("arquivo", arquivo)
+
+    @Slot(str)
+    def definirAjuste(self, ajuste):
+        import papel
+        if ajuste not in papel.AJUSTES:
+            return
+        if getattr(self, "_alvo_papel", "area") == "entrada":
+            atual = self._papel_entrada()
+            # Com o papel do DuiaOS, o ajudante precisa de uma imagem: manda a do DuiaOS
+            self._entrada("opcoes" if atual["modo"] == "proprio" else "imagem", ajuste, atual["cor"], atual["desfocar"],
+                          atual["arquivo"])
+        else:
+            self._gravar_papel("ajuste", ajuste)
+
+    @Slot(str)
+    def definirCorDasBordas(self, cor):
+        """Cor que aparece em volta da imagem (ajustar, centralizar) — sem trocar a imagem."""
+        if not re.fullmatch(r"#[0-9A-Fa-f]{6}", cor):
+            return
+        if getattr(self, "_alvo_papel", "area") == "entrada":
+            atual = self._papel_entrada()
+            self._entrada("opcoes" if atual["modo"] == "proprio" else "imagem", atual["ajuste"], cor, atual["desfocar"],
+                          atual["arquivo"])
+        else:
+            self._gravar_papel("cor", cor)
+
+    @Slot(str)
+    def definirModoTelas(self, modo):
+        import papel
+        if modo in papel.MODOS_TELAS:
+            pastas.gravar_preferencia("papel-de-parede", "telas", modo)
+            if modo == "separado" and not getattr(self, "_tela_papel", ""):
+                telas = self._telas_papel()
+                self._tela_papel = telas[0]["nome"] if telas else ""
+            self.mudou.emit()
+
+    @Slot(int)
+    def definirAlternar(self, minutos):
+        import papel
+        if minutos in papel.INTERVALOS:
+            pastas.gravar_preferencia("papel-de-parede", "alternar", str(minutos))
+            self.mudou.emit()
+
+    @Slot(bool)
+    def definirDesfocar(self, ligado):
+        alvo = getattr(self, "_alvo_papel", "area")
+        if alvo == "entrada":
+            atual = self._papel_entrada()
+            if atual["modo"] == "padrao":
+                self._entrada("padrao", desfocar=ligado)
+            else:
+                self._entrada("opcoes", atual["ajuste"], atual["cor"], ligado)
+        elif alvo == "bloqueio":
+            pastas.gravar_preferencia("papel-bloqueio", "desfocar", "sim" if ligado else "nao")
+            self.mudou.emit()
+
+    @Slot()
+    def usarPapelDaArea(self):
+        """Bloqueio: volta a seguir a área de trabalho. Entrada: copia o papel da área de trabalho."""
+        import papel
+        alvo = getattr(self, "_alvo_papel", "area")
+        area = papel.ler_area(pastas.PREFERENCIAS, sessao.PAPEL_PADRAO)["padrao"]
+        if alvo == "bloqueio":
+            pastas.gravar_preferencia("papel-bloqueio", "modo", "area")
+            self.mudou.emit()
+        elif alvo == "entrada":
+            if area["arquivo"] and not area["arquivo"].lower().endswith(papel.EXTENSOES_IMAGEM):
+                self.aviso.emit("O papel da área de trabalho é um vídeo ou GIF; a Tela de Entrada usa fotos.")
+                return
+            atual = self._papel_entrada()
+            if area["arquivo"]:
+                self._entrada("imagem", area["ajuste"], area["cor"], atual["desfocar"], area["arquivo"])
+            else:
+                self._entrada("imagem-cor", area["ajuste"], area["cor"], atual["desfocar"])
+
+    @Slot()
+    def entradaPadrao(self):
+        self._entrada("padrao", desfocar=self._papel_entrada()["desfocar"])
+
+    def _papel_entrada(self):
+        import papel
+        if DEMONSTRACAO:
+            return getattr(self, "_entrada_demo", {"modo": "padrao", "arquivo": str(sessao.PAPEL_PADRAO), "cor": sessao.COR_PADRAO,
+                                                   "ajuste": "preencher", "desfocar": False})
+        return papel.ler_entrada(papel.ENTRADA_CONF, sessao.PAPEL_PADRAO)
+
+    def _entrada(self, acao, ajuste="preencher", cor="#E8F0FE", desfocar=False, arquivo=""):
+        """Tela de Entrada: /usr/lib/duiaos/papel-entrada pelo pkexec (administrador)."""
+        sim = "sim" if desfocar else "nao"
+        if DEMONSTRACAO:
+            self._entrada_demo = ({"modo": "padrao", "arquivo": str(sessao.PAPEL_PADRAO), "cor": sessao.COR_PADRAO,
+                                   "ajuste": "preencher", "desfocar": desfocar} if acao == "padrao" else
+                                  {"modo": "proprio", "arquivo": arquivo or self._papel_entrada()["arquivo"], "cor": cor,
+                                   "ajuste": ajuste, "desfocar": desfocar})
+            self.mudou.emit()
+            return
+        if acao == "padrao":
+            argumentos, dados = ["padrao", sim], b""
+        elif acao == "opcoes":
+            argumentos, dados = ["opcoes", ajuste, cor, sim], b""
+        else:
+            if acao == "imagem-cor":
+                # Uma cor lisa: uma imagem pequena dessa cor
+                from PySide6.QtGui import QColor, QImage
+                from PySide6.QtCore import QBuffer, QByteArray, QIODevice
+                figura = QImage(64, 64, QImage.Format_RGB32)
+                figura.fill(QColor(cor))
+                bruto, buffer = QByteArray(), None
+                buffer = QBuffer(bruto)
+                buffer.open(QIODevice.WriteOnly)
+                figura.save(buffer, "PNG")
+                dados = bytes(bruto)
+            else:
+                try:
+                    dados = Path(arquivo).read_bytes()
+                except OSError:
+                    self.aviso.emit("Não consegui ler essa imagem.")
+                    return
+            argumentos = ["imagem", ajuste, cor, sim]
+
+        def mudar():
+            processo = subprocess.run(["pkexec", AJUDANTE_PAPEL_ENTRADA, *argumentos], input=dados,
+                                      capture_output=True, timeout=120, check=False)
+            if processo.returncode == 0:
+                return ""
+            if processo.returncode in (126, 127):
+                return "Só um administrador deste computador pode mudar a Tela de Entrada."
+            return "Não deu para mudar a Tela de Entrada (a imagem precisa ser JPG, PNG ou WebP de até 40 MB)."
+        self._em_fundo("aviso-papel", mudar)
+
+    def _telas_papel(self):
+        if DEMONSTRACAO:
+            return [{"nome": "eDP-1", "rotulo": "Tela do notebook", "x": 0, "y": 0, "largura": 1920, "altura": 1080},
+                    {"nome": "HDMI-A-1", "rotulo": "Monitor (HDMI-A-1)", "x": 1920, "y": 0, "largura": 2560, "altura": 1440}]
+        telas = []
+        for tela in QGuiApplication.screens():
+            g = tela.geometry()
+            nome = tela.name()
+            embutida = nome.startswith(("eDP", "LVDS", "DSI"))
+            modelo = (tela.model() or tela.manufacturer() or "").strip()
+            telas.append({"nome": nome, "rotulo": "Tela do notebook" if embutida else (f"{modelo} ({nome})" if modelo else f"Monitor ({nome})"),
+                          "x": g.x(), "y": g.y(), "largura": g.width(), "altura": g.height()})
+        return telas
+
+    def _papel_info(self):
+        """Tudo o que a página mostra: o alvo, as telas, o papel em edição e os das três telas."""
+        import papel
+        area = papel.ler_area(pastas.PREFERENCIAS, sessao.PAPEL_PADRAO)
+        alvo = getattr(self, "_alvo_papel", "area")
+        telas = self._telas_papel()
+        tela = getattr(self, "_tela_papel", "") or (telas[0]["nome"] if telas else "")
+        if alvo == "area":
+            atual = papel.papel_da_tela(area, tela) if area["telas"] == "separado" else area["padrao"]
+        elif alvo == "bloqueio":
+            atual = papel.ler_bloqueio(pastas.PREFERENCIAS, sessao.PAPEL_PADRAO)
+        else:
+            atual = self._papel_entrada()
+        estendido = papel.recorte_estendido(telas, tela) if area["telas"] == "estender" else None
+        return {"alvo": alvo, "telas": telas, "tela": tela, "modoTelas": area["telas"], "alternar": area["alternar"],
+                "atual": atual, "estendido": estendido or {}, "porTela": {t["nome"]: papel.papel_da_tela(area, t["nome"]) for t in telas},
+                "bloqueioModo": papel.ler_bloqueio(pastas.PREFERENCIAS, sessao.PAPEL_PADRAO)["modo"],
+                "tamanhoImagem": tamanho_imagem(atual.get("arquivo", ""))}
+
+    papelInfo = Property("QVariantMap", _papel_info, notify=mudou)
 
     @Slot(result="QVariantList")
     def imagensDoUsuario(self):
@@ -854,6 +1066,15 @@ class Ajustes(QObject):
     demonstracao = Property(bool, lambda self: DEMONSTRACAO, constant=True)
 
 
+def tamanho_imagem(arquivo):
+    """'1920 × 1080' (lido do cabeçalho, sem abrir a imagem inteira) ou ''."""
+    if not arquivo or not Path(arquivo).is_file():
+        return ""
+    from PySide6.QtGui import QImageReader
+    tamanho = QImageReader(arquivo).size()
+    return f"{tamanho.width()} × {tamanho.height()}" if tamanho.isValid() else ""
+
+
 def argumento(nome, padrao=""):
     return sys.argv[sys.argv.index(nome) + 1] if nome in sys.argv and sys.argv.index(nome) + 1 < len(sys.argv) else padrao
 
@@ -877,6 +1098,8 @@ def main():
     interface.ligar_registro("duiaos-configuracoes")
 
     ajustes = Ajustes(secao)
+    if DEMONSTRACAO and "--papel" in sys.argv:          # demonstração da página do papel de parede
+        ajustes._alvo_papel = argumento("--papel", "area")
     estado = controles.Controles(demonstracao=DEMONSTRACAO)
     ajustes._controles = estado
     engine = QQmlApplicationEngine()
@@ -885,6 +1108,7 @@ def main():
     contexto.setContextProperty("ajustes", ajustes)
     contexto.setContextProperty("controles", estado)
     contexto.setContextProperty("capturaArquivo", captura)
+    contexto.setContextProperty("caminhoComum", str(comum.PASTA_SHELL / "comum"))
     engine.load(PASTA / "Configuracoes.qml")
     if not engine.rootObjects():
         sys.exit(1)

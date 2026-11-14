@@ -5,6 +5,7 @@ import QtMultimedia
 Item {
     property string fonte: ""
     property bool tocando: true
+    property string ajuste: "preencher"
     onTocandoChanged: tocando ? jogador.play() : jogador.pause()
     onFonteChanged: if (tocando && fonte !== "") jogador.play()
     MediaPlayer {
@@ -15,5 +16,6 @@ Item {
         audioOutput: null
         Component.onCompleted: if (parent.tocando) play()
     }
-    VideoOutput { id: saida; anchors.fill: parent; fillMode: VideoOutput.PreserveAspectCrop }
+    VideoOutput { id: saida; anchors.fill: parent; fillMode: parent.ajuste === "ajustar" || parent.ajuste === "centralizar" ? VideoOutput.PreserveAspectFit
+                                                            : (parent.ajuste === "esticar" ? VideoOutput.Stretch : VideoOutput.PreserveAspectCrop) }
 }

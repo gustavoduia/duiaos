@@ -19,6 +19,9 @@ Window {
         opcoesEnergia: bloqueio.opcoesEnergia
         versao: bloqueio.versao
         papelDeParede: bloqueio.papelDeParede
+        ajusteFundo: bloqueio.ajusteFundo
+        corFundo: bloqueio.corFundo
+        desfocar: bloqueio.desfocarFundo
         onEntrar: (usuario, senha) => bloqueio.desbloquear(senha)
         onAcaoEnergia: (id) => bloqueio.energia(id)
     }

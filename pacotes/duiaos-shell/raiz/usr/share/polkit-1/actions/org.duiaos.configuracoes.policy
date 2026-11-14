@@ -16,4 +16,16 @@
     </defaults>
     <annotate key="org.freedesktop.policykit.exec.path">/usr/lib/duiaos/conta</annotate>
   </action>
+  <!-- Papel de parede da Tela de Entrada: vale para todas as contas, por isso é de administrador
+       (a regra 50-duiaos-configuracoes libera o administrador na sessão local ativa, sem senha) -->
+  <action id="org.duiaos.configuracoes.papel-entrada">
+    <description>Mudar o papel de parede da Tela de Entrada</description>
+    <message>É preciso ser administrador para mudar a Tela de Entrada de todas as contas</message>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/lib/duiaos/papel-entrada</annotate>
+  </action>
 </policyconfig>

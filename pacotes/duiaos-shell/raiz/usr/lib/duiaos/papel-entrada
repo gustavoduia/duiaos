@@ -1,0 +1,94 @@
+#!/usr/bin/python3
+"""DuiaOS — papel de parede da Tela de Entrada (Configurações › Papel de parede), para todas as contas.
+
+Roda como root pelo pkexec (ação org.duiaos.configuracoes.papel-entrada; administrador na sessão local
+ativa). A Tela de Entrada roda como _greetd e não lê as pastas pessoais: a imagem é copiada para
+/var/lib/duiaos/entrada/, legível por todos, e as opções vão para papel.conf (shell/comum/papel.py).
+
+  papel-entrada padrao DESFOCAR                     volta ao papel do DuiaOS
+  papel-entrada imagem AJUSTE COR DESFOCAR          lê a imagem (JPEG, PNG ou WebP, até 40 MB) na entrada padrão
+  papel-entrada opcoes AJUSTE COR DESFOCAR          muda só as opções, mantendo a imagem
+AJUSTE: preencher | ajustar | esticar | centralizar | lado-a-lado · COR: #RRGGBB · DESFOCAR: sim | nao
+Saída: 0 ok · 2 uso errado · 1 outra falha.
+"""
+import os
+import re
+import sys
+
+PASTA = "/var/lib/duiaos/entrada"
+CONF = os.path.join(PASTA, "papel.conf")
+AJUSTES = ("preencher", "ajustar", "esticar", "centralizar", "lado-a-lado")
+LIMITE = 40 * 1024 * 1024
+
+
+def tipo(dados):
+    if dados.startswith(b"\xff\xd8\xff"):
+        return "jpg"
+    if dados.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "png"
+    if dados[:4] == b"RIFF" and dados[8:12] == b"WEBP":
+        return "webp"
+    return ""
+
+
+def ler_conf():
+    valores = {}
+    try:
+        with open(CONF, encoding="utf-8") as arquivo:
+            for linha in arquivo:
+                if "=" in linha and not linha.startswith(("#", "[")):
+                    chave, valor = linha.split("=", 1)
+                    valores[chave.strip()] = valor.strip()
+    except OSError:
+        pass
+    return valores
+
+
+def gravar(valores):
+    os.makedirs(PASTA, mode=0o755, exist_ok=True)
+    temporario = CONF + ".tmp"
+    with open(temporario, "w", encoding="utf-8") as arquivo:
+        arquivo.write("# DuiaOS — papel de parede da Tela de Entrada (Configurações › Papel de parede)\n[papel]\n")
+        for chave in ("modo", "arquivo", "cor", "ajuste", "desfocar"):
+            if chave in valores:
+                arquivo.write(f"{chave} = {valores[chave]}\n")
+    os.chmod(temporario, 0o644)
+    os.replace(temporario, CONF)
+
+
+def main():
+    if os.geteuid() != 0 or "PKEXEC_UID" not in os.environ or len(sys.argv) < 3:
+        return 2
+    acao, argumentos = sys.argv[1], sys.argv[2:]
+    if acao == "padrao" and len(argumentos) == 1 and argumentos[0] in ("sim", "nao"):
+        gravar({"modo": "padrao", "desfocar": argumentos[0]})
+        return 0
+    if acao not in ("imagem", "opcoes") or len(argumentos) != 3:
+        return 2
+    ajuste, cor, desfocar = argumentos
+    if ajuste not in AJUSTES or not re.fullmatch(r"#[0-9A-Fa-f]{6}", cor) or desfocar not in ("sim", "nao"):
+        return 2
+    valores = {**ler_conf(), "cor": cor, "ajuste": ajuste, "desfocar": desfocar}
+    if acao == "imagem":
+        dados = sys.stdin.buffer.read(LIMITE + 1)
+        extensao = tipo(dados)
+        if len(dados) > LIMITE or not extensao:
+            return 2
+        os.makedirs(PASTA, mode=0o755, exist_ok=True)
+        destino = os.path.join(PASTA, f"papel.{extensao}")
+        with open(destino + ".tmp", "wb") as arquivo:
+            arquivo.write(dados)
+        os.chmod(destino + ".tmp", 0o644)
+        os.replace(destino + ".tmp", destino)
+        for outra in ("jpg", "png", "webp"):                 # não deixa sobras de outros formatos
+            if outra != extensao and os.path.exists(os.path.join(PASTA, f"papel.{outra}")):
+                os.remove(os.path.join(PASTA, f"papel.{outra}"))
+        valores.update({"modo": "proprio", "arquivo": destino})
+    elif valores.get("modo") != "proprio":
+        return 2
+    gravar(valores)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

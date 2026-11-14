@@ -68,6 +68,7 @@ udisks2
 # Área de Trabalho e Tela de Descanso: vídeos de fundo (QtMultimedia, com FFmpeg) e escolha de
 # arquivos (FileDialog do Qt Quick, sem portal)
 qml6-module-qtmultimedia
+qml6-module-qtquick-effects
 qml6-module-qtquick-dialogs
 qml6-module-qtquick-templates
 qml6-module-qt-labs-folderlistmodel

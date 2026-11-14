@@ -46,18 +46,24 @@ from PySide6.QtQml import QQmlApplicationEngine  # noqa: E402
 import aplicativos  # noqa: E402
 import interface  # noqa: E402
 import operacoes  # noqa: E402
+import papel  # noqa: E402
 import pastas  # noqa: E402
 import sessao  # noqa: E402
 import sistema as comum  # noqa: E402
 
 
 def papel_de_parede():
-    """(arquivo, cor) escolhidos; arquivo vazio = só a cor. Arquivo que sumiu volta ao padrão."""
-    arquivo = pastas.ler_preferencia("papel-de-parede", "arquivo", str(sessao.PAPEL_PADRAO))
-    cor = pastas.ler_preferencia("papel-de-parede", "cor", sessao.COR_PADRAO)
-    if arquivo and not Path(arquivo).is_file():
-        arquivo = str(sessao.PAPEL_PADRAO) if sessao.PAPEL_PADRAO.is_file() else ""
-    return arquivo, cor
+    """Configuração dos papéis de parede (papel.ler_area): todas as telas, uma para cada ou estendida."""
+    return papel.ler_area(pastas.PREFERENCIAS, sessao.PAPEL_PADRAO)
+
+
+def imagens_para_alternar():
+    """Troca automática: as imagens do DuiaOS e as importadas (não os vídeos)."""
+    lista = []
+    for pasta in (sessao.PAPEIS_DO_SISTEMA, pastas.DADOS / "duiaos" / "fundos"):
+        if pasta.is_dir():
+            lista += sorted(str(p) for p in pasta.iterdir() if p.suffix.lower() in papel.EXTENSOES_IMAGEM)
+    return lista
 
 
 class Area(QObject):
@@ -80,7 +86,22 @@ class Area(QObject):
         self._vigia = QFileSystemWatcher([str(self._pasta), str(pastas.PREFERENCIAS.parent)], self)
         self._vigia.directoryChanged.connect(lambda _c: self._atraso.start())
         self._atraso = QTimer(self, singleShot=True, interval=250, timeout=self.recarregar)
+        # Troca automática do papel de parede (Configurações › Papel de parede)
+        self._alternar = QTimer(self, timeout=self._trocar_papel)
         self.recarregar()
+
+    def _programar_troca(self):
+        minutos = self._papel["alternar"] if self._papel["telas"] != "separado" else 0
+        if minutos <= 0:
+            self._alternar.stop()
+        elif self._alternar.interval() != minutos * 60000 or not self._alternar.isActive():
+            self._alternar.start(minutos * 60000)
+
+    def _trocar_papel(self):
+        proximo = papel.proximo_da_lista(imagens_para_alternar(), self._papel["padrao"]["arquivo"])
+        if proximo:
+            pastas.gravar_preferencia("papel-de-parede", "arquivo", proximo)   # a Tela de Bloqueio vê o mesmo
+            self.recarregar()
 
     def _demonstracao(self):
         nomes = [("Projetos", True), ("Fotos da viagem", True), ("Contrato de aluguel.pdf", False),
@@ -94,15 +115,16 @@ class Area(QObject):
 
     @Slot()
     def recarregar(self):
-        papel = papel_de_parede()
+        papel_atual = papel_de_parede()
         try:
             itens = operacoes.listar(self._pasta, ordem=pastas.ler_preferencia("area-de-trabalho", "ordem", "nome"))
         except operacoes.ErroDeArquivo:
             itens = []
         posicao = comum_posicao_barra()
-        if papel != self._papel or posicao != self._posicao_barra:
-            self._papel, self._posicao_barra = papel, posicao
+        if papel_atual != self._papel or posicao != self._posicao_barra:
+            self._papel, self._posicao_barra = papel_atual, posicao
             self.mudou.emit()
+        self._programar_troca()
         if itens != self._itens:
             self._itens = itens
             self.itensMudaram.emit()
@@ -213,8 +235,11 @@ class Area(QObject):
             aplicativos.iniciar(["foot", "--working-directory", str(self._pasta)])
 
     itens = Property("QVariantList", lambda self: self._itens, notify=itensMudaram)
-    arquivoPapel = Property(str, lambda self: self._papel[0], notify=mudou)
-    corPapel = Property(str, lambda self: self._papel[1], notify=mudou)
+    papeis = Property("QVariantMap", lambda self: self._papel, notify=mudou)
+
+    @Slot(str, result="QVariantMap")
+    def papelDaTela(self, saida):
+        return papel.papel_da_tela(self._papel, saida)
     posicaoBarra = Property(str, lambda self: self._posicao_barra, notify=mudou)
     ordem = Property(str, lambda self: pastas.ler_preferencia("area-de-trabalho", "ordem", "nome"), notify=itensMudaram)
 

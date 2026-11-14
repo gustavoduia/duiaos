@@ -45,6 +45,9 @@ Window {
             opcoesEnergia: entrada.opcoesEnergia
             versao: entrada.versao
             papelDeParede: entrada.papelDeParede
+            ajusteFundo: entrada.ajusteFundo
+            corFundo: entrada.corFundo
+            desfocar: entrada.desfocarFundo
             onEntrar: (usuario, senha) => entrada.entrar(usuario, senha)
             onAcaoEnergia: (id) => entrada.energia(id)
 

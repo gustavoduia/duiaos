@@ -39,7 +39,7 @@ Window {
     LayerShell.Window.scope: "duiaos-ilha-de-aplicativos"
 
     // Quanto a Ilha anda para fora da tela quando está escondida
-    readonly property real recuo: mostrada ? 0 : conteudo.espessuraFundo + distanciaBorda + 4
+    property real recuo: mostrada ? 0 : conteudo.espessuraFundo + distanciaBorda + 4
     Behavior on recuo { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
 
     Ilha {

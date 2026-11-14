@@ -3,8 +3,8 @@
 
 À esquerda: o símbolo do DuiaOS abre o Menu do DuiaOS (Sobre este computador,
 Configurações, Central de Aplicativos, Explorador de Arquivos, Repousar,
-Reiniciar, Desligar, Bloquear tela, Encerrar sessão), o botão "Wise" (com o
-Wise instalado) e o nome do aplicativo em uso.
+Reiniciar, Desligar, Bloquear tela, Encerrar sessão) e o nome do aplicativo em
+uso. O Wise fica nos ícones de controle da direita.
 
 À direita: até 4 ícones de controle (Wise, Wi-Fi, som, bateria, Bluetooth,
 brilho, luz noturna), uma seta que mostra os outros num balão, o botão da
