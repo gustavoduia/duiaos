@@ -641,16 +641,91 @@ Window {
     }
 
     // ----------------------------------------------------------- Atualizações
+    // Selo colorido (código, tipo, importância)
+    component Selo: Rectangle {
+        property string texto: ""
+        property color cor: Tema.azulDuia
+        property bool mono: false
+        width: textoSelo.implicitWidth + 14; height: 20; radius: 6
+        color: Qt.rgba(cor.r, cor.g, cor.b, 0.14)
+        Text { id: textoSelo; anchors.centerIn: parent; text: parent.texto; color: parent.cor
+               font { family: parent.mono ? Tema.fonteCodigo : Tema.fonteTexto; pixelSize: 11; weight: Font.DemiBold } }
+    }
+    // Ficha de uma atualização do DuiaOS (código DUIA-AAAA-NNNN, ADR 046)
+    component FichaAtualizacao: Rectangle {
+        id: ficha
+        property var f: ({})
+        property bool aberta: false
+        width: parent ? parent.width : 500
+        height: colunaFicha.implicitHeight + 24
+        radius: 12
+        color: Tema.cartao
+        border { color: Tema.borda; width: 1 }
+        readonly property color corTipo: ({ seguranca: Tema.erro, correcao: Tema.aviso, novidade: Tema.azulDuia, melhoria: Tema.sucesso })[f.tipo] || Tema.azulDuia
+        Column {
+            id: colunaFicha
+            anchors { left: parent.left; right: parent.right; top: parent.top; margins: 12 }
+            spacing: 6
+            Row {
+                spacing: 6
+                Selo { texto: ficha.f.codigo || ""; cor: Tema.azulNoite; mono: true }
+                Selo { texto: ficha.f.tipoNome || ""; cor: ficha.corTipo }
+                Selo { visible: ficha.f.importancia !== "recomendada"; texto: ficha.f.importanciaNome || ""; cor: ficha.f.importancia === "critica" ? Tema.erro : Tema.aviso }
+                Text { anchors.verticalCenter: parent.verticalCenter; text: (ficha.f.data || "").split("-").reverse().join("/")
+                       color: Tema.textoApagado; font { family: Tema.fonteTexto; pixelSize: 11 } }
+            }
+            Text { width: parent.width; text: ficha.f.titulo || ""; wrapMode: Text.WordWrap; color: Tema.texto
+                   font { family: Tema.fonteTexto; pixelSize: 14; weight: Font.Bold } }
+            Text { width: parent.width; text: ficha.f.resumo || ""; wrapMode: Text.WordWrap; color: Tema.textoSecundario
+                   font { family: Tema.fonteTexto; pixelSize: 12 } }
+            Column {
+                visible: ficha.aberta
+                width: parent.width
+                spacing: 8
+                topPadding: 4
+                Text { width: parent.width; text: (ficha.f.descricao || "").split("\n\n").join("\n\n"); wrapMode: Text.WordWrap
+                       color: Tema.texto; font { family: Tema.fonteTexto; pixelSize: 13 } lineHeight: 1.15 }
+                Text { text: "Detalhes"; color: Tema.texto; font { family: Tema.fonteTexto; pixelSize: 12; weight: Font.Bold } }
+                Repeater {
+                    model: ficha.f.detalhes || []
+                    Row {
+                        required property string modelData
+                        width: parent.width
+                        spacing: 8
+                        Text { text: "•"; color: ficha.corTipo; font { family: Tema.fonteTexto; pixelSize: 13; weight: Font.Bold } }
+                        Text { width: parent.width - 16; text: modelData; wrapMode: Text.WordWrap; color: Tema.texto; font { family: Tema.fonteTexto; pixelSize: 12 } }
+                    }
+                }
+                Text { visible: (ficha.f.observacoes || "") !== ""; width: parent.width; text: ficha.f.observacoes || ""; wrapMode: Text.WordWrap
+                       color: Tema.textoSecundario; font { family: Tema.fonteTexto; pixelSize: 12; italic: true } }
+                Grid {
+                    columns: 2; columnSpacing: 10; rowSpacing: 3
+                    Text { text: "Pacotes"; color: Tema.textoApagado; font { family: Tema.fonteTexto; pixelSize: 11 } }
+                    Text { text: (ficha.f.pacotes || []).join(", "); color: Tema.textoSecundario; font { family: Tema.fonteCodigo; pixelSize: 11 } }
+                    Text { text: "Depois"; color: Tema.textoApagado; font { family: Tema.fonteTexto; pixelSize: 11 } }
+                    Text { text: ficha.f.reiniciarNome || ""; color: Tema.textoSecundario; font { family: Tema.fonteTexto; pixelSize: 11 } }
+                }
+            }
+            Text {
+                text: ficha.aberta ? "Esconder detalhes" : "Ver detalhes"
+                color: Tema.azulDuia; font { family: Tema.fonteTexto; pixelSize: 12; weight: Font.DemiBold }
+                MouseArea { anchors { fill: parent; margins: -6 } cursorShape: Qt.PointingHandCursor; onClicked: ficha.aberta = !ficha.aberta }
+            }
+        }
+    }
+
     Component {
         id: paginaAtualizacoes
         Pagina {
             id: pa
             readonly property var a: ajustes.atualizacao
+            property bool verHistorico: false
             Destaque { icone: "reiniciar"; titulo: ({ inicio: "Atualizações do sistema", procurando: "Procurando atualizações…",
-                                                       pronta: pa.a.quantidade + (pa.a.quantidade === 1 ? " atualização disponível" : " atualizações disponíveis"),
+                                                       pronta: pa.a.quantidade + (pa.a.quantidade === 1 ? " pacote para atualizar" : " pacotes para atualizar"),
                                                        "em-dia": "O sistema está em dia", atualizando: "Atualizando…",
                                                        concluida: "Sistema atualizado", erro: "Não foi possível atualizar" })[pa.a.etapa] || "Atualizações do sistema"
-                       texto: pa.a.etapa === "pronta" ? "Vai baixar " + pa.a.baixar + ". Você pode continuar usando o computador."
+                       texto: pa.a.etapa === "pronta" ? "Download de " + pa.a.baixar + " · " + pa.a.reiniciarNome
+                                + (pa.a.quantidadeSeguranca > 0 ? " · " + pa.a.quantidadeSeguranca + (pa.a.quantidadeSeguranca === 1 ? " correção de segurança" : " correções de segurança") : "")
                               : (pa.a.mensagem || "O DuiaOS, o Wise e os aplicativos instalados recebem correções e novidades por aqui.") }
             Rectangle {
                 visible: pa.a.etapa === "atualizando" || pa.a.etapa === "procurando"
@@ -664,17 +739,69 @@ Window {
                         onClicado: ajustes.procurarAtualizacoes() }
                 Botao { visible: pa.a.etapa === "pronta"; texto: "Atualizar agora"; tipo: "primario"; onClicado: ajustes.atualizarAgora() }
                 Botao { visible: pa.a.etapa === "atualizando"; texto: "Cancelar"; onClicado: ajustes.cancelarAtualizacao() }
+                Botao { texto: pa.verHistorico ? "Esconder o histórico" : "Histórico"; icone: "relogio"; onClicado: pa.verHistorico = !pa.verHistorico }
             }
+
+            // Do DuiaOS: uma ficha por atualização
+            Titulo { nivel: 3; visible: pa.a.etapa === "pronta" && (pa.a.duiaos || []).length > 0
+                     text: "Do DuiaOS (" + (pa.a.duiaos || []).length + ")" }
+            Repeater { model: pa.a.etapa === "pronta" ? (pa.a.duiaos || []) : []
+                       FichaAtualizacao { required property var modelData; required property int index; f: modelData; aberta: ajustes.demonstracao && index === 0 } }
+            Rotulo { visible: pa.a.etapa === "pronta" && (pa.a.duiaosSemFicha || []).length > 0; width: parent.width; secundario: true
+                     text: "Outros pacotes do DuiaOS nesta atualização: " + (pa.a.duiaosSemFicha || []).join(", ") }
+
+            // Do Debian: pacote a pacote
+            Titulo { nivel: 3; visible: pa.a.etapa === "pronta" && (pa.a.debian || []).length > 0
+                     text: "Do Debian (" + (pa.a.debian || []).length + ")" }
             Grupo {
-                visible: pa.a.etapa === "pronta"
-                titulo: "O que muda"
+                visible: pa.a.etapa === "pronta" && (pa.a.debian || []).length > 0
                 Repeater {
-                    model: (pa.a.lista || []).slice(0, 30)
-                    Linha { required property string modelData; required property int index; titulo: modelData; ultima: index === Math.min(29, pa.a.lista.length - 1) }
+                    model: pa.a.etapa === "pronta" ? (pa.a.debian || []).slice(0, 80) : []
+                    Linha {
+                        required property var modelData
+                        required property int index
+                        titulo: modelData.pacote + (modelData.seguranca ? "   ·   Segurança" : "")
+                        descricao: (modelData.descricao !== "" ? modelData.descricao + "\n" : "") + (modelData.de !== "" ? modelData.de + "  →  " : "novo  ·  ") + modelData.para
+                        ultima: index === Math.min(79, pa.a.debian.length - 1)
+                        Icone { visible: modelData.seguranca; nome: "escudo"; tamanho: 16; cor: Tema.erro; anchors.verticalCenter: parent.verticalCenter }
+                        Botao { texto: "O que mudou"; height: 28; onClicado: ajustes.verMudancas(modelData.pacote) }
+                    }
                 }
             }
+            Rotulo { visible: pa.a.etapa === "pronta" && (pa.a.debian || []).length > 80; width: parent.width; secundario: true
+                     text: "E mais " + ((pa.a.debian || []).length - 80) + " pacotes." }
+
+            // Histórico: fichas já instaladas neste computador
+            Titulo { nivel: 3; visible: pa.verHistorico; text: "Instaladas neste computador" }
+            Rotulo { visible: pa.verHistorico && ajustes.historicoAtualizacoes.length === 0; secundario: true; text: "Nenhuma ficha de atualização instalada ainda." }
+            Repeater { model: pa.verHistorico ? ajustes.historicoAtualizacoes : []; FichaAtualizacao { required property var modelData; f: modelData } }
+
             Rotulo { width: parent.width; secundario: true
                      text: "Quem atualiza é o agente do sistema, que confere o que vai mudar e não remove nada essencial. Também dá para pedir ao Wise: “atualiza o sistema”." }
+        }
+    }
+
+    // Registro de mudanças de um pacote do Debian (Configurações › Atualizações › O que mudou)
+    Rectangle {
+        anchors.fill: parent
+        z: 55
+        visible: ajustes.registroDeMudancas.pacote !== undefined
+        color: Qt.rgba(0.06, 0.09, 0.14, 0.35)
+        MouseArea { anchors.fill: parent; onClicked: ajustes.fecharMudancas() }
+        Cartao {
+            anchors.centerIn: parent
+            width: Math.min(parent.width - 80, 720); height: Math.min(parent.height - 80, 520)
+            cor: Tema.cartao
+            MouseArea { anchors.fill: parent }
+            Titulo { id: tituloRegistro; x: 20; y: 16; nivel: 2; text: "O que mudou em " + (ajustes.registroDeMudancas.pacote || "") }
+            Flickable {
+                anchors { left: parent.left; right: parent.right; top: tituloRegistro.bottom; bottom: fecharRegistro.top; margins: 20; topMargin: 12 }
+                contentHeight: textoRegistro.height
+                clip: true
+                TextEdit { id: textoRegistro; width: parent.width; readOnly: true; selectByMouse: true; wrapMode: Text.Wrap
+                           text: ajustes.registroDeMudancas.texto || ""; color: Tema.texto; font { family: Tema.fonteCodigo; pixelSize: 12 } }
+            }
+            Botao { id: fecharRegistro; anchors { right: parent.right; bottom: parent.bottom; margins: 16 } texto: "Fechar"; onClicado: ajustes.fecharMudancas() }
         }
     }
 

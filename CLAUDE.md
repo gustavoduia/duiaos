@@ -34,6 +34,11 @@ Clone os repositórios lado a lado (`../duiaos-wise`, `../duiaos-websites`, `../
   site, `npm test` e `npm run build`; `shellcheck` nos scripts mudados.
 - Programa novo do DuiaOS: `duiaos_registro.ligar("duiaos-NOME")` no início e eventos com
   `duiaos_registro.info/aviso/erro` (nunca `print` para registrar).
+- **Toda mudança que chega aos computadores** (sistema, interface, aplicativos, Wise, pacotes) → **ficha de
+  atualização** nova em `atualizacoes/` (ADR 046): `python3 ferramentas/atualizacoes.py nova`, preencher código
+  DUIA-AAAA-NNNN, título, tipo, importância, pacotes, reinício, resumo, "## O que muda" e "## Detalhes" para quem
+  usa o computador, e `python3 ferramentas/atualizacoes.py conferir`. Vale também para mudanças do Wise (a ficha
+  fica aqui, com `pacotes: duiaos-wise`). Ela aparece na Central de Atualizações das Configurações.
 - Recurso novo ou mudado → linha no inventário certo com conferência. Decisão nova → ADR em `docs/decisoes.md`
   (decisões internas do Wise também podem ir em `duiaos-wise/docs/decisoes.md`, que é documentação técnica dele).
 - Recurso visível para o usuário → página da documentação no `duiaos-websites`, no mesmo chat

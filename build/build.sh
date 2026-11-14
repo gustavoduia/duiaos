@@ -41,7 +41,7 @@ log "DuiaOS ${VERSION} (${CODENAME}) — arquitetura ${ARCH}"
 log "Instalando o live-build"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
-apt-get install -y -qq live-build curl ca-certificates zstd >/dev/null   # curl e zstd: pacote duiaos-ollama
+apt-get install -y -qq live-build curl ca-certificates zstd python3 git >/dev/null   # curl e zstd: pacote duiaos-ollama; python3 e git: catálogo de atualizações
 
 log "Preparando a pasta de trabalho ${WORK}"
 rm -rf "${WORK}"

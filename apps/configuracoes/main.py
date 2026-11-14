@@ -127,6 +127,49 @@ def ler_telas():
     return sessao.interpretar_wlr_randr(saida)
 
 
+def _catalogo_do_repositorio():
+    """Demonstração: o catálogo gerado das fichas do repositório (ferramentas/atualizacoes.py)."""
+    sys.path.insert(0, str(PASTA.parents[1] / "ferramentas"))
+    try:
+        import atualizacoes as fichas
+        return fichas.catalogo()
+    except Exception:          # noqa: BLE001
+        return {"atualizacoes": []}
+
+
+def detalhar_plano(plano):
+    """Plano do duiaos-agente → o que mostrar: fichas do DuiaOS e pacotes do Debian com descrição e selo de segurança."""
+    import atualizacoes_sistema as at
+    import tipos
+    mudancas = plano.get("mudancas", {})
+    todas = mudancas.get("atualizar", []) + mudancas.get("instalar", [])
+    if not todas:
+        return {"etapa": "em-dia", "mensagem": "Não há nada para atualizar agora."}
+    origens = {p["pacote"]: p for p in at.simular()}
+    duiaos = [m for m in todas if m["pacote"].startswith("duiaos-")]
+    debian = [m for m in todas if not m["pacote"].startswith("duiaos-")]
+    descricoes = at.descricoes([m["pacote"] for m in debian])
+    publicado = at.baixar_catalogo(at.endereco_do_catalogo())
+    instalado = at.ler_catalogo_instalado()
+    fichas = at.fichas_pendentes(publicado, instalado, duiaos)
+    com_ficha = {p for f in fichas for p in f.get("pacotes", [])}
+    lista_debian = []
+    for m in debian:
+        origem = origens.get(m["pacote"], {})
+        lista_debian.append({"pacote": m["pacote"], "de": m.get("de", ""), "para": m.get("para", ""),
+                             "descricao": descricoes.get(m["pacote"], ""), "origem": origem.get("origem", ""),
+                             "seguranca": origem.get("seguranca", False)})
+    lista_debian.sort(key=lambda p: (not p["seguranca"], p["pacote"]))
+    reiniciar = at.maior_reinicio(fichas)
+    if any(p["pacote"].startswith(("linux-image", "systemd", "libc6")) for p in debian):
+        reiniciar = "computador"
+    nomes = {"nao": "Não é preciso reiniciar", "sessao": "Saia e entre de novo na sessão", "computador": "Reinicie o computador"}
+    return {"etapa": "pronta", "plano": plano["id"], "quantidade": len(todas),
+            "baixar": tipos.tamanho_legivel(plano.get("baixar_bytes", 0)), "reiniciar": reiniciar, "reiniciarNome": nomes[reiniciar],
+            "duiaos": fichas, "debian": lista_debian, "quantidadeSeguranca": sum(1 for p in lista_debian if p["seguranca"]),
+            "duiaosSemFicha": [f"{m['pacote']} {m.get('para', '')}" for m in duiaos if m["pacote"] not in com_ficha]}
+
+
 # =========================================================================== Qt
 
 class Ajustes(QObject):
@@ -146,6 +189,8 @@ class Ajustes(QObject):
         self._pronto.connect(self._ao_pronto)
         if DEMONSTRACAO:
             self._demonstracao()
+            if self._secao == "atualizacoes":
+                QTimer.singleShot(100, self.procurarAtualizacoes)
         else:
             self._em_fundo("sobre", ler_sobre)
             self._em_fundo("telas", ler_telas)
@@ -185,6 +230,14 @@ class Ajustes(QObject):
             if resultado:
                 self.aviso.emit(resultado)
             self._em_fundo("data", ler_data)
+            return
+        if nome == "detalhes":
+            self._atualizacao = resultado
+            self.atualizacaoMudou.emit()
+            return
+        if nome == "registro":
+            self._registro = resultado
+            self.atualizacaoMudou.emit()
             return
         if nome == "fusos":
             self._fusos = resultado
@@ -573,25 +626,32 @@ class Ajustes(QObject):
         self._atualizacao = {"etapa": "procurando", "mensagem": "Procurando atualizações…"}
         self.atualizacaoMudou.emit()
         if DEMONSTRACAO:
-            self._atualizacao = {"etapa": "pronta", "plano": "demo", "quantidade": 23, "baixar": "148,2 MB",
-                                 "resumo": "Atualizar 23 pacotes", "lista": ["firefox-esr", "duiaos-shell", "linux-image-amd64"]}
+            catalogo = _catalogo_do_repositorio()["atualizacoes"]
+            self._atualizacao = {
+                "etapa": "pronta", "plano": "demo", "quantidade": 7, "baixar": "148,2 MB", "reiniciar": "computador",
+                "reiniciarNome": "Reinicie o computador",
+                "duiaos": catalogo[:3],
+                "debian": [{"pacote": "firefox-esr", "de": "128.5.0esr-1~deb13u1", "para": "128.6.0esr-1~deb13u1", "seguranca": True,
+                            "descricao": "Navegador web Mozilla Firefox (versão de suporte estendido)", "origem": "Debian-Security:13/stable-security"},
+                           {"pacote": "libc6", "de": "2.41-11", "para": "2.41-12", "seguranca": False,
+                            "descricao": "Biblioteca C do GNU: bibliotecas compartilhadas", "origem": "Debian:13.2/stable"},
+                           {"pacote": "tzdata", "de": "2025b-4", "para": "2025c-0+deb13u1", "seguranca": False,
+                            "descricao": "Dados de fuso horário", "origem": "Debian:13.2/stable-updates"}],
+                "quantidadeSeguranca": 1, "duiaosSemFicha": []}
             self.atualizacaoMudou.emit()
             return
         self._ligar_agente()
 
         def respondeu(argumentos):
             import json
-            import tipos
             plano = json.loads(argumentos[0])
             if plano.get("recusa"):
                 self._atualizacao = {"etapa": "erro", "mensagem": plano["recusa"]["mensagem"]}
-            else:
-                mudancas = plano.get("mudancas", {})
-                lista = [m["pacote"] for m in mudancas.get("atualizar", []) + mudancas.get("instalar", [])]
-                self._atualizacao = {"etapa": "pronta" if lista else "em-dia", "plano": plano["id"], "quantidade": len(lista),
-                                     "baixar": tipos.tamanho_legivel(plano.get("baixar_bytes", 0)),
-                                     "resumo": plano.get("resumo", ""), "lista": lista[:200]}
+                self.atualizacaoMudou.emit()
+                return
+            self._atualizacao = {"etapa": "procurando", "mensagem": "Lendo o que cada atualização traz…"}
             self.atualizacaoMudou.emit()
+            self._em_fundo("detalhes", detalhar_plano, plano)
         self._agente("Preparar", "atualizar_sistema", "{}", ao_responder=respondeu)
 
     @Slot()
@@ -609,12 +669,38 @@ class Ajustes(QObject):
         if not DEMONSTRACAO:
             self._agente("Cancelar")
 
+    @Slot(str)
+    def verMudancas(self, pacote):
+        """Registro de mudanças (changelog) de um pacote do Debian."""
+        import atualizacoes_sistema as at
+        self._registro = {"pacote": pacote, "texto": "Baixando o registro de mudanças…"}
+        self.atualizacaoMudou.emit()
+        if DEMONSTRACAO:
+            self._registro = {"pacote": pacote, "texto": pacote + " (nova versão) stable-security; urgency=medium\n\n  * Corrige falhas de segurança.\n"}
+            self.atualizacaoMudou.emit()
+            return
+        self._em_fundo("registro", lambda: {"pacote": pacote, "texto": at.registro_de_mudancas(pacote)})
+
+    @Slot()
+    def fecharMudancas(self):
+        self._registro = {}
+        self.atualizacaoMudou.emit()
+
+    def _historico(self):
+        import atualizacoes_sistema as at
+        if DEMONSTRACAO:
+            return _catalogo_do_repositorio()["atualizacoes"]
+        return at.ler_catalogo_instalado()
+
     atualizacao = Property("QVariantMap", lambda self: getattr(self, "_atualizacao", {"etapa": "inicio"}), notify=atualizacaoMudou)
+    registroDeMudancas = Property("QVariantMap", lambda self: getattr(self, "_registro", {}) or {}, notify=atualizacaoMudou)
+    historicoAtualizacoes = Property("QVariantList", _historico, notify=atualizacaoMudou)
 
     secao = Property(str, lambda self: self._secao, notify=secaoMudou)
     sobre = Property("QVariantMap", lambda self: self._sobre, notify=mudou)
     telas = Property("QVariantList", lambda self: self._telas, notify=mudou)
     wise = Property(bool, lambda self: comum.wise_instalado() or DEMONSTRACAO, constant=True)
+    demonstracao = Property(bool, lambda self: DEMONSTRACAO, constant=True)
 
 
 def argumento(nome, padrao=""):

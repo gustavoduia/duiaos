@@ -21,7 +21,7 @@
 #   APT_URL         endereço do repositório apt
 #
 # Usado pelo build da ISO (build/build.sh) e pelo workflow pacotes.yml.
-# Precisa só de: bash, dpkg-deb, find, md5sum, du, sed.
+# Precisa de: bash, dpkg-deb, find, md5sum, du, sed; python3 e git para o catálogo de atualizações.
 # =============================================================================
 set -euo pipefail
 
@@ -104,6 +104,13 @@ if [ -z "${FONTES_ABERTAS}" ] || [ ! -f "${FONTES_ABERTAS}/EULA.md" ]; then
   echo "Não achei o duiaos-fontes-abertas (EULA e licenças). Clone-o ao lado deste repositório:" >&2
   echo "  git clone https://github.com/gustavoduia/duiaos-fontes-abertas ../duiaos-fontes-abertas" >&2
   exit 1
+fi
+# Catálogo das atualizações do DuiaOS (fichas em atualizacoes/, ADR 046): histórico do que já está instalado
+if command -v python3 >/dev/null; then
+  python3 "${RAIZ}/ferramentas/atualizacoes.py" catalogo "${ID}/usr/share/duiaos/atualizacoes.json" >/dev/null
+else
+  echo "    AVISO: sem python3; o pacote sai sem o histórico de atualizações." >&2
+  install -d "${ID}/usr/share/duiaos" && echo '{"formato": 1, "atualizacoes": []}' > "${ID}/usr/share/duiaos/atualizacoes.json"
 fi
 install -m 0644 "${FONTES_ABERTAS}/EULA.md" "${FONTES_ABERTAS}/LICENCAS-DE-TERCEIROS.md" \
   "${FONTES_ABERTAS}/TRADEMARKS.md" "${ID}/usr/share/duiaos/licenca/"
