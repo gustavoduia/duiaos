@@ -1,6 +1,7 @@
 // DuiaOS — conteúdo da Barra de Recursos (sem a janela, para servir também à demonstração).
 //
-// Esquerda: símbolo (Menu do DuiaOS) e o aplicativo em uso (o Wise fica nos ícones da direita).
+// Esquerda: símbolo (Menu do DuiaOS), o aplicativo em uso e os menus dele (Arquivo, Editar…;
+// menus.py, ADR 057). O Wise fica nos ícones da direita.
 // Direita: seta do balão (ícones que não couberam), até 4 ícones de controle,
 // Central de Controle e relógio (calendário).
 import QtQuick
@@ -84,6 +85,29 @@ Rectangle {
         }
     }
 
+    component MenuDaBarra: BotaoDaBarra {
+        id: tituloMenu
+        property int indice: 0
+        property string texto: ""
+        property bool negrito: false
+        property real larguraMaxima: 200
+        painel: "appmenu" + indice
+        Accessible.role: Accessible.MenuItem
+        Accessible.name: texto
+        onClicado: sistema.abrirMenuDoAplicativo(indice, barra.ancoraDe(tituloMenu))
+        HoverHandler {
+            onHoveredChanged: if (hovered && sistema.painel.indexOf("appmenu") === 0 && sistema.painel !== tituloMenu.painel)
+                                  sistema.abrirMenuDoAplicativo(tituloMenu.indice, barra.ancoraDe(tituloMenu))
+        }
+        Text {
+            text: tituloMenu.texto
+            color: Tema.texto
+            elide: Text.ElideRight
+            width: Math.min(implicitWidth, tituloMenu.larguraMaxima)
+            font { family: Tema.fonteTexto; pixelSize: 13; weight: tituloMenu.negrito ? Font.Bold : Font.Normal }
+        }
+    }
+
     component Indicador: BotaoDaBarra {
         id: ind
         required property string modelData
@@ -159,14 +183,27 @@ Rectangle {
                 onClicado: barra.abrir("menu", botaoMenu)
                 Simbolo { width: 17; height: 17 }
             }
-            Text {
-                anchors.verticalCenter: parent.verticalCenter
-                leftPadding: 8
-                text: sistema.aplicativoEmFoco
-                color: Tema.texto
-                font { family: Tema.fonteTexto; pixelSize: 13; weight: Font.Bold }
-                elide: Text.ElideRight
-                width: Math.min(implicitWidth, barra.width * 0.3)
+            // Menu do aplicativo em foco (ADR 057): o nome dele (ações da janela) e os menus dele
+            // (Arquivo, Editar…), lidos pela acessibilidade. Com um menu aberto, passar o mouse em
+            // outro título abre esse, como no macOS.
+            MenuDaBarra {
+                id: menuNome
+                visible: sistema.aplicativoEmFoco !== ""
+                indice: -1
+                negrito: true
+                texto: sistema.aplicativoEmFoco
+                larguraMaxima: barra.width * 0.2
+            }
+            Repeater {
+                model: sistema.titulosDoMenu
+                delegate: MenuDaBarra {
+                    required property string modelData
+                    required property int index
+                    indice: index
+                    texto: modelData
+                    // Só os que cabem antes do centro da barra (o resto fica escondido, sem sobrepor o aviso)
+                    visible: x + width < barra.width * 0.5 - 60
+                }
             }
         }
 

@@ -18,7 +18,7 @@ camada por cima de tudo que fecha com um clique fora ou Esc.
 Uso:
   main.py                         inicia a Barra de Recursos
   main.py --posicao LUGAR         muda a posição: topo, base, esquerda ou direita
-  main.py --demonstracao [--painel NOME] [--captura ARQUIVO]
+  main.py --demonstracao [--painel NOME|appmenuN] [--captura ARQUIVO]   (appmenu0 = Arquivo, appmenu-1 = o nome do app)
                                   abre numa janela comum, com dados de exemplo
                                   (testar o visual sem a sessão do DuiaOS)
 """
@@ -128,31 +128,37 @@ class Configuracao(QObject):
     maximoVisiveis = Property(int, lambda self: MAXIMO_VISIVEIS, constant=True)
 
 
-def aplicativo_em_foco():
-    """Nome do aplicativo da janela em foco (wlr-foreign-toplevel pelo wlrctl), ou ''."""
+def janela_em_foco():
+    """(app_id, título, nome do aplicativo) da janela em foco (wlr-foreign-toplevel pelo wlrctl, numa
+    chamada só), ou ("", "", "")."""
     try:
-        saida = subprocess.run(["wlrctl", "toplevel", "list"], capture_output=True, text=True,
+        saida = subprocess.run(["wlrctl", "toplevel", "list", "state:active"], capture_output=True, text=True,
                                timeout=2, check=False).stdout
     except (OSError, subprocess.TimeoutExpired):
-        return ""
-    ids = []
-    for linha in saida.splitlines():
-        app_id = linha.split(":", 1)[0].strip()
-        if app_id and app_id not in ids:
-            ids.append(app_id)
-    for app_id in ids[:16]:
-        try:
-            focado = subprocess.run(["wlrctl", "toplevel", "find", "app_id:" + app_id, "state:focused"],
-                                    capture_output=True, timeout=2, check=False).returncode == 0
-        except (OSError, subprocess.TimeoutExpired):
-            continue
-        if focado:
-            app = aplicativos.ler_desktop(app_id + ".desktop")
-            if not app:
-                app = next((a for a in aplicativos.listar_aplicativos()
-                            if a["classe"] == app_id.lower() or a["id"].lower().endswith("." + app_id.lower() + ".desktop")), None)
-            return app["nome"] if app else app_id.split(".")[-1].capitalize()
-    return ""
+        return "", "", ""
+    linha = next((l for l in saida.splitlines() if l.strip()), "")
+    app_id, _, titulo = linha.partition(":")
+    app_id, titulo = app_id.strip(), titulo.strip()
+    return (app_id, titulo, nome_do_aplicativo(app_id)) if app_id else ("", "", "")
+
+
+_NOMES = {}
+
+
+def nome_do_aplicativo(app_id):
+    if app_id in _NOMES:                       # a lista de aplicativos não é lida a cada segundo
+        return _NOMES[app_id]
+    app = aplicativos.ler_desktop(app_id + ".desktop")
+    if not app:
+        app = next((a for a in aplicativos.listar_aplicativos()
+                    if a["classe"] == app_id.lower() or a["id"].lower().endswith("." + app_id.lower() + ".desktop")), None)
+    _NOMES[app_id] = app["nome"] if app else app_id.split(".")[-1].capitalize()
+    return _NOMES[app_id]
+
+
+def aplicativo_em_foco():
+    """Nome do aplicativo da janela em foco, ou ''."""
+    return janela_em_foco()[2]
 
 
 HISTORICO_NOTIFICACOES = Path(os.environ.get("XDG_RUNTIME_DIR", "/tmp")) / "duiaos-notificacoes.json"
@@ -179,25 +185,57 @@ def chamar_notificacoes(metodo, *argumentos):
     QDBusConnection.sessionBus().asyncCall(mensagem)
 
 
+def _item(rotulo, atalho="", ativo=True, marcado=None, itens=None):
+    tipo = "submenu" if itens else ("marcavel" if marcado is not None else "item")
+    return {"id": abs(hash(rotulo)) % 10000 + 1, "rotulo": rotulo, "tipo": tipo, "ativo": ativo, "marcado": bool(marcado),
+            "atalho": atalho, "itens": itens or []}
+
+
+_SEP = {"id": -1, "rotulo": "", "tipo": "separador", "ativo": False, "marcado": False, "atalho": "", "itens": []}
+MENUS_DE_EXEMPLO = [
+    ("Arquivo", [_item("Novo", "Ctrl+N"), _item("Abrir…", "Ctrl+O"),
+                 _item("Abrir recente", itens=[_item("Relatório de outubro.odt"), _item("Orçamento 2026.ods")]), _SEP,
+                 _item("Salvar", "Ctrl+S"), _item("Salvar como…", "Ctrl+Shift+S"), _SEP, _item("Imprimir…", "Ctrl+P"), _SEP,
+                 _item("Sair", "Ctrl+Q")]),
+    ("Editar", [_item("Desfazer", "Ctrl+Z", ativo=False), _item("Refazer", "Ctrl+Shift+Z", ativo=False), _SEP,
+                _item("Recortar", "Ctrl+X"), _item("Copiar", "Ctrl+C"), _item("Colar", "Ctrl+V"), _SEP,
+                _item("Selecionar tudo", "Ctrl+A"), _item("Localizar…", "Ctrl+F")]),
+    ("Exibir", [_item("Barra de ferramentas", marcado=True), _item("Barra de status", marcado=True),
+                _item("Régua", marcado=False), _SEP, _item("Ampliar", "Ctrl++"), _item("Reduzir", "Ctrl+-")]),
+    ("Formatar", [_item("Negrito", "Ctrl+B"), _item("Itálico", "Ctrl+I"), _item("Sublinhado", "Ctrl+U")]),
+    ("Ajuda", [_item("Ajuda do aplicativo", "F1"), _item("Sobre")]),
+]
+
+
 class Sistema(QObject):
     """O que a barra mostra além dos controles: Wise, aplicativo em uso, usuário, notificações, ações."""
 
     mudou = Signal()
     painelMudou = Signal()
     notificacoesMudaram = Signal()
-    _foco = Signal(str)
+    menusMudaram = Signal()
+    _foco = Signal(str, str, str)
+    _menus = Signal(str, "QVariantList")
+    _itens = Signal(int, "QVariantList")
 
     def __init__(self):
         super().__init__()
         self._wise = comum.wise_instalado() or DEMONSTRACAO
         self._wise_estado = "descansando" if DEMONSTRACAO else ""
-        self._app = "Explorador de Arquivos" if DEMONSTRACAO else ""
+        self._app = "Editor de Texto" if DEMONSTRACAO else ""
         self._usuario = comum.usuario_atual()["nome"]
         self._windows = False
         self._painel, self._ancora, self._confirmar = "", 0.0, ""
         self._historico, self._marca_historico = [], 0.0
         self._foco.connect(self._ao_foco)
+        # Menu do aplicativo em foco (menus.py, ADR 057)
+        self._janela = ("", "")                # (app_id, título) da janela dona dos menus
+        self._titulos_menu, self._itens_menu, self._menu_aberto = [], [], -2
+        self._menus.connect(self._ao_menus)
+        self._itens.connect(self._ao_itens)
+        self._leitor = None
         if DEMONSTRACAO:
+            self._titulos_menu = [nome for nome, _itens in MENUS_DE_EXEMPLO]
             self._historico = [
                 {"id": 3, "app": "Wise", "titulo": "Sua agenda de amanhã", "texto": "Reunião às 9h e dentista às 15h.", "quando": "12:40",
                  "tipoIcone": "", "valorIcone": ""},
@@ -206,7 +244,10 @@ class Sistema(QObject):
         if not DEMONSTRACAO:
             self._timer_wise = QTimer(self, interval=1000, timeout=self.atualizar_wise)
             self._timer_wise.start()
-            self._timer_foco = QTimer(self, interval=1500, timeout=self._buscar_foco)
+            import menus
+            self._leitor = menus.ProcessoDeMenus(lambda app, nomes: self._menus.emit(app, list(nomes)),
+                                                 lambda indice, itens: self._itens.emit(indice, list(itens)))
+            self._timer_foco = QTimer(self, interval=1000, timeout=self._buscar_foco)
             self._timer_foco.start()
             threading.Thread(target=self._ver_windows, daemon=True).start()
             self._timer_notificacoes = QTimer(self, interval=1000, timeout=self._ver_historico)
@@ -250,12 +291,91 @@ class Sistema(QObject):
         self._windows = comum.windows_disponivel()
 
     def _buscar_foco(self):
-        threading.Thread(target=lambda: self._foco.emit(aplicativo_em_foco()), daemon=True).start()
+        if self._painel:                       # com um menu aberto, a janela em foco não muda os menus
+            return
+        threading.Thread(target=lambda: self._foco.emit(*janela_em_foco()), daemon=True).start()
 
-    def _ao_foco(self, nome):
+    def _ao_foco(self, app_id, titulo, nome):
+        if self._painel:
+            return
+        if app_id:
+            self._janela = (app_id, titulo)
         if nome != self._app:
             self._app = nome
             self.mudou.emit()
+        if self._leitor:
+            self._leitor.foco(app_id)
+
+    # ---------------------------------------------------- menu do aplicativo
+    def _ao_menus(self, app_id, nomes):
+        if self._painel.startswith("appmenu"):
+            return
+        nomes = list(nomes) if app_id else []
+        if nomes != self._titulos_menu:
+            self._titulos_menu = nomes
+            self.menusMudaram.emit()
+
+    def _ao_itens(self, indice, itens):
+        if indice == self._menu_aberto:
+            self._itens_menu = list(itens) or [{"id": -1, "rotulo": "Este menu está vazio", "tipo": "item", "ativo": False,
+                                                "marcado": False, "atalho": "", "itens": []}]
+            self.menusMudaram.emit()
+
+    @Slot(int, float)
+    def abrirMenuDoAplicativo(self, indice, ancora):
+        """Abre um menu do aplicativo em foco (-1 = o menu com o nome dele, com as ações da janela).
+        Clicar de novo no mesmo fecha."""
+        import menus
+        nome = f"appmenu{indice}"
+        if self._painel == nome:
+            self.fecharPainel()
+            return
+        self._menu_aberto = indice
+        if indice < 0:
+            self._itens_menu = menus.menu_da_janela(self._app)
+        elif DEMONSTRACAO:
+            self._itens_menu = MENUS_DE_EXEMPLO[indice][1] if indice < len(MENUS_DE_EXEMPLO) else []
+        else:
+            self._itens_menu = []                      # carregando: a linha do AT-SPI responde em seguida
+            self._leitor.itens(indice)
+        self._painel, self._ancora, self._confirmar = nome, ancora, ""
+        self.painelMudou.emit()
+        self.menusMudaram.emit()
+
+    @Slot("QVariant")
+    def acionarMenu(self, identificador):
+        """Item escolhido num menu do aplicativo: as ações da janela (texto "janela:...") o DuiaOS faz;
+        os outros são acionados no próprio aplicativo pelo AT-SPI, depois de devolver o foco a ele."""
+        self.fecharPainel()
+        if DEMONSTRACAO:
+            print("Demonstração: menu", identificador, flush=True)
+            return
+        app_id, titulo = self._janela
+        filtro = ["app_id:" + app_id] + (["title:" + titulo] if titulo else [])
+        if isinstance(identificador, str) and identificador.startswith("janela:"):
+            acao = identificador.split(":", 1)[1]
+            if acao == "minimizar":
+                aplicativos.iniciar(["sh", "-c", 'wlrctl toplevel focus "$@" && sleep 0.15 && exec "$0"',
+                                     str(PASTA.parent / "ilha-de-aplicativos" / "minimizar.sh"), *filtro])
+            elif acao == "expandir":
+                aplicativos.iniciar(["wlrctl", "toplevel", "maximize", *filtro])
+            elif acao == "fechar":
+                aplicativos.iniciar(["wlrctl", "toplevel", "close", *filtro])
+            elif acao == "encerrar":
+                aplicativos.iniciar(["wlrctl", "toplevel", "close", "app_id:" + app_id])
+            return
+        if self._leitor and isinstance(identificador, (int, float)) and identificador > 0:
+            leitor, numero = self._leitor, int(identificador)
+
+            def devolver_foco_e_acionar():
+                subprocess.run(["wlrctl", "toplevel", "focus", *filtro], timeout=2, check=False, capture_output=True)
+                import time
+                time.sleep(0.12)                       # o compositor devolve o teclado à janela
+                leitor.acionar(numero)
+            threading.Thread(target=devolver_foco_e_acionar, daemon=True).start()
+
+    titulosDoMenu = Property("QVariantList", lambda self: self._titulos_menu, notify=menusMudaram)
+    itensDoMenu = Property("QVariantList", lambda self: self._itens_menu, notify=menusMudaram)
 
     def atualizar_wise(self):
         estado = comum.estado_wise()

@@ -89,6 +89,9 @@ Item {
         font { family: Tema.fonteTexto; pixelSize: 11; weight: Font.DemiBold }
     }
 
+    // ============================================================ Menu do aplicativo em foco
+    MenuDoAplicativo { posicionar: painel.posicionar; z: 5 }
+
     // ============================================================ Menu do DuiaOS
     Balao {
         nome: "menu"

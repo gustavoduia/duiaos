@@ -32,6 +32,8 @@ wlrctl
 # Acessibilidade (AT-SPI), captura de tela e teclado virtual (ADR 035):
 # leitores de tela e o Wise usando o computador
 at-spi2-core
+# Menu do aplicativo em foco na Barra (ADR 057): o Python lê os menus pelo AT-SPI
+gir1.2-atspi-2.0
 grim
 wtype
 

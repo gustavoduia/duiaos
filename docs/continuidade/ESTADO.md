@@ -54,6 +54,10 @@ fundos com GIF/vídeo, Atualizações nas Configurações, foto da conta, menu d
    Entrada/Bloqueio, Central de IA e "Ajude a melhorar"; janelas presas aos cantos.
 
 ## 5. Decisões recentes (detalhe nos ADRs)
+- 16/11: **Menus de cada aplicativo na Barra** (ADR 057, ficha DUIA-2026-0016): pela acessibilidade (AT-SPI),
+  sem modificar o labwc; leitor em processo à parte. Testado aqui com apps GTK 3 e Qt 6 reais
+  (`shell/testes/menus/`, Xvfb + dbus-run-session). Firefox, Electron e apps do DuiaOS ficam só com o menu do
+  aplicativo. **Sem teste no Dell** (estado ACTIVE no Wayland e devolução do foco).
 - 16/11: **Entrar sem tela preta, gênio sem piscar, modo Automático, tom das telas de acesso** (ADR 056, ficha
   DUIA-2026-0015). Causa da espera ao entrar achada nos relatórios do Dell (Wise aquecendo a IA no login).
   Ambiente de teste novo aqui: `xvfb-run` com `QT_QPA_PLATFORM=xcb` desenha com OpenGL (serve para efeitos que o

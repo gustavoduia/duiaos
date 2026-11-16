@@ -26,6 +26,7 @@ Window {
         interval: 400; running: true
         onTriggered: {
             if (painelInicial.indexOf("confirmar:") === 0) sistema.pedirEnergia(painelInicial.split(":")[1])
+            else if (painelInicial.indexOf("appmenu") === 0) sistema.abrirMenuDoAplicativo(parseInt(painelInicial.slice(7)), [100, 190, 250, 305, 365, 425][parseInt(painelInicial.slice(7)) + 1] || 200)
             else if (painelInicial !== "") {
                 var ancoras = { menu: 25, central: janela.width - 150, calendario: janela.width - 70, balao: janela.width - 290,
                                 wifi: janela.width - 255, som: janela.width - 225, bateria: janela.width - 185, luz: janela.width - 200,
