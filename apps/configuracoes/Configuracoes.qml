@@ -1057,6 +1057,68 @@ Window {
             function marcarTodos(sim) { var m = {}; if (sim) for (var i = 0; i < lista.itens.length; i++) m[lista.itens[i].caminho] = true; marcados = m }
             onListaChanged: marcados = ({})
             Component.onCompleted: ajustes.medirArmazenamento()
+            // Uma limpeza em andamento: aviso com o que está fazendo, o andamento e o tempo (para nunca
+            // parecer travado), e os outros botões esperam
+            readonly property var trabalho: ar.trabalho || ({})
+            readonly property bool ocupado: !!trabalho.texto
+            property real agora: Date.now() / 1000
+            Timer { interval: 1000; repeat: true; running: par.ocupado; onTriggered: par.agora = Date.now() / 1000 }
+
+            Rectangle {
+                id: andamentoLimpeza
+                visible: par.ocupado
+                width: parent.width
+                height: colunaLimpeza.implicitHeight + 24
+                radius: 12
+                color: Tema.cartao
+                border { color: Tema.azulDuia; width: 1 }
+                Row {
+                    id: colunaLimpeza
+                    anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; margins: 14 }
+                    spacing: 12
+                    Item {
+                        width: 30; height: 30
+                        anchors.verticalCenter: parent.verticalCenter
+                        Rectangle { anchors.fill: parent; radius: 15; color: Tema.destaque }
+                        Icone {
+                            anchors.centerIn: parent; nome: "reiniciar"; tamanho: 18; cor: Tema.azulDuia
+                            RotationAnimator on rotation { from: 0; to: 360; duration: 1100; loops: Animation.Infinite; running: par.ocupado }
+                        }
+                    }
+                    Column {
+                        width: parent.width - 42
+                        spacing: 6
+                        Text {
+                            width: parent.width; elide: Text.ElideRight; color: Tema.texto
+                            text: (par.trabalho.texto || "")
+                                  + (par.trabalho.total > 0 ? "  " + (par.trabalho.feito || 0) + " de " + par.trabalho.total : "")
+                            font { family: Tema.fonteTexto; pixelSize: 13; weight: Font.DemiBold }
+                        }
+                        // Com total conhecido, a barra enche; sem ele, uma luz corre de um lado ao outro
+                        Rectangle {
+                            width: parent.width; height: 6; radius: 3; color: Tema.controleDesligado; clip: true
+                            Rectangle {
+                                visible: par.trabalho.total > 0
+                                height: parent.height; radius: 3; color: Tema.azulDuia
+                                width: par.trabalho.total > 0 ? Math.max(6, parent.width * (par.trabalho.feito || 0) / par.trabalho.total) : 0
+                                Behavior on width { NumberAnimation { duration: 200 } }
+                            }
+                            Rectangle {
+                                id: luzCorrendo
+                                visible: !(par.trabalho.total > 0)
+                                width: parent.width * 0.3; height: parent.height; radius: 3; color: Tema.azulDuia
+                                NumberAnimation on x { from: -luzCorrendo.width; to: luzCorrendo.parent.width; duration: 1300
+                                                        loops: Animation.Infinite; running: par.ocupado && !(par.trabalho.total > 0) }
+                            }
+                        }
+                        Text {
+                            color: Tema.textoSecundario
+                            text: "Há " + Math.max(0, Math.round(par.agora - (par.trabalho.inicio || par.agora))) + " s · pode continuar usando o computador"
+                            font { family: Tema.fonteTexto; pixelSize: 12 }
+                        }
+                    }
+                }
+            }
 
             // ================= visão geral (some enquanto uma lista está aberta)
             Destaque {
@@ -1124,6 +1186,7 @@ Window {
                         descricao: modelData.texto
                         ultima: index === par.ar.recomendacoes.length - 1
                         Botao { texto: modelData.acao; tipo: modelData.acao === "Revisar" || modelData.acao === "Procurar" ? "secundario" : "primario"
+                                ativo: !par.ocupado
                                 onClicado: ajustes.limparRecomendacao(modelData.id) }
                     }
                 }
@@ -1184,7 +1247,7 @@ Window {
             Row {
                 visible: par.lista.tipo === ""
                 spacing: 8
-                Botao { texto: par.ar.carregando ? "Medindo…" : "Medir de novo"; icone: "reiniciar"; ativo: !par.ar.carregando
+                Botao { texto: par.ar.carregando ? "Medindo…" : "Medir de novo"; icone: "reiniciar"; ativo: !par.ar.carregando && !par.ocupado
                         onClicado: ajustes.medirArmazenamento() }
             }
 
@@ -1215,7 +1278,7 @@ Window {
                                                 : "Marque o que quer apagar"
                     Botao { texto: par.quantosMarcados === par.lista.itens.length ? "Desmarcar todos" : "Marcar todos"
                             onClicado: par.marcarTodos(par.quantosMarcados !== par.lista.itens.length) }
-                    Botao { texto: par.lista.tipo === "caches" ? "Apagar" : "Mover para a Lixeira"; tipo: "perigo"; ativo: par.quantosMarcados > 0
+                    Botao { texto: par.lista.tipo === "caches" ? "Apagar" : "Mover para a Lixeira"; tipo: "perigo"; ativo: par.quantosMarcados > 0 && !par.ocupado
                             onClicado: { ajustes.apagarDoArmazenamento(par.lista.tipo, Object.keys(par.marcados)); ajustes.listarArmazenamento("") } }
                 }
                 Repeater {
@@ -1836,9 +1899,9 @@ Window {
         property var opcoes: []
         property string atual: ""
         property var aoEscolher: null
-        property string busca: ""
+        property string filtro: ""   // não pode se chamar "busca": é o id do campo de busca da lateral
         function abrir(lista, valor, funcao, x, y, largura) {
-            opcoes = lista; atual = valor; aoEscolher = funcao; busca = ""
+            escolha.opcoes = lista; escolha.atual = valor; escolha.aoEscolher = funcao; escolha.filtro = ""
             cartaoEscolha.width = Math.max(largura, 220)
             cartaoEscolha.x = Math.min(x, janela.width - cartaoEscolha.width - 8)
             cartaoEscolha.y = Math.min(y, janela.height - cartaoEscolha.height - 8)
@@ -1846,7 +1909,7 @@ Window {
             if (lista.length > 12) campoEscolha.entrada.forceActiveFocus()
             for (var i = 0; i < lista.length; i++) if (lista[i].valor === valor) listaEscolha.positionViewAtIndex(i, ListView.Center)
         }
-        readonly property var filtradas: busca === "" ? opcoes : opcoes.filter(function (o) { return o.rotulo.toLowerCase().indexOf(busca.toLowerCase()) >= 0 })
+        readonly property var filtradas: filtro === "" ? opcoes : opcoes.filter(function (o) { return o.rotulo.toLowerCase().indexOf(escolha.filtro.toLowerCase()) >= 0 })
         MouseArea { anchors.fill: parent; onClicked: escolha.visible = false }
         Cartao {
             id: cartaoEscolha
@@ -1859,7 +1922,7 @@ Window {
                 visible: escolha.opcoes.length > 12
                 anchors { left: parent.left; right: parent.right; top: parent.top; margins: 8 }
                 icone: "busca"; dica: "Buscar"
-                entrada.onTextChanged: escolha.busca = texto
+                entrada.onTextChanged: escolha.filtro = texto
                 onVisibleChanged: texto = ""
             }
             ListView {

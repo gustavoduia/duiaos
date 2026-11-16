@@ -70,6 +70,41 @@ def janela_qt():
     return No("frame", "Editor Qt", [barra])
 
 
+class TesteMenuDoBotao(unittest.TestCase):
+    """O popover do botão ☰ (GNOME) numa árvore de mentira, no formato que o GTK 3 descreve."""
+
+    def janela(self):
+        popover = No("panel", "", [No("filler", "", [
+            No("push button", "Salvar como…"), No("check box", "Tela cheia", estados=("ENABLED", "VISIBLE", "CHECKED")),
+            No("separator"), No("push button", "Recarregar", estados=("VISIBLE",)), No("push button", "Exibir")])],
+            estados=("ENABLED", "VISIBLE"))
+        busca = No("panel", "", [No("text", "Buscar"), No("push button", "a"), No("push button", "b"), No("push button", "c")])
+        abas = No("panel", "", [No("radio button", "2"), No("radio button", "4"), No("check box", "Espaços")])
+        cabecalho = No("panel", "", [No("toggle button", "Menu", estados=("VISIBLE", "SHOWING")),
+                                     No("toggle button", "Documentos", estados=("VISIBLE", "SHOWING"))])
+        return No("frame", "Editor", [cabecalho, abas, popover, busca])
+
+    def test_acha_o_popover_com_mais_itens_e_o_botao(self):
+        arvore = ArvoreDeMentira()
+        arvore.descricao = lambda n: ""
+        menu = menus.achar_menu_do_botao(arvore, self.janela())
+        self.assertIsNotNone(menu)
+        self.assertEqual([arvore.nome(n) for n, *_ in menus.itens_do_popover(arvore, menu.painel)][:2], ["Salvar como…", "Tela cheia"])
+        self.assertEqual(menu.botao.nome, "Menu")
+        contador = iter(range(1, 100))
+        itens = menus.ler_itens_do_popover(arvore, menu, lambda no: next(contador), {"Exibir": ["Painel lateral"]})
+        self.assertEqual([(i["rotulo"], i["tipo"]) for i in itens],
+                         [("Salvar como…", "item"), ("Tela cheia", "marcavel"), ("", "separador"), ("Recarregar", "item"),
+                          ("Exibir", "submenu")])
+        self.assertTrue(itens[1]["marcado"])
+        self.assertFalse(itens[3]["ativo"])
+        self.assertEqual(itens[4]["itens"][0]["rotulo"], "Painel lateral")
+
+    def test_sem_popover(self):
+        arvore = ArvoreDeMentira()
+        self.assertIsNone(menus.achar_menu_do_botao(arvore, No("frame", "X", [No("push button", "OK")])))
+
+
 class TesteTexto(unittest.TestCase):
     def test_atalhos(self):
         casos = {"n;<Alt>a:n;<Primary>n": "Ctrl+N", "f;<Alt>e:f;<Primary><Shift>z": "Ctrl+Shift+Z",
@@ -198,6 +233,25 @@ class TesteAplicativosDeVerdade(unittest.TestCase):
         self.assertTrue(r["itens"]["2"][0]["marcado"])
         self.assertIn("ACIONADO Novo", r["saida"])
         self.assertIn("ACIONADO relatorio.txt", r["saida"])                            # dentro do submenu
+
+    def test_gedit_menu_do_botao(self):
+        """Aplicativo do GNOME sem barra de menus: o ☰ vira o menu "Menu" (ADR 061). Era o caso do Gedit no Dell."""
+        if not shutil.which("gedit"):
+            self.skipTest("sem o Gedit")
+        processo = subprocess.run(["dbus-run-session", "--", sys.executable, str(RAIZ / "shell/testes/menus/sessao_gedit.py")],
+                                  capture_output=True, text=True, timeout=150, check=False)
+        linha = next((l for l in processo.stdout.splitlines() if l.startswith("RESULTADO ")), "")
+        self.assertTrue(linha, processo.stdout[-1500:] + processo.stderr[-1500:])
+        r = json.loads(linha[len("RESULTADO "):])
+        self.assertEqual(r["titulos"], ["Menu"])
+        primeira = {i["rotulo"]: i for i in r["leituras"][0]}
+        self.assertIn("Preferences", primeira)
+        self.assertFalse(primeira["Reload"]["ativo"])                 # documento novo: Recarregar desativado
+        self.assertEqual(primeira["Fullscreen"]["tipo"], "marcavel")
+        self.assertTrue(r["abriu_janela"])                            # "Keyboard Shortcuts" abriu a janela
+        exibir = next(i for i in r["segunda"] if i["rotulo"] == "View")
+        self.assertEqual(exibir["tipo"], "submenu")                   # a página interna virou submenu
+        self.assertIn("Side Panel", [s["rotulo"] for s in exibir["itens"]])
 
     def test_qt(self):
         try:

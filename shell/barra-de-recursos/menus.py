@@ -13,6 +13,12 @@ Inspirado no noctalia-appmenu (Apache-2.0), que fez o mesmo para o compositor ni
 nosso. Quem não tem barra de menus pelo AT-SPI (Firefox, aplicativos Electron, os do próprio
 DuiaOS) fica com o menu da janela (Minimizar, Expandir, Fechar, Encerrar).
 
+Aplicativos do GNOME (Gedit, Arquivos, Calculadora…) não têm barra de menus: o menu fica no botão ☰
+da barra de título, um "popover" que o GTK descreve pelo AT-SPI mesmo fechado. Sem barra, ele vira um
+menu "Menu" na Barra (ADR 061). Os itens que abrem uma página interna (ex.: "Exibir" no Gedit) só
+mostram o conteúdo dela quando ela está aberta: na primeira vez, escolher o item abre o ☰ do
+aplicativo já nessa página; depois disso, os itens da página aparecem como submenu na Barra.
+
 Todo o acesso ao AT-SPI fica num processo à parte (python3 menus.py --servico), com tempo-limite
 curto nas chamadas: a biblioteca do AT-SPI encerra o processo quando o barramento de acessibilidade
 some, e um aplicativo travado pode demorar a responder — nada disso pode derrubar ou travar a Barra.
@@ -102,9 +108,12 @@ class Arvore:
     def quantos_filhos(self, n):
         return n.get_child_count()
 
+    def descricao(self, n):
+        return n.get_description() or ""
+
     def estados(self, n):
         conjunto = n.get_state_set()
-        return {nome for nome in ("ENABLED", "SENSITIVE", "VISIBLE", "CHECKED", "CHECKABLE", "ACTIVE")
+        return {nome for nome in ("ENABLED", "SENSITIVE", "VISIBLE", "CHECKED", "CHECKABLE", "ACTIVE", "SHOWING")
                 if conjunto.contains(getattr(self.A.StateType, nome))}
 
     def tecla(self, n):
@@ -203,6 +212,105 @@ def ler_itens(arvore, menu, registrar, filtrar_invisiveis, nivel=0, conta=None):
     return itens
 
 
+# ------------------------------------------------------------------ menu do botão ☰ (GNOME; ADR 061)
+
+PAPEIS_DO_POPOVER = {"push button", "check box", "radio button", "toggle button", "menu item", "check menu item",
+                     "radio menu item"}
+# Nomes do botão ☰ (GTK em português e em inglês); sem nenhum deles, vale o último botão de alternar sem descrição
+NOMES_DO_BOTAO = {"menu", "menu principal", "menu do aplicativo", "menu de aplicativo", "main menu", "primary menu",
+                  "application menu", "opções", "options"}
+
+
+class MenuDoBotao:
+    """Pseudo-menu da Barra: o popover do botão ☰ (painel) e o botão que o abre (para mostrar na janela)."""
+
+    def __init__(self, painel, botao):
+        self.painel, self.botao = painel, botao
+
+
+def _descendentes(arvore, no, profundidade=7, limite=400):
+    pilha, vistos = [(no, 0)], 0
+    while pilha and vistos < limite:
+        atual, nivel = pilha.pop()
+        vistos += 1
+        yield atual, nivel
+        if nivel < profundidade:
+            pilha.extend((f, nivel + 1) for f in reversed(arvore.filhos(atual, 80)))
+
+
+def itens_do_popover(arvore, painel):
+    """[(nó, papel, nome, estados)] dos itens e separadores do popover, na ordem em que aparecem."""
+    saida = []
+    for no, nivel in _descendentes(arvore, painel):
+        if nivel == 0:
+            continue
+        papel = arvore.papel(no)
+        if papel == PAPEL_SEPARADOR:
+            saida.append((no, papel, "", set()))
+        elif papel in PAPEIS_DO_POPOVER and rotulo(arvore.nome(no)):
+            saida.append((no, papel, rotulo(arvore.nome(no)), arvore.estados(no)))
+    return saida
+
+
+def achar_menu_do_botao(arvore, janela, limite=600):
+    """O popover do botão ☰ de uma janela sem barra de menus, ou None. É o painel escondido com mais
+    itens (pelo menos 3), sem campo de texto (os de busca não são menus); o botão é o de alternar
+    visível com um dos nomes de menu (ou o último de alternar sem descrição)."""
+    candidatos, botoes = [], []
+    for no, _nivel in _descendentes(arvore, janela, profundidade=12, limite=limite):
+        papel = arvore.papel(no)
+        if papel == "toggle button" and "SHOWING" in arvore.estados(no):
+            botoes.append(no)
+        if papel == "panel" and "SHOWING" not in arvore.estados(no):
+            itens = itens_do_popover(arvore, no)
+            if any(arvore.papel(n) == "text" for n, _ in _descendentes(arvore, no, 4, 80)):
+                continue
+            quantos = sum(1 for i in itens if i[1] != PAPEL_SEPARADOR)
+            if quantos >= 3:
+                candidatos.append((quantos, no))
+    if not candidatos:
+        return None
+    painel = max(candidatos, key=lambda c: c[0])[1]     # empate: o primeiro (o GTK repete o da tela cheia)
+    pelo_nome = [b for b in botoes if arvore.nome(b).strip().lower() in NOMES_DO_BOTAO and not _descricao(arvore, b)]
+    sem_descricao = [b for b in botoes if not _descricao(arvore, b)]
+    botao = (pelo_nome or sem_descricao or [None])[-1]
+    return MenuDoBotao(painel, botao)
+
+
+def _descricao(arvore, no):
+    try:
+        return arvore.descricao(no)
+    except AttributeError:
+        return ""
+
+
+def ler_itens_do_popover(arvore, menu, registrar, aprendidos):
+    """Itens do popover no formato de ler_itens. aprendidos: {nome do item: [nomes]} das páginas internas
+    já vistas, que viram submenus (o número de cada subitem leva o item que abre a página)."""
+    itens = []
+    for no, papel, nome, estados in itens_do_popover(arvore, menu.painel):
+        if papel == PAPEL_SEPARADOR:
+            if itens and itens[-1]["tipo"] != "separador":
+                itens.append({"id": -1, "rotulo": "", "tipo": "separador", "ativo": False, "marcado": False,
+                              "atalho": "", "itens": []})
+            continue
+        if "VISIBLE" not in estados:
+            continue
+        ativo = "ENABLED" in estados or "SENSITIVE" in estados
+        if nome in aprendidos:
+            filhos = [{"id": registrar(("pagina", no, sub)), "rotulo": sub, "tipo": "item", "ativo": True, "marcado": False,
+                       "atalho": "", "itens": []} for sub in aprendidos[nome]]
+            itens.append({"id": registrar(no), "rotulo": nome, "tipo": "submenu", "ativo": ativo and bool(filhos),
+                          "marcado": False, "atalho": "", "itens": filhos})
+            continue
+        marcavel = papel in ("check box", "radio button", "check menu item", "radio menu item") or "CHECKABLE" in estados
+        itens.append({"id": registrar(no), "rotulo": nome, "tipo": "marcavel" if marcavel else "item", "ativo": ativo,
+                      "marcado": "CHECKED" in estados, "atalho": atalho(arvore.tecla(no)), "itens": []})
+    while itens and itens[-1]["tipo"] == "separador":
+        itens.pop()
+    return itens
+
+
 # ------------------------------------------------------------------ leitor
 
 # Camadas do próprio DuiaOS (não são aplicativos com menus; ficam "ativas" quando a Barra, a Ilha ou a
@@ -240,6 +348,10 @@ class LeitorDeMenus:
         self._nos = {}                      # número → nó, para acionar (o número leva o menu: menu × 10000 + item)
         self._geracao = 0                   # muda com a janela: números de uma janela anterior não valem mais
         self._ultimo = None                 # (app_id, títulos) enviado por último
+        self._app = ""                      # app_id da janela em foco
+        self._aprendidos = {}               # (app_id, item do ☰) → [itens da página interna que ele abre]
+        self._proxima_varredura = 0.0
+        self.pausa = 0.2                    # espera para o GTK trocar a página do ☰ depois de um clique
         self._linha = threading.Thread(target=self._rodar, name="menus-do-aplicativo", daemon=True)
         self._linha.start()
 
@@ -340,13 +452,23 @@ class LeitorDeMenus:
             self._janela, self._menus = None, []
             self._enviar_menus(app_id, [], "o aplicativo não se descreve pela acessibilidade")
             return
-        barra = achar_barra(self._arvore, janela)
-        menus = titulos(self._arvore, barra) if barra is not None else []
+        if janela == self._janela and self._menus and isinstance(self._menus[0][0], MenuDoBotao):
+            menus, barra = self._menus, None    # a mesma janela com o ☰ já achado: não varre de novo
+        elif janela == self._janela and not self._menus and time.monotonic() < self._proxima_varredura:
+            return                              # a mesma janela sem menus: procura de novo a cada 5 s, não a cada 1 s
+        else:
+            barra = achar_barra(self._arvore, janela)
+            menus = titulos(self._arvore, barra) if barra is not None else []
+            if barra is None:
+                botao = achar_menu_do_botao(self._arvore, janela)
+                if botao is not None:
+                    menus = [(botao, "Menu")]
         if janela != self._janela:
             self._nos = {}
             self._geracao += 1
-        self._janela, self._toolkit, self._menus = janela, toolkit, menus
-        motivo = "" if menus else ("a janela não tem barra de menus" if barra is None else "os menus estão vazios até serem abertos")
+        self._janela, self._toolkit, self._menus, self._app = janela, toolkit, menus, app_id
+        self._proxima_varredura = time.monotonic() + 5
+        motivo = "" if menus else ("a janela não tem barra de menus nem o botão ☰" if barra is None else "os menus estão vazios até serem abertos")
         self._enviar_menus(app_id, [nome for _no, nome in menus], motivo)
 
     def _enviar_menus(self, app_id, nomes, motivo=""):
@@ -375,6 +497,10 @@ class LeitorDeMenus:
             self._ao_itens(indice, [])
             return
         no, _nome = self._menus[indice]
+        if isinstance(no, MenuDoBotao):
+            aprendidos = {nome: subs for (app, nome), subs in self._aprendidos.items() if app == self._app}
+            self._ao_itens(indice, ler_itens_do_popover(self._arvore, no, self._registrador(indice), aprendidos))
+            return
         filtrar = self._toolkit.lower().startswith("gtk")
         self._ao_itens(indice, ler_itens(self._arvore, no, self._registrador(indice), filtrar))
 
@@ -384,8 +510,42 @@ class LeitorDeMenus:
             return
         if antes:
             antes()                             # devolve o foco à janela do aplicativo
-        ok = self._arvore.acionar(no)
+        menu = self._menus[0][0] if self._menus else None
+        if isinstance(menu, MenuDoBotao):
+            ok = self._acionar_no_popover(menu, no)
+        else:
+            ok = self._arvore.acionar(no)
         self._ao_acionar(numero if ok else 0)
+
+    def _nomes_do_popover(self, menu):
+        return [nome for _n, papel, nome, _e in itens_do_popover(self._arvore, menu.painel) if papel != PAPEL_SEPARADOR]
+
+    def _acionar_no_popover(self, menu, no):
+        """Item do ☰. Se ele abriu uma página interna (o popover passou a mostrar outros itens, com o nome
+        dele no alto), guarda os itens da página e abre o ☰ na janela, já nessela, para a pessoa escolher."""
+        arvore = self._arvore
+        if isinstance(no, tuple):               # subitem de uma página já aprendida: abre a página e aciona
+            _tipo, abridor, nome_sub = no
+            arvore.acionar(abridor)
+            time.sleep(self.pausa)
+            alvo = next((n for n, papel, nome, _e in itens_do_popover(arvore, menu.painel) if nome == nome_sub), None)
+            ok = bool(alvo is not None and arvore.acionar(alvo))
+            time.sleep(self.pausa)
+            nomes = self._nomes_do_popover(menu)
+            if nomes and nomes[0] == rotulo(arvore.nome(abridor)):   # ainda na página: volta para a principal
+                primeiro = next(n for n, papel, _nome, _e in itens_do_popover(arvore, menu.painel) if papel != PAPEL_SEPARADOR)
+                arvore.acionar(primeiro)
+            return ok
+        antes = self._nomes_do_popover(menu)
+        nome = rotulo(arvore.nome(no))
+        ok = arvore.acionar(no)
+        time.sleep(self.pausa)
+        depois = self._nomes_do_popover(menu)
+        if ok and depois != antes and depois and depois[0] == nome:
+            self._aprendidos[(self._app, nome)] = depois[1:]
+            if menu.botao is not None:
+                arvore.acionar(menu.botao)      # mostra o ☰ do aplicativo, aberto na página
+        return ok
 
 
 # ------------------------------------------------------------------ processo à parte

@@ -237,6 +237,18 @@ class TesteAmpliacao(unittest.TestCase):
                                        capture_output=True, text=True, timeout=120, env=ambiente, cwd=raiz)
         self.assertIn("PULO-OK", resultado.stdout, resultado.stdout[-1500:] + resultado.stderr[-1500:])
 
+    def test_arrastar_reorganiza_em_tempo_real_e_nao_trava(self):
+        """Arrastar um fixado: os vizinhos abrem espaço enquanto arrasta; ao soltar, a ordem muda e a Ilha
+        não fica presa em "arrastando" (ficava: a lista nova recriava o ícone no meio do clique, 16/11)."""
+        raiz = Path(__file__).resolve().parents[2]
+        with tempfile.TemporaryDirectory() as inicio:
+            ambiente = {**os.environ, "HOME": inicio, "XDG_CONFIG_HOME": inicio + "/.config",
+                        "XDG_RUNTIME_DIR": inicio, "XDG_DATA_HOME": inicio + "/.local/share"}
+            resultado = subprocess.run([sys.executable, str(raiz / "shell/testes/ilha_arrasto.py"),
+                                        str(raiz / "shell/ilha-de-aplicativos/main.py")],
+                                       capture_output=True, text=True, timeout=120, env=ambiente, cwd=raiz)
+        self.assertIn("ARRASTO-OK", resultado.stdout, resultado.stdout[-1500:] + resultado.stderr[-1500:])
+
     def test_ampliacao_estavel_e_sem_recarregar_imagens(self):
         raiz = Path(__file__).resolve().parents[2]
         with tempfile.TemporaryDirectory() as inicio:

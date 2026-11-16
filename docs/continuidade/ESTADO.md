@@ -54,6 +54,11 @@ fundos com GIF/vídeo, Atualizações nas Configurações, foto da conta, menu d
    Entrada/Bloqueio, Central de IA e "Ajude a melhorar"; janelas presas aos cantos.
 
 ## 5. Decisões recentes (detalhe nos ADRs)
+- 16/11: **Menu do ☰ do GNOME na Barra, Ilha que reorganiza ao arrastar, listas das Configurações, procura a
+  cada hora, aquecimento do Wise** (ADR 061, ficha DUIA-2026-0019). Causas achadas: lista com propriedade de
+  mesmo nome do campo de busca (nenhum Seletor abria); lista nova recriando o ícone no meio do clique (Ilha
+  presa em "arrastando"); procura automática de 6 em 6 h; serviço do Wise sem HOME. **O disco do Dell está
+  quase cheio** (aviso de 941 MB livres na foto do Gustavo): pode impedir downloads de atualizações.
 - 16/11: **Armazenamento nas Configurações e avisos de disco cheio** (ADR 060) e **menus dos aplicativos do
   DuiaOS + tamanho na loja** (ADR 059), ficha DUIA-2026-0018. Causa dos menus vazios: o VLC não publica a
   acessibilidade e nada do DuiaOS tinha barra de menus; agora Explorador, Configurações e loja publicam menus

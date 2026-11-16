@@ -11,7 +11,7 @@ Cinco modos, escolhidos em Configurações › Atualizações e guardados em /et
   instalar            procura, baixa e instala sem avisar (só avisa se for preciso reiniciar)
 
 Quem procura é o temporizador duiaos-atualizacao-automatica (como root, 10 min depois de ligar e a
-cada 6 h): este arquivo com --ciclo. A instalação passa pelo duiaos-agente (D-Bus, como root não
+cada hora): este arquivo com --ciclo. A instalação passa pelo duiaos-agente (D-Bus, como root não
 precisa do polkit), com o mesmo andamento, registros, reparo e idempotência da instalação pela tela.
 
 O que foi encontrado fica em /var/lib/duiaos/atualizacoes/estado.json (legível por todos): a Barra de

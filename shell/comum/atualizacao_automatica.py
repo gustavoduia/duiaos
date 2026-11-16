@@ -24,7 +24,7 @@ NOMES = {
 }
 EXPLICACOES = {
     "desativado": "O DuiaOS não procura atualizações sozinho. Use Procurar quando quiser.",
-    "avisar": "O DuiaOS procura a cada 6 horas e avisa quando houver atualizações. Você decide quando baixar e instalar.",
+    "avisar": "O DuiaOS procura a cada hora e avisa quando houver atualizações. Você decide quando baixar e instalar.",
     "baixar": "O DuiaOS procura, avisa e já deixa as atualizações baixadas. Instalar fica com você, e é mais rápido.",
     "instalar-avisando": "O DuiaOS procura, baixa e instala sozinho, e avisa quando encontra e quando termina.",
     "instalar": "O DuiaOS procura, baixa e instala sozinho, sem avisos. Só avisa se for preciso reiniciar.",

@@ -23,7 +23,7 @@ linha nova ou atualizada no mesmo envio.
 | --- | --- | --- | --- | --- |
 | Modelo local = modelo ativo da IA do sistema (estado.json conferido) | `wise/ia_do_sistema.py` | `wise/ia_do_sistema.py::/var/lib/duiaos-ia/estado.json`, `wise/ia_do_sistema.py::class Acompanhamento` | W10 | main |
 | Abertura fixa + aquecimento (pergunta lê só as palavras novas) | `wise/modelos/local.py`, `wise/orquestrador.py` | `wise/modelos/local.py::ABERTURA = [`, `wise/modelos/local.py::def aquecer` | W11 | main |
-| Aquecimento antes do login (serviço do sistema; mesma abertura da sessão) | `wise/aquecimento.py`, `pacote/raiz/usr/lib/systemd/system/duiaos-wise-aquecimento.service` | `wise/aquecimento.py::def esperar_modelo`, `pacote/raiz/usr/lib/systemd/system/duiaos-wise-aquecimento.service::Type=exec` | W20 | main |
+| Aquecimento antes do login (serviço do sistema; mesma abertura da sessão) | `wise/aquecimento.py`, `pacote/raiz/usr/lib/systemd/system/duiaos-wise-aquecimento.service` | `wise/aquecimento.py::def esperar_modelo`, `pacote/raiz/usr/lib/systemd/system/duiaos-wise-aquecimento.service::Type=exec`, `pacote/raiz/usr/lib/systemd/system/duiaos-wise-aquecimento.service::Environment=HOME=/tmp` | W20 | main |
 | Agir sem anunciar; fazer exatamente o que foi pedido | `wise/orquestrador.py` | `wise/orquestrador.py::sem anunciar antes`, `wise/orquestrador.py::def _usar_ferramenta` | W20 | main |
 | Texto parcial no máximo 4x/s, numa área própria | `wise/interface/main.py` | `wise/interface/main.py::_tempo_parcial = QTimer(self, interval=250` | W12 | main |
 | Gemini só com consentimento; chave no cofre | `wise/modelos/gemini.py`, `wise/segredos.py` | `wise/segredos.py::Secret Service` | W1 | main |

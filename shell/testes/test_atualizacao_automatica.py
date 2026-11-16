@@ -84,3 +84,35 @@ class TesteDicaDeAbrir(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TesteListaDoModo(unittest.TestCase):
+    def test_lista_quando_houver_atualizacoes_abre(self):
+        """A lista não abria (16/11): a propriedade "busca" da lista de opções tinha o nome do campo de busca."""
+        import os
+        import subprocess
+        try:
+            import PySide6  # noqa: F401
+        except ImportError:
+            self.skipTest("sem PySide6")
+        resultado = subprocess.run([sys.executable, str(RAIZ / "shell/testes/configuracoes_seletor.py"),
+                                    str(RAIZ / "apps/configuracoes/main.py")], capture_output=True, text=True, timeout=90,
+                                   env={**os.environ, "QT_QPA_PLATFORM": "offscreen"}, cwd=RAIZ)
+        self.assertIn("SELETOR-OK", resultado.stdout, resultado.stdout[-1500:] + resultado.stderr[-1500:])
+
+    def test_nenhuma_propriedade_com_o_nome_de_um_id(self):
+        """No QML, um id do arquivo ganha de uma propriedade de mesmo nome usada sem o objeto na frente.
+        Propriedade e id com o mesmo nome só onde todo uso é qualificado (lista abaixo, conferida à mão)."""
+        import re
+        conferidos = {("shell/ilha-de-aplicativos/Ilha.qml", "vaga"), ("apps/central-de-ia/CentralDeIA.qml", "aviso"),
+                      ("apps/ajude-a-melhorar/AjudeAMelhorar.qml", "cartao")}
+        problemas = []
+        for arquivo in sorted(list(RAIZ.glob("apps/**/*.qml")) + list(RAIZ.glob("shell/**/*.qml"))):
+            texto = arquivo.read_text(encoding="utf-8")
+            ids = set(re.findall(r"\bid:\s*(\w+)", texto))
+            # "property alias x: x" é o jeito certo de expor um filho: não conta
+            nomes = {n for t, n in re.findall(r"property\s+([\w<>.]+)\s+(\w+)", texto) if not re.search(rf"property\s+alias\s+{n}\s*:\s*{n}\b", texto)}
+            for nome in ids & nomes:
+                if (str(arquivo.relative_to(RAIZ)), nome) not in conferidos:
+                    problemas.append(f"{arquivo.relative_to(RAIZ)}: {nome}")
+        self.assertEqual(problemas, [])

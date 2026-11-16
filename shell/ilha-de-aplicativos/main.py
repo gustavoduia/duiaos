@@ -569,7 +569,12 @@ class Ilha(QObject):
         fixados.remove(id_desktop)
         posicao = max(0, min(len(fixados), destino - len(fixos)))
         fixados.insert(posicao, id_desktop)
-        if DEMONSTRACAO:
+        if DEMONSTRACAO:                       # só na memória (também serve ao teste do arrasto)
+            ordem = fixos + fixados
+            self._ids_fixados = ordem
+            fixados_itens = sorted((i for i in self._itens if i.get("fixado")), key=lambda d: ordem.index(d["id"]) if d.get("id") in ordem else len(ordem))
+            self._itens = fixados_itens + [i for i in self._itens if not i.get("fixado")]
+            self.mudou.emit()
             return
         gravar_fixados(fixados)
         self.recarregar_fixados()

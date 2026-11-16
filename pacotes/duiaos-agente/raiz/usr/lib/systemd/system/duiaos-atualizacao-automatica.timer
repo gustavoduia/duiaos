@@ -1,10 +1,10 @@
 [Unit]
-Description=Procura atualizações do DuiaOS a cada 6 horas (ADR 058)
+Description=Procura atualizações do DuiaOS a cada hora (ADR 058; era a cada 6 h até 16/11)
 
 [Timer]
 OnBootSec=10min
-OnUnitActiveSec=6h
-RandomizedDelaySec=20min
+OnUnitActiveSec=1h
+RandomizedDelaySec=5min
 Persistent=true
 
 [Install]

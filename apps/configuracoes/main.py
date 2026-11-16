@@ -965,7 +965,7 @@ class Ajustes(QObject):
                 elif metodo in ("EspacoDoSistema", "LimparSistema"):
                     if metodo == "LimparSistema":
                         self.aviso.emit(v.error().message())
-                    self._mudar_armaz(carregando=False)
+                    self._mudar_armaz(carregando=False, trabalho={})
                     return v.deleteLater()
                 elif metodo in ("Registros", "LerRegistro", "Estado"):
                     self._registro_aberto = {"titulo": "Registro", "texto": v.error().message()} if metodo == "LerRegistro" else getattr(self, "_registro_aberto", {})
@@ -1084,12 +1084,21 @@ class Ajustes(QObject):
     armazenamentoMudou = Signal()
 
     def _armazenamento(self):
-        return getattr(self, "_armaz", {"carregando": True, "dispositivos": [], "uso": [], "recomendacoes": [],
+        return getattr(self, "_armaz", {"carregando": True, "dispositivos": [], "uso": [], "recomendacoes": [], "trabalho": {},
                                         "lista": {"tipo": "", "titulo": "", "itens": [], "carregando": False}})
 
     def _mudar_armaz(self, **mudar):
         self._armaz = {**self._armazenamento(), **mudar}
         self.armazenamentoMudou.emit()
+
+    def _trabalhar(self, texto, total=0):
+        """Uma limpeza começou: a página mostra o andamento (e trava os outros botões) até terminar."""
+        import time as _time
+        self._mudar_armaz(trabalho={"texto": texto, "feito": 0, "total": total, "inicio": _time.time()})
+
+    def _progresso(self, feito, total):
+        """Chamado da linha de fundo: o sinal leva o andamento para a linha da interface."""
+        self._pronto.emit("armazenamento-progresso", {"feito": feito, "total": total})
 
     @Slot()
     def medirArmazenamento(self):
@@ -1100,6 +1109,9 @@ class Ajustes(QObject):
             self._mudar_armaz(**armazenamento_de_exemplo())
             if "--lista" in sys.argv:                       # demonstração de uma lista (ex.: --lista videos)
                 self.listarArmazenamento(argumento("--lista", "videos"))
+            if "--limpando" in sys.argv:                    # demonstração do andamento de uma limpeza
+                self._trabalhar("Movendo para a Lixeira…", 12)
+                self._mudar_armaz(trabalho={**self._armazenamento()["trabalho"], "feito": 5})
             return
 
         def medir():
@@ -1116,8 +1128,13 @@ class Ajustes(QObject):
     def _ao_armazenamento(self, nome, resultado):
         import json as _json
         if isinstance(resultado, Exception):
-            self.aviso.emit("Não consegui medir o armazenamento: " + str(resultado)[:120])
-            self._mudar_armaz(carregando=False)
+            self.aviso.emit(("Não consegui terminar a limpeza: " if nome == "armazenamento-feito" else
+                             "Não consegui medir o armazenamento: ") + str(resultado)[:120])
+            self._mudar_armaz(carregando=False, trabalho={})
+            return
+        if nome == "armazenamento-progresso":
+            if self._armazenamento().get("trabalho"):
+                self._mudar_armaz(trabalho={**self._armazenamento()["trabalho"], **resultado})
             return
         if nome == "armazenamento-medir":
             self._mudar_armaz(carregando=False, **resultado)
@@ -1136,6 +1153,7 @@ class Ajustes(QObject):
         elif nome == "armazenamento-lista":
             self._mudar_armaz(lista={**self._armazenamento()["lista"], **resultado, "carregando": False})
         elif nome == "armazenamento-feito":
+            self._mudar_armaz(trabalho={})
             if resultado:
                 self.aviso.emit(resultado)
             self.medirArmazenamento()
@@ -1185,11 +1203,21 @@ class Ajustes(QObject):
             return
         from tipos import tamanho_legivel
 
+        total = len(caminhos)
+        self._trabalhar("Apagando os arquivos temporários…" if tipo == "caches" else "Movendo para a Lixeira…", total)
+
         def apagar():
             if tipo == "caches":
-                return "Liberados " + tamanho_legivel(ar.apagar_caches(caminhos)) + "."
+                liberado = 0
+                for n, caminho in enumerate(caminhos, 1):
+                    liberado += ar.apagar_caches([caminho])
+                    self._progresso(n, total)
+                return "Liberados " + tamanho_legivel(liberado) + "."
             tamanho = sum(os.path.getsize(c) for c in caminhos if os.path.isfile(c))
-            ar.operacoes_do_explorador().mover_para_lixeira(caminhos)
+            mover = ar.operacoes_do_explorador().mover_para_lixeira
+            for n, caminho in enumerate(caminhos, 1):
+                mover([caminho])
+                self._progresso(n, total)
             return (f"{len(caminhos)} {'item foi' if len(caminhos) == 1 else 'itens foram'} para a Lixeira ({tamanho_legivel(tamanho)}). "
                     "Esvazie a Lixeira para liberar o espaço.")
         self._em_fundo("armazenamento-feito", apagar)
@@ -1202,9 +1230,25 @@ class Ajustes(QObject):
         if DEMONSTRACAO:
             self.aviso.emit("Demonstração: nada foi apagado.")
             return
+        textos = {"lixeira": "Esvaziando a Lixeira…", "flatpak": "Removendo o que o Flathub não usa mais…",
+                  "apt": "Apagando os pacotes de instalação já usados…", "registros": "Apagando os registros antigos do sistema…"}
+        if ident in textos:
+            self._trabalhar(textos[ident])
         if ident == "lixeira":
             def esvaziar():
-                ar.operacoes_do_explorador().esvaziar_lixeira()
+                # Item por item, para a página mostrar o andamento (uma Lixeira grande leva tempo)
+                op = ar.operacoes_do_explorador()
+                arquivos, infos = op._pastas_lixeira(None)
+                itens = []
+                for pasta in (arquivos, infos):
+                    try:
+                        itens += [pasta / n for n in os.listdir(pasta)]
+                    except OSError:
+                        pass
+                for n, item in enumerate(itens, 1):
+                    op.excluir_permanentemente([item])
+                    if n % 5 == 0 or n == len(itens):
+                        self._progresso(n, len(itens))
                 return "A Lixeira foi esvaziada."
             self._em_fundo("armazenamento-feito", esvaziar)
         elif ident == "flatpak":
