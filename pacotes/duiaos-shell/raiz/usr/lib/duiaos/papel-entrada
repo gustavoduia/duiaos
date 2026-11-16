@@ -65,7 +65,7 @@ def main():
         gravar({"modo": "padrao", **ler_conf(), "estilo": argumentos[0]})
         return 0
     if acao == "padrao" and len(argumentos) == 1 and argumentos[0] in ("sim", "nao"):
-        gravar({"modo": "padrao", "desfocar": argumentos[0], "estilo": ler_conf().get("estilo", "padrao")})
+        gravar({"modo": "padrao", "desfocar": argumentos[0], "estilo": ler_conf().get("estilo", "futurista")})
         return 0
     if acao not in ("imagem", "opcoes") or len(argumentos) != 3:
         return 2

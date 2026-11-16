@@ -17,6 +17,7 @@ case "$1" in
 esac
 
 if [ "$1" = "purge" ]; then
+  rm -f /boot/grub/duiaos-inicio.png
   rm -f /etc/apt/sources.list.d/duiaos.sources
   rm -rf /var/lib/duiaos
 fi

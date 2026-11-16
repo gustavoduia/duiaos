@@ -41,8 +41,9 @@ class TesteSessao(unittest.TestCase):
 
     def test_modo_escuro_grava_e_apaga(self):
         with tempfile.TemporaryDirectory() as pasta:
-            antes = sessao.pastas.CONFIG
+            antes, estilo = sessao.pastas.CONFIG, sessao.pastas.estilo_da_interface
             sessao.pastas.CONFIG = Path(pasta)
+            sessao.pastas.estilo_da_interface = lambda: "padrao"       # o Clássico: no modo claro não há override
             try:
                 sessao.aplicar_aparencia(True)
                 override = Path(pasta, "labwc", "themerc-override")
@@ -56,7 +57,7 @@ class TesteSessao(unittest.TestCase):
                 sessao.aplicar_aparencia(False)
                 self.assertTrue(override.exists())
             finally:
-                sessao.pastas.CONFIG = antes
+                sessao.pastas.CONFIG, sessao.pastas.estilo_da_interface = antes, estilo
 
 
 class TesteFundosEFoto(unittest.TestCase):

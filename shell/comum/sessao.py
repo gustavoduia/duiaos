@@ -210,7 +210,7 @@ def aplicar_aparencia(escuro=None):
     """Modo escuro e estilo nas janelas (labwc) e nos aplicativos GTK; os do DuiaOS mudam sozinhos."""
     if escuro is None:
         escuro = pastas.ler_preferencia("aparencia", "modo", "claro") == "escuro"
-    futurista = pastas.ler_preferencia("aparencia", "estilo", "padrao") == "futurista"
+    futurista = pastas.estilo_da_interface() == "futurista"
     override = pastas.CONFIG / "labwc" / "themerc-override"
     try:
         texto = tema_das_janelas(escuro, futurista)

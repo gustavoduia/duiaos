@@ -6,6 +6,7 @@ Rectangle {
     property string icone: "pasta"
     property string estilo: "azul"          // azul, cinza, claro, noite
     property int tamanho: 44
+    property int resolucao: 0               // veja Icone.qml: fixo no maior tamanho quando o ladrilho é animado
     width: tamanho; height: tamanho
     radius: tamanho * (Tema.futurista ? 0.3 : 0.25)
     readonly property var cores: Tema.futurista ? ({
@@ -25,5 +26,6 @@ Rectangle {
         GradientStop { position: 1; color: raiz.c[1] }
     }
     border { color: Tema.futurista ? Qt.rgba(1, 1, 1, Tema.escuro ? 0.16 : 0.5) : Qt.rgba(0.06, 0.09, 0.14, 0.10); width: 1 }
-    Icone { anchors.centerIn: parent; nome: raiz.icone; tamanho: Math.round(raiz.tamanho * 0.55); cor: raiz.c[2] }
+    Icone { anchors.centerIn: parent; nome: raiz.icone; tamanho: Math.round(raiz.tamanho * 0.55); cor: raiz.c[2]
+            resolucao: raiz.resolucao ? Math.round(raiz.resolucao * 0.55) : 0 }
 }

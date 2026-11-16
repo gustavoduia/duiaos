@@ -39,11 +39,25 @@ class TesteJanelas(unittest.TestCase):
     def test_estilo_da_entrada(self):
         with tempfile.TemporaryDirectory() as pasta:
             conf = Path(pasta) / "papel.conf"
-            self.assertEqual(papel.estilo_da_entrada(conf), "padrao")
-            conf.write_text("[papel]\nmodo = padrao\nestilo = futurista\n")
+            self.assertEqual(papel.estilo_da_entrada(conf), "futurista")       # instalação nova: futurista (ADR 054)
+            conf.write_text("[papel]\nmodo = padrao\n")
             self.assertEqual(papel.estilo_da_entrada(conf), "futurista")
+            conf.write_text("[papel]\nmodo = padrao\nestilo = padrao\n")
+            self.assertEqual(papel.estilo_da_entrada(conf), "padrao")          # quem escolheu o Clássico fica nele
             conf.write_text("[papel]\nestilo = neon\n")
-            self.assertEqual(papel.estilo_da_entrada(conf), "padrao")
+            self.assertEqual(papel.estilo_da_entrada(conf), "futurista")
+
+    def test_estilo_inicial_e_o_futurista(self):
+        import pastas
+        with tempfile.TemporaryDirectory() as pasta:
+            preferencias = Path(pasta) / "preferencias.conf"
+            self.assertEqual(pastas.estilo_da_interface(preferencias), "futurista")
+            preferencias.write_text("[aparencia]\nmodo = escuro\n")
+            self.assertEqual(pastas.estilo_da_interface(preferencias), "futurista")
+            preferencias.write_text("[aparencia]\nestilo = padrao\n")
+            self.assertEqual(pastas.estilo_da_interface(preferencias), "padrao")
+            preferencias.write_text("[aparencia]\nestilo = outro\n")
+            self.assertEqual(pastas.estilo_da_interface(preferencias), "futurista")
 
 
 @unittest.skipUnless(TEM_QT, "PySide6 não instalado")

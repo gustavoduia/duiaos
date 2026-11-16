@@ -153,5 +153,30 @@ class TesteTelasDaIlha(unittest.TestCase):
                     self.assertTrue(arquivo.is_file(), resultado.stderr[-2000:])
 
 
+
+
+try:
+    import PySide6  # noqa: F401
+    TEM_QT = True
+except ImportError:
+    TEM_QT = False
+
+
+@unittest.skipUnless(TEM_QT, "PySide6 não instalado")
+class TesteAmpliacao(unittest.TestCase):
+    """Os ícones piscavam ao passar o mouse (16/11): cada mudança de tamanho refazia a imagem do ícone,
+    e o foco era medido nos ícones já ampliados. O auxiliar passa o mouse pela Ilha e confere os dois."""
+
+    def test_ampliacao_estavel_e_sem_recarregar_imagens(self):
+        raiz = Path(__file__).resolve().parents[2]
+        with tempfile.TemporaryDirectory() as inicio:
+            ambiente = {**os.environ, "HOME": inicio, "XDG_CONFIG_HOME": inicio + "/.config",
+                        "XDG_RUNTIME_DIR": inicio, "XDG_DATA_HOME": inicio + "/.local/share"}
+            resultado = subprocess.run([sys.executable, str(raiz / "shell/testes/ilha_ampliacao.py"),
+                                        str(raiz / "shell/ilha-de-aplicativos/main.py")],
+                                       capture_output=True, text=True, timeout=120, env=ambiente, cwd=raiz)
+        self.assertIn("AMPLIACAO-OK", resultado.stdout, resultado.stdout[-1500:] + resultado.stderr[-1500:])
+
+
 if __name__ == "__main__":
     unittest.main()

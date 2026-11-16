@@ -86,6 +86,10 @@ animacao_de_boot() {
 }
 
 menu_de_boot() {
+  # A imagem que o GRUB mostra enquanto espera o F12 precisa estar onde ele lê (/boot/grub)
+  if [ -d /boot/grub ] && [ -r /usr/share/duiaos/grub/duiaos-inicio.png ]; then
+    install -m 0644 /usr/share/duiaos/grub/duiaos-inicio.png /boot/grub/duiaos-inicio.png || true
+  fi
   if ! em_chroot && [ -e /boot/grub/grub.cfg ] && command -v update-grub >/dev/null 2>&1; then
     update-grub || echo "Aviso: update-grub falhou; rode-o à mão." >&2
   fi

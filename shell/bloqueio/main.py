@@ -108,7 +108,7 @@ class Bloqueio(QObject):
     ajusteFundo = Property(str, lambda self: self._papel()["ajuste"], constant=True)
     corFundo = Property(str, lambda self: self._papel()["cor"], constant=True)
     futurista = Property(bool, lambda self: (sys.argv[sys.argv.index("--estilo") + 1] if "--estilo" in sys.argv[:-1]
-                                             else pastas.ler_preferencia("aparencia", "estilo", "padrao")) == "futurista", constant=True)
+                                             else pastas.estilo_da_interface()) == "futurista", constant=True)
     desfocarFundo = Property(bool, lambda self: self._papel()["desfocar"], constant=True)
 
     def _papel(self):

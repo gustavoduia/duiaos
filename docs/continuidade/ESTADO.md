@@ -54,6 +54,12 @@ fundos com GIF/vídeo, Atualizações nas Configurações, foto da conta, menu d
    Entrada/Bloqueio, Central de IA e "Ajude a melhorar"; janelas presas aos cantos.
 
 ## 5. Decisões recentes (detalhe nos ADRs)
+- 16/11: **Inicialização limpa, janelas com identidade própria e Futurista como estilo inicial** (ADR 054, ficha
+  DUIA-2026-0013): GRUB escondido com F12 para escolher o sistema; logomarca em fundo preto (GRUB e Plymouth, sem
+  o nome); núcleo, systemd, sessão e Tela de Entrada sem texto no terminal; Ilha amplia sem piscar (causa: imagem
+  refeita a cada tamanho); bolinhas das janelas à direita em azul; ícones de traço fino; o estilo anterior vira
+  "Clássico". **Sem teste no Dell** — o boot (F12, logomarca, ausência de texto) só dá para conferir lá.
+- 16/11: **Procurar atualizações consulta sempre** (ADR 053, ficha DUIA-2026-0012).
 - 16/11: **Estilo futurista "Aurora"** (ADR 052, ficha DUIA-2026-0011): segundo visual ao lado do padrão, em
   Configurações › Aparência e estilos; Telas de Entrada e de Bloqueio redesenhadas. **Sem teste no Dell.**
 - 14/11: **Papéis de parede completos** e **testes das janelas reais** (ADR 051; fichas 0009 e 0010). A Ilha

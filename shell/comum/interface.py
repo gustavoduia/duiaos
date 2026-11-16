@@ -77,8 +77,7 @@ def _criar_aparencia():
 
         @staticmethod
         def _ler_estilo():
-            estilo = pastas.ler_preferencia("aparencia", "estilo", "padrao")
-            return estilo if estilo in ("padrao", "futurista") else "padrao"
+            return pastas.estilo_da_interface()
 
         def recarregar(self):
             escuro = pastas.ler_preferencia("aparencia", "modo", "claro") == "escuro"
@@ -89,7 +88,7 @@ def _criar_aparencia():
 
         @Slot(str)
         def definirEstilo(self, estilo):
-            """Estilo da interface (ADR 052): "padrao" ou "futurista" (Aurora). Vale na hora."""
+            """Estilo da interface (ADR 052 e 054): "futurista" (Aurora, o inicial) ou "padrao" (Clássico). Vale na hora."""
             if estilo not in ("padrao", "futurista"):
                 return
             pastas.gravar_preferencia("aparencia", "estilo", estilo)

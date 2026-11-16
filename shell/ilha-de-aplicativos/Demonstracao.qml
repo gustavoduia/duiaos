@@ -16,7 +16,7 @@ Window {
         id: conteudo
         x: posicao === "esquerda" ? 8 : (posicao === "direita" ? janela.width - width - 8 : (janela.width - width) / 2)
         y: vertical ? (janela.height - height) / 2 : janela.height - height - 8
-        Component.onCompleted: if (demoAmpliada) foco = 4.5
+        Component.onCompleted: if (demoAmpliada) { foco = 4.5; forca = 1 }
     }
     // Área livre (sem a faixa da Ilha), como a camada dos balões no sistema
     Item {

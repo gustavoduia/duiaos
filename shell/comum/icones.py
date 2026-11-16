@@ -1,5 +1,9 @@
 """DuiaOS — ícones próprios da interface (traço fino, 24 × 24).
 
+O traço é fino e não engrossa junto com o ícone: num ícone pequeno ele tem cerca de 1,2 ponto
+da tela, e num grande cresce bem menos que o desenho (um ícone de 60 pontos com o traço de
+um de 18 ficaria com o contorno grosso). Veja TRACO e traco().
+
 Os desenhos ficam aqui, em SVG, e o QML os pede ao provedor de imagens com a cor
 que quiser:
 
@@ -10,9 +14,19 @@ Explorador de Arquivos e às Configurações, em qualquer cor. Todos os desenhos
 são do DuiaOS (nenhum vem de outro conjunto de ícones).
 """
 import math
+import re
 
 # Elementos SVG de cada ícone, com "C" no lugar da cor. O contêiner aplica
-# traço arredondado de 1,8; "fill='C'" pinta por dentro.
+# traço arredondado (TRACO, afinado nos tamanhos grandes); "fill='C'" pinta por dentro.
+TRACO = 1.6                     # em unidades do desenho (24), para ícones de até 18 pontos
+_TRACO_ANTIGO = 1.8             # os traços escritos nos desenhos foram pensados para este
+
+
+def traco(lado):
+    """Espessura do traço para uma imagem de `lado` pixels (o QML pede o dobro do tamanho do ícone)."""
+    tamanho = lado / 2 if lado else 18
+    return round(max(0.7, TRACO * min(1.0, (18 / tamanho) ** 0.65)), 3)
+
 _A = 'stroke-opacity="0.28"'
 
 
@@ -74,7 +88,9 @@ DESENHOS = {
     "pasta": '<path d="M3 7.5a2 2 0 0 1 2-2h4.2l2 2.2H19a2 2 0 0 1 2 2v7.8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
     "sino": '<path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 1.5h-15zM10 20.5a2 2 0 0 0 4 0"/>',
     "sino-desligado": '<path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 1.5h-15zM10 20.5a2 2 0 0 0 4 0"/><path d="M4 4l16 16"/>',
-    "pasta-cheia": '<path d="M3 7.5a2 2 0 0 1 2-2h4.2l2 2.2H19a2 2 0 0 1 2 2v7.8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" fill="C" fill-opacity="0.16" stroke-width="1.4"/><path d="M3 10h18" stroke-width="1.2" stroke-opacity="0.5"/>',
+    # Pasta dos ícones grandes (Explorador, Área de Trabalho): duas formas cheias, sem contorno
+    "pasta-cheia": ('<path d="M3 7.2a2 2 0 0 1 2-2h4c.6 0 1.1.2 1.5.6L12 7.3h7a2 2 0 0 1 2 2V12H3z" fill="C" fill-opacity="0.55" stroke="none"/>'
+                    '<path d="M3 10.7a1.9 1.9 0 0 1 1.9-1.9h14.2a1.9 1.9 0 0 1 1.9 1.9v6.6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" fill="C" stroke="none"/>'),
     "pasta-aplicativos": ('<path d="M3 7.5a2 2 0 0 1 2-2h4.2l2 2.2H19a2 2 0 0 1 2 2v7.8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'
                           '<path d="M9.2 16.8l2.8-6.3 2.8 6.3M10.2 14.6h3.6" stroke-width="1.6"/>'),
     "pasta-downloads": ('<path d="M3 7.5a2 2 0 0 1 2-2h4.2l2 2.2H19a2 2 0 0 1 2 2v7.8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'
@@ -151,17 +167,20 @@ DESENHOS = {
 }
 
 
-def svg(nome, cor="1F2933"):
-    """SVG completo do ícone na cor pedida (hex sem '#'). None se o nome não existe."""
+def svg(nome, cor="1F2933", lado=0):
+    """SVG completo do ícone na cor pedida (hex sem '#'), com o traço certo para `lado` pixels. None se o nome não existe."""
     desenho = DESENHOS.get(nome)
     if desenho is None:
         return None
     cor = "#" + "".join(c for c in cor if c in "0123456789abcdefABCDEF")[:8]
     if len(cor) not in (4, 7, 9):
         cor = "#1F2933"
-    corpo = desenho.replace('"C"', f'"{cor}"')
+    espessura = traco(lado)
+    fator = espessura / _TRACO_ANTIGO
+    corpo = re.sub(r'stroke-width="([0-9.]+)"', lambda m: f'stroke-width="{round(float(m.group(1)) * fator, 3)}"', desenho)
+    corpo = corpo.replace('"C"', f'"{cor}"')
     return ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" '
-            f'fill="none" stroke="{cor}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
+            f'fill="none" stroke="{cor}" stroke-width="{espessura}" stroke-linecap="round" stroke-linejoin="round">'
             f'{corpo}</svg>')
 
 
@@ -178,9 +197,9 @@ def registrar(engine):
 
         def requestImage(self, pedido, tamanho, tamanho_pedido):
             nome, _, cor = pedido.partition("/")
-            texto = svg(nome, cor or "1F2933") or svg("arquivo", cor or "1F2933")
             lado_l = tamanho_pedido.width() if tamanho_pedido.width() > 0 else 48
             lado_a = tamanho_pedido.height() if tamanho_pedido.height() > 0 else lado_l
+            texto = svg(nome, cor or "1F2933", lado_l) or svg("arquivo", cor or "1F2933", lado_l)
             imagem = QImage(lado_l, lado_a, QImage.Format.Format_ARGB32_Premultiplied)
             imagem.fill(Qt.GlobalColor.transparent)
             pintor = QPainter(imagem)

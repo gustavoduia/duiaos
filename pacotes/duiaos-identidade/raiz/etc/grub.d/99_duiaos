@@ -1,0 +1,48 @@
+#!/bin/sh
+# =============================================================================
+# DuiaOS — inicialização sem menu, com F12 para escolher o sistema (ADR 054).
+#
+# Roda dentro do update-grub (grub-mkconfig), por último. Só age quando
+# GRUB_TIMEOUT_STYLE=hidden (o padrão do DuiaOS, em /etc/default/grub.d).
+#
+# Como funciona: durante a espera escondida, o GRUB aceita a tecla de atalho
+# de uma entrada do menu. A entrada do F12 carrega este mesmo grub.cfg de
+# novo com duiaos_menu=1, e aí o menu aparece e espera a escolha.
+# O texto do GRUB ("Carregando Linux…") fica preto sobre preto, para a
+# pessoa ver só a logomarca; a entrada de suporte do menu o mostra de novo.
+# =============================================================================
+set -e
+
+[ "${GRUB_TIMEOUT_STYLE:-}" = "hidden" ] || exit 0
+
+ESPERA="${GRUB_TIMEOUT:-2}"
+case "${ESPERA}" in ''|*[!0-9]*|0) ESPERA=2 ;; esac
+
+FUNDO=""
+if [ -r /boot/grub/duiaos-inicio.png ]; then
+  # shellcheck disable=SC2016  # ${prefix} é do GRUB, não do shell
+  FUNDO='insmod png
+background_image -m stretch ${prefix}/duiaos-inicio.png'
+fi
+
+cat <<FIM
+set color_normal=black/black
+set color_highlight=black/black
+${FUNDO}
+if [ "\${duiaos_menu}" = "1" ]; then
+  set timeout_style=menu
+  set timeout=-1
+  menuentry "Suporte: mostrar o texto do GRUB (para as teclas e, c)" --id duiaos-texto {
+    set color_normal=light-gray/black
+    set color_highlight=black/light-gray
+  }
+else
+  set timeout_style=hidden
+  set timeout=${ESPERA}
+  menuentry "Escolher o sistema (F12)" --hotkey=f12 --id duiaos-escolher {
+    set duiaos_menu=1
+    export duiaos_menu
+    configfile \${prefix}/grub.cfg
+  }
+fi
+FIM

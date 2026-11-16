@@ -63,6 +63,18 @@ def favoritos(arquivo=None, inicio=None):
     return itens
 
 
+# Estilo da interface de quem nunca escolheu (instalação nova ou reinstalada): o futurista "Aurora".
+# O visual anterior segue disponível como "Clássico" (id "padrao") em Configurações › Aparência e estilos (ADR 054).
+ESTILOS = ("futurista", "padrao")
+ESTILO_INICIAL = "futurista"
+
+
+def estilo_da_interface(arquivo=None):
+    """Estilo escolhido nas preferências, ou o inicial."""
+    estilo = ler_preferencia("aparencia", "estilo", ESTILO_INICIAL, arquivo)
+    return estilo if estilo in ESTILOS else ESTILO_INICIAL
+
+
 def criar_pastas_padrao(arquivo=None, inicio=None):
     """Garante que as pastas do usuário existam (1ª entrada)."""
     for chave in PADRAO:

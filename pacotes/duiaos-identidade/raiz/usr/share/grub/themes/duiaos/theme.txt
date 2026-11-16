@@ -1,14 +1,14 @@
-# DuiaOS — tema do menu de boot (GRUB) do sistema instalado.
+# DuiaOS — tema da escolha do sistema (GRUB), aberta com F12 ao ligar (ADR 054).
 title-text: ""
-desktop-color: "#F7F9FC"
+desktop-color: "#000000"
 message-font: "Unifont Regular 16"
-message-color: "#1F2933"
+message-color: "#E6ECF5"
 terminal-font: "Unifont Regular 16"
 
 # Logotipo
 + image {
         left = 50%-120
-        top = 15%
+        top = 18%
         file = "logo.png"
 }
 
@@ -18,9 +18,9 @@ terminal-font: "Unifont Regular 16"
         width = 40%
         top = 45%
         height = 35%
-        item_color = "#5B6675"
+        item_color = "#8A96A8"
         item_font = "Unifont Regular 16"
-        selected_item_color = "#1A3A73"
+        selected_item_color = "#FFFFFF"
         selected_item_font = "Unifont Regular 16"
         item_height = 24
         item_padding = 0
@@ -38,10 +38,10 @@ terminal-font: "Unifont Regular 16"
         top = 100%-100
         height = 16
         font = "Unifont Regular 16"
-        text_color = "#1F2933"
-        fg_color = "#2E6BE6"
-        bg_color = "#DDE3EC"
-        border_color = "#DDE3EC"
+        text_color = "#E6ECF5"
+        fg_color = "#6E9BF5"
+        bg_color = "#1B2433"
+        border_color = "#1B2433"
         text = "@TIMEOUT_NOTIFICATION_LONG@"
 }
 
@@ -51,8 +51,8 @@ terminal-font: "Unifont Regular 16"
         left = 0
         width = 100%
         height = 20
-        text = "Enter: iniciar   e: editar opções   c: linha de comando"
+        text = "Setas: escolher   Enter: iniciar"
         align = "center"
-        color = "#5B6675"
+        color = "#8A96A8"
         font = "Unifont Regular 16"
 }

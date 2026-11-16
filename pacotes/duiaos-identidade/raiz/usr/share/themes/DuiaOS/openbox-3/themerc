@@ -1,6 +1,7 @@
-# DuiaOS — tema das janelas (labwc), modo claro. Barra de título no estilo do macOS: três
-# bolinhas à esquerda (fechar, minimizar, maximizar; ordem em /etc/xdg/labwc/rc.xml) e título
-# no centro. O modo escuro troca as cores por ~/.config/labwc/themerc-override
+# DuiaOS — tema das janelas (labwc), modo claro. Identidade própria (ADR 054): três bolinhas em
+# tons de azul no canto DIREITO da barra de título — do canto para dentro: fechar (azul escuro),
+# minimizar (azul médio) e expandir (azul claro); a ordem fica em /etc/xdg/labwc/rc.xml — e o
+# título no centro. O modo escuro e o estilo trocam as cores por ~/.config/labwc/themerc-override
 # (shell/comum/sessao.py). Desenhos dos botões: *-active.svg / *-inactive.svg / *_hover-active.svg.
 
 border.width: 1

@@ -34,20 +34,51 @@ Item {
     width: vertical ? espessura : comprimento
     height: vertical ? comprimento : espessura
 
-    // Mouse sobre a Ilha: posição em "vagas" (0 = Central de Aplicativos) para a ampliação
+    // Mouse sobre a Ilha: posição em "vagas" (0 = Central de Aplicativos) para a ampliação.
+    // A posição é medida na Ilha EM REPOUSO (como no Dock do macOS), não nos ícones já ampliados:
+    // se fosse medida neles, cada ampliação deslocaria os ícones debaixo do mouse, o foco mudaria
+    // de novo e a Ilha ficaria tremendo. "forca" faz a onda entrar e sair suavemente.
     property real foco: -100
     property bool sobre: hover.hovered
     property bool arrastando: false
-    onSobreChanged: if (!sobre && !arrastando) foco = -100
-    HoverHandler { id: hover }
+    property real forca: (sobre || arrastando) && o.ampliacao ? 1 : 0
+    Behavior on forca { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
+    HoverHandler {
+        id: hover
+        onPointChanged: {
+            if (!hovered || ilhaFundo.arrastando) return
+            var p = ilhaFundo.vertical ? point.position.y - ilhaFundo.height / 2 : point.position.x - ilhaFundo.width / 2
+            ilhaFundo.foco = ilhaFundo.focoEm(p)
+        }
+    }
 
     // Faixa da borda (só o fundo); a janela usa para saber onde recebe cliques
     readonly property rect faixa: Qt.rect(fundo.x, fundo.y, fundo.width, fundo.height)
 
+    // Onde começa cada vaga com a Ilha em repouso, ao longo dela (a mesma conta da grade:
+    // vagas de base + 6, espaço de 2, divisórias de 1) e o comprimento total
+    readonly property var repouso: {
+        var passo = base + 6, k = ilha.itens.length, inicios = [0], pos = passo + 2
+        for (var i = 0; i < k; i++) {
+            if (grupo(i) !== (i === 0 ? 0 : grupo(i - 1))) pos += 3
+            inicios.push(pos); pos += passo + 2
+        }
+        pos += 15                                    // 4 + divisória + 4, com os espaços
+        for (var j = 0; j < 3; j++) { inicios.push(pos); pos += passo + 2 }
+        return { inicios: inicios, total: pos - 2, passo: passo }
+    }
+    // Posição ao longo da Ilha (a partir do centro) → foco em vagas; fora das pontas, continua em linha reta
+    function focoEm(p) {
+        var r = repouso, x = p + r.total / 2, ultimo = r.inicios.length - 1
+        for (var n = ultimo; n > 0; n--) if (x >= r.inicios[n]) break
+        var f = (x - r.inicios[n]) / r.passo
+        return n + (n < ultimo ? Math.min(1, f) : f)
+    }
+
     function zoom(ordem) {
-        if (!o.ampliacao || foco < -1) return 0
+        if (forca <= 0 || foco < -50) return 0
         var d = Math.abs(ordem + 0.5 - foco)
-        return d >= raioAmpliacao ? 0 : (1 + Math.cos(Math.PI * d / raioAmpliacao)) / 2
+        return d >= raioAmpliacao ? 0 : forca * (1 + Math.cos(Math.PI * d / raioAmpliacao)) / 2
     }
     // Distância do centro da Ilha até um ponto (para os balões), ao longo da Ilha
     function ancora(item) {
@@ -110,8 +141,6 @@ Item {
         signal soltou(int passos, bool tirar)
         width: ilhaFundo.vertical ? tam + 16 : tam + 6
         height: ilhaFundo.vertical ? tam + 6 : tam + 16
-        Behavior on width { enabled: !ilhaFundo.sobre; NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
-        Behavior on height { enabled: !ilhaFundo.sobre; NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
         z: area.pressed ? 2 : 0
         Accessible.role: Accessible.Button
         Accessible.name: nome
@@ -129,13 +158,6 @@ Item {
             function onPulando(id) { if (id !== "" && id === vaga.idDesktop && !vaga.aberto) pulo.restart() }
         }
 
-        HoverHandler {
-            onPointChanged: {
-                if (!hovered || ilhaFundo.arrastando) return
-                var f = ilhaFundo.vertical ? point.position.y / vaga.height : point.position.x / vaga.width
-                ilhaFundo.foco = vaga.ordem + Math.max(0, Math.min(1, f))
-            }
-        }
         Item {
             id: dentro
             width: vaga.tam; height: width
@@ -179,7 +201,6 @@ Item {
                 movendo = false
                 ilhaFundo.arrastando = false
                 vaga.arrasto = Qt.point(0, 0)
-                if (!ilhaFundo.sobre) ilhaFundo.foco = -100
             }
         }
     }
@@ -215,7 +236,7 @@ Item {
             nome: "Central de Aplicativos"
             onClicado: ilha.alternarCentral()
             onMenu: (a) => ilha.abrirMenu("central", -1, a)
-            Ladrilho { anchors.fill: parent; icone: "aplicativos"; estilo: "noite"; tamanho: parent.width }
+            Ladrilho { anchors.fill: parent; icone: "aplicativos"; estilo: "noite"; tamanho: parent.width; resolucao: ilhaFundo.maximo }
         }
 
         Repeater {
@@ -255,12 +276,12 @@ Item {
                         anchors.fill: parent
                         icone: delegado.modelData.iconeDuia || "pasta"
                         estilo: delegado.modelData.iconeDuia === "engrenagem" ? "cinza" : "azul"
-                        tamanho: parent.width
+                        tamanho: parent.width; resolucao: ilhaFundo.maximo
                     }
                     IconeApp {
                         visible: (delegado.modelData.iconeDuia || "") === ""
                         anchors.fill: parent
-                        icone: delegado.modelData.icone; nome: delegado.modelData.nome; tamanho: parent.width
+                        icone: delegado.modelData.icone; nome: delegado.modelData.nome; tamanho: parent.width; resolucao: ilhaFundo.maximo
                     }
                 }
             }
@@ -275,7 +296,7 @@ Item {
             nome: "Aplicativos"
             onClicado: ilha.abrirPasta("aplicativos")
             onMenu: (a) => ilha.abrirMenu("aplicativos", -1, a)
-            Ladrilho { anchors.fill: parent; icone: "pasta-aplicativos"; estilo: "azul"; tamanho: parent.width }
+            Ladrilho { anchors.fill: parent; icone: "pasta-aplicativos"; estilo: "azul"; tamanho: parent.width; resolucao: ilhaFundo.maximo }
         }
         Vaga {
             id: vagaDownloads
@@ -283,14 +304,14 @@ Item {
             nome: "Downloads"
             onClicado: ilha.alternarDownloads(ilhaFundo.ancora(vagaDownloads))
             onMenu: (a) => ilha.abrirMenu("downloads", -1, a)
-            Ladrilho { anchors.fill: parent; icone: "pasta-downloads"; estilo: "azul"; tamanho: parent.width }
+            Ladrilho { anchors.fill: parent; icone: "pasta-downloads"; estilo: "azul"; tamanho: parent.width; resolucao: ilhaFundo.maximo }
         }
         Vaga {
             ordem: ilha.itens.length + 3
             nome: "Lixeira"
             onClicado: ilha.abrirPasta("lixeira")
             onMenu: (a) => ilha.abrirMenu("lixeira", -1, a)
-            Ladrilho { anchors.fill: parent; icone: ilha.lixeiraCheia ? "lixeira-cheia" : "lixeira"; estilo: "claro"; tamanho: parent.width }
+            Ladrilho { anchors.fill: parent; icone: ilha.lixeiraCheia ? "lixeira-cheia" : "lixeira"; estilo: "claro"; tamanho: parent.width; resolucao: ilhaFundo.maximo }
         }
     }
 }

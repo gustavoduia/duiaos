@@ -1,13 +1,15 @@
 # =============================================================================
 # DuiaOS — animação de boot e de desligamento (Plymouth).
 #
-# Fundo Branco gelo, o "D" do símbolo no centro e o ponto Azul Duia
-# balançando na abertura do "D", sobre a mesma órbita do logotipo.
+# Fundo preto e só a logomarca (ADR 054): o "D" do símbolo no centro e o ponto
+# azul balançando na abertura do "D", sobre a mesma órbita do logotipo.
+# Sem o texto "DuiaOS". A posição e o tamanho são os mesmos da imagem que o GRUB
+# mostra enquanto espera o F12 (branding/grub/inicio.svg), para não haver salto.
 # Imagens geradas por branding/plymouth/gerar.py.
 # =============================================================================
 
-Window.SetBackgroundTopColor(0.969, 0.976, 0.988);     # Branco gelo #F7F9FC
-Window.SetBackgroundBottomColor(0.910, 0.941, 0.996);  # Azul névoa  #E8F0FE
+Window.SetBackgroundTopColor(0, 0, 0);
+Window.SetBackgroundBottomColor(0, 0, 0);
 
 largura = Window.GetWidth();
 altura = Window.GetHeight();
@@ -25,12 +27,10 @@ simbolo.y = Window.GetY() + Math.Int(altura * 0.42 - lado / 2);
 simbolo.sprite.SetPosition(simbolo.x, simbolo.y, 1);
 simbolo.sprite.SetOpacity(0);
 
-nome.largura = Math.Int(lado * 1.6);
-nome.altura = Math.Int(nome.largura / 4);
-nome.sprite = Sprite(Image("nome.png").Scale(nome.largura, nome.altura));
-nome.sprite.SetPosition(Window.GetX() + Math.Int((largura - nome.largura) / 2),
-                        simbolo.y + lado + Math.Int(lado * 0.22), 1);
-nome.sprite.SetOpacity(0);
+# Ao ligar, a logomarca já está na tela (o GRUB a deixou): começa visível.
+# Ao desligar ou reiniciar, ela entra suavemente.
+entrada = 25;
+if (Plymouth.GetMode() == "boot") entrada = 1;
 
 ponto.lado = Math.Int(16 * unidade);
 ponto.imagem = Image("ponto.png").Scale(ponto.lado, ponto.lado);
@@ -47,11 +47,10 @@ quadro = 0;
 fun atualizar() {
   global.quadro = global.quadro + 1;
 
-  # Entrada suave (cerca de meio segundo)
-  opacidade = global.quadro / 25;
+  # Entrada suave (cerca de meio segundo) ao desligar; imediata ao ligar
+  opacidade = global.quadro / entrada;
   if (opacidade > 1) opacidade = 1;
   simbolo.sprite.SetOpacity(opacidade);
-  nome.sprite.SetOpacity(opacidade);
 
   # O ponto balança na abertura do "D", sobre a órbita, entre 44° e 66°
   # (sem encostar no traço), passando pela posição do logotipo (55°),

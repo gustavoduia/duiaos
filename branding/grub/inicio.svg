@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <!-- Tela dos 2 segundos em que o GRUB espera o F12 (ADR 054): fundo preto e a logomarca,
+       na mesma posição e tamanho da animação de boot (Plymouth), para não haver salto.
+       PNG: pacotes/duiaos-identidade/raiz/usr/share/duiaos/grub/duiaos-inicio.png -->
+  <rect width="1920" height="1080" fill="#000000"/>
+  <svg x="879" y="372" width="162" height="162" viewBox="12 8 104 104">
+    <path d="M58 100H28V20H58A40 40 0 0 1 95.59 73.68" fill="none" stroke="#FFFFFF" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="80.94" cy="92.77" r="8" fill="#6E9BF5"/>
+  </svg>
+</svg>

@@ -34,4 +34,17 @@ export XDG_DATA_DIRS="${DADOS_FLATPAK}:${XDG_DATA_DIRS:-/usr/local/share:/usr/sh
 export QT_QPA_PLATFORM=wayland
 export MOZ_ENABLE_WAYLAND=1
 
-exec labwc
+# Nada de texto de terminal na tela (ADR 054): limpa o terminal virtual, esconde
+# o cursor e manda as mensagens dos programas para o registro do sistema
+# (journalctl -t duiaos-sessao). Sem isso, ao sair ou desligar aparecia por um
+# instante o texto que os programas escreveram por baixo da interface.
+{ printf '\033[H\033[2J\033[3J\033[?25l' > /dev/tty; } 2>/dev/null || true
+if command -v systemd-cat >/dev/null 2>&1; then
+  REGISTRAR="systemd-cat --identifier=duiaos-sessao"
+else
+  REGISTRAR=""
+  exec >/dev/null 2>&1
+fi
+
+# shellcheck disable=SC2086  # REGISTRAR vazio ou "comando opção"
+exec ${REGISTRAR} labwc

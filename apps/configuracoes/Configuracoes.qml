@@ -764,13 +764,13 @@ Window {
     Component {
         id: paginaAparencia
         Pagina {
-            // Estilos (ADR 052): o visual padrão ou o futurista "Aurora"
+            // Estilos (ADR 052 e 054): o futurista "Aurora" (o inicial) ou o Clássico (id "padrao")
             Titulo { nivel: 3; text: "Estilos" }
             Row {
                 spacing: 18
                 Repeater {
-                    model: [{ id: "padrao", nome: "Padrão", texto: "O visual de sempre" },
-                            { id: "futurista", nome: "Futurista", texto: "Vidro, brilho e o degradê aurora" }]
+                    model: [{ id: "futurista", nome: "Futurista", texto: "O visual do DuiaOS: vidro, brilho e o degradê aurora" },
+                            { id: "padrao", nome: "Clássico", texto: "O visual anterior, mais sóbrio" }]
                     Column {
                         id: opcaoEstilo
                         required property var modelData
@@ -787,8 +787,8 @@ Window {
                                 x: 16; y: 16; width: 132; height: 96; radius: opcaoEstilo.fut ? 14 : 8
                                 color: opcaoEstilo.fut ? "#131A30" : "#FFFFFF"
                                 border { color: opcaoEstilo.fut ? "#35427A" : "#DDE3EC"; width: 1 }
-                                Row { x: 10; y: 10; spacing: 4
-                                      Repeater { model: ["#FF5F57", "#FEBC2E", "#28C840"]; Rectangle { required property string modelData; width: 7; height: 7; radius: 3.5; color: modelData } } }
+                                Row { x: parent.width - width - 10; y: 10; spacing: 4
+                                      Repeater { model: ["#8DB8FF", "#3D7BF2", "#2447A8"]; Rectangle { required property string modelData; width: 7; height: 7; radius: 3.5; color: modelData } } }
                                 Rectangle { x: 10; y: 30; width: 84; height: 7; radius: 3.5; color: opcaoEstilo.fut ? "#35427A" : "#C9D2DE" }
                                 Rectangle { x: 10; y: 44; width: 56; height: 7; radius: 3.5; color: opcaoEstilo.fut ? "#232C4D" : "#DDE3EC" }
                                 Rectangle {
@@ -836,8 +836,8 @@ Window {
                                         border { color: modelData.id ? "#353B46" : "#DDE3EC"; width: 1 } }
                             Rectangle { x: 12; y: 32; width: 100; height: 64; radius: 8; color: modelData.id ? "#262B34" : "#FFFFFF"
                                         border { color: modelData.id ? "#353B46" : "#DDE3EC"; width: 1 }
-                                        Row { x: 8; y: 8; spacing: 4
-                                              Repeater { model: ["#FF5F57", "#FEBC2E", "#28C840"]; Rectangle { required property string modelData; width: 7; height: 7; radius: 3.5; color: modelData } } }
+                                        Row { x: parent.width - width - 8; y: 8; spacing: 4
+                                              Repeater { model: ["#8DB8FF", "#3D7BF2", "#2447A8"]; Rectangle { required property string modelData; width: 7; height: 7; radius: 3.5; color: modelData } } }
                                         Rectangle { x: 8; y: 26; width: 60; height: 6; radius: 3; color: modelData.id ? "#4A5363" : "#C9D2DE" }
                                         Rectangle { x: 8; y: 38; width: 40; height: 6; radius: 3; color: "#2E6BE6" } }
                             Rectangle { x: 120; y: 32; width: 48; height: 64; radius: 8; color: modelData.id ? "#20242C" : "#EEF2F7" }

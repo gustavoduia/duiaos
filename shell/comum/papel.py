@@ -25,6 +25,8 @@ Ajustes (como a imagem ocupa a tela):
 import configparser
 from pathlib import Path
 
+import pastas
+
 AJUSTES = ("preencher", "ajustar", "esticar", "centralizar", "lado-a-lado")
 MODOS_TELAS = ("mesmo", "separado", "estender")
 COR_PADRAO = "#E8F0FE"
@@ -118,10 +120,10 @@ def ler_entrada(conf=ENTRADA_CONF, papel_padrao=PAPEL_PADRAO):
 
 
 def estilo_da_entrada(conf=ENTRADA_CONF):
-    """Estilo da Tela de Entrada ("padrao" ou "futurista"; ADR 052), do arquivo do sistema."""
+    """Estilo da Tela de Entrada ("futurista", o inicial, ou "padrao" = Clássico; ADR 052 e 054), do arquivo do sistema."""
     config = _ler(conf)
-    estilo = config.get("papel", "estilo", fallback="padrao") if config.has_section("papel") else "padrao"
-    return estilo if estilo in ("padrao", "futurista") else "padrao"
+    estilo = config.get("papel", "estilo", fallback=pastas.ESTILO_INICIAL) if config.has_section("papel") else pastas.ESTILO_INICIAL
+    return estilo if estilo in pastas.ESTILOS else pastas.ESTILO_INICIAL
 
 
 def proximo_da_lista(lista, atual):

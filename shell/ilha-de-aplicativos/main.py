@@ -740,10 +740,10 @@ def janela_de_exemplo():
     imagem.fill(QColor("#FFFFFF"))
     pintor = QPainter(imagem)
     pintor.fillRect(0, 0, 640, 34, QColor("#EEF2F7"))
-    for i, cor in enumerate(("#FF5F57", "#FEBC2E", "#28C840")):
+    for i, cor in enumerate(("#8DB8FF", "#3D7BF2", "#2447A8")):       # expandir, minimizar, fechar (à direita)
         pintor.setBrush(QColor(cor))
         pintor.setPen(QColor(cor))
-        pintor.drawEllipse(14 + i * 20, 11, 12, 12)
+        pintor.drawEllipse(640 - 66 + i * 20, 11, 12, 12)
     pintor.fillRect(0, 34, 160, 386, QColor("#F1F4F8"))
     for linha in range(8):
         pintor.fillRect(190, 70 + linha * 40, 400 - (linha % 3) * 60, 14, QColor("#C9D2DE"))

@@ -5,12 +5,12 @@
   DUIAOS_SHELL vem de iniciar-sessao (padrão /usr/share/duiaos/shell).
 -->
 <labwc_config>
-  <!-- Janelas no estilo do macOS: tema DuiaOS (/usr/share/themes/DuiaOS), bolinhas à esquerda
-       (fechar, minimizar, maximizar) e título no centro -->
+  <!-- Janelas com a identidade do DuiaOS (ADR 054): tema DuiaOS (/usr/share/themes/DuiaOS), bolinhas
+       em tons de azul à direita (expandir, minimizar e, no canto, fechar) e título no centro -->
   <theme>
     <name>DuiaOS</name>
     <titlebar>
-      <layout>close,iconify,max:</layout>
+      <layout>:max,iconify,close</layout>
       <showTitle>yes</showTitle>
     </titlebar>
     <font place=""><name>Inter</name><size>10</size><weight>Bold</weight></font>

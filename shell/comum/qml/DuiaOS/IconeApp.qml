@@ -5,12 +5,15 @@ Item {
     property string icone: ""
     property string nome: ""
     property int tamanho: 44
+    // Lado com que a imagem é carregada (veja Icone.qml): fixo no maior tamanho quando o ícone é animado
+    property int resolucao: 0
+    readonly property int ladoImagem: (resolucao || tamanho) * 2
     width: tamanho; height: tamanho
 
     Image {
         id: imagem
         anchors.fill: parent
-        sourceSize: Qt.size(parent.width * 2, parent.height * 2)
+        sourceSize: Qt.size(parent.ladoImagem, parent.ladoImagem)
         source: parent.icone !== "" ? "image://icone/" + parent.icone : ""
         visible: status === Image.Ready
         asynchronous: true
