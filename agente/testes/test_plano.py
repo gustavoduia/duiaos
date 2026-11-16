@@ -25,6 +25,11 @@ class TestValidar(unittest.TestCase):
         with self.assertRaises(pl.Recusa):
             pl.validar("rodar_comando", {})
 
+    def test_procurar_forcado_so_aceita_verdadeiro(self):
+        self.assertEqual(pl.validar("atualizar_sistema", {"forcar": True}), {"forcar": True})
+        for outro in ("sim", 1, None, "true"):
+            self.assertEqual(pl.validar("atualizar_sistema", {"forcar": outro}), {})
+
     def test_comando_nunca_remove_ao_instalar(self):
         self.assertIn("--no-remove", pl.comando_apt("instalar_aplicativo", {"pacote": "vlc"}))
         self.assertEqual(pl.comando_apt("atualizar_sistema", {}), ["full-upgrade"])

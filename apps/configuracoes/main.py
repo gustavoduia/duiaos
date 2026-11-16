@@ -1008,7 +1008,7 @@ class Ajustes(QObject):
             self._atualizacao = {"etapa": "procurando", "mensagem": "Lendo o que cada atualização traz…"}
             self.atualizacaoMudou.emit()
             self._em_fundo("detalhes", detalhar_plano, plano)
-        self._agente("Preparar", "atualizar_sistema", "{}", ao_responder=respondeu)
+        self._agente("Preparar", "atualizar_sistema", '{"forcar": true}', ao_responder=respondeu)
 
     def _procurar_flathub(self):
         """Aplicativos do Flathub com versão nova: atualizam pela Duia App Store (ADR 049)."""

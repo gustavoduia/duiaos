@@ -41,7 +41,8 @@ def validar(acao, argumentos):
     if not isinstance(argumentos, dict):
         raise Recusa("Invalido", "Os argumentos devem ser um objeto.")
     if acao == "atualizar_sistema":
-        return {}
+        # "forcar": o botão Procurar da pessoa sempre consulta os repositórios de novo (sem o intervalo de 5 min)
+        return {"forcar": True} if argumentos.get("forcar") is True else {}
     pacote = argumentos.get("pacote")
     if not isinstance(pacote, str) or not NOME_PACOTE.match(pacote):
         raise Recusa("Invalido", f"Nome de pacote inválido: {str(pacote)[:70]!r}.")

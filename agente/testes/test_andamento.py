@@ -179,3 +179,30 @@ class TesteAutoAtualizacao(unittest.TestCase):
             for comando in comandos:
                 if "duiaos-agente.service" in comando and script == "postinst":
                     self.fail(f"{script} mexe no serviço em execução: {comando.strip()}")
+
+
+@unittest.skipUnless(TEM_GI, "sem python3-gi")
+class TesteProcurarForcado(unittest.TestCase):
+    """O botão Procurar consulta os repositórios sempre; a busca automática respeita o intervalo de 5 min."""
+
+    def _agente(self):
+        chamadas = []
+
+        class AptConta(ag.AptDeMentira):
+            def atualizar_listas(self, forcar=False):
+                chamadas.append(forcar)
+
+        servico = ag.Agente.__new__(ag.Agente)
+        servico.apt = AptConta()
+        servico._ultimo_update = time.monotonic()      # acabou de consultar
+        return servico, chamadas
+
+    def test_sem_forcar_respeita_o_intervalo(self):
+        servico, chamadas = self._agente()
+        servico._simular("atualizar_sistema", {})
+        self.assertEqual(chamadas, [])
+
+    def test_forcar_consulta_mesmo_dentro_do_intervalo(self):
+        servico, chamadas = self._agente()
+        servico._simular("atualizar_sistema", {"forcar": True})
+        self.assertEqual(chamadas, [True])

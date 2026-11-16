@@ -95,8 +95,10 @@ class Apt:
                            check=False)
         return r.returncode, r.stdout, r.stderr
 
-    def atualizar_listas(self):
-        codigo, _saida, erro = self.rodar(["apt-get", "-q", "-o", "DPkg::Lock::Timeout=60", "update"], tempo=300)
+    def atualizar_listas(self, forcar=False):
+        # forcar: também pede aos servidores (e ao cache do GitHub Pages) a lista mais nova, sem reaproveitar cópia
+        extra = ["-o", "Acquire::http::No-Cache=true", "-o", "Acquire::https::No-Cache=true"] if forcar else []
+        codigo, _saida, erro = self.rodar(["apt-get", "-q", "-o", "DPkg::Lock::Timeout=60", *extra, "update"], tempo=300)
         if codigo != 0:
             raise Recusa("SemRede", "Não consegui consultar os repositórios (sem internet?). "
                                     + (erro.strip().splitlines() or [""])[-1][:160])
@@ -172,7 +174,7 @@ class Apt:
 class AptDeMentira(Apt):
     """--simular-apt: nada muda no sistema; serve para testar a interface do Wise."""
 
-    def atualizar_listas(self):
+    def atualizar_listas(self, forcar=False):
         time.sleep(0.2)
 
     def simular(self, comando):
@@ -308,8 +310,9 @@ class Agente:
     # --------------------------------------------------------------- planos
     def _simular(self, acao, argumentos):
         """Simulação completa: (mudanças, resumo, recusa, baixar, espaço)."""
-        if acao == "atualizar_sistema" and time.monotonic() - self._ultimo_update > INTERVALO_UPDATE:
-            self.apt.atualizar_listas()
+        forcar = bool(argumentos.get("forcar"))
+        if acao == "atualizar_sistema" and (forcar or time.monotonic() - self._ultimo_update > INTERVALO_UPDATE):
+            self.apt.atualizar_listas(forcar)
             self._ultimo_update = time.monotonic()
         instalado = candidato = ""
         if "pacote" in argumentos:
@@ -408,7 +411,7 @@ class Agente:
                     escrever("[reparo] dpkg --audit mostrou pacotes pela metade:\n" + pendente)
                     self.apt.reparar(escrever)
                 # Confere de novo: a pessoa aprovou ESTE impacto
-                mudancas, _resumo, recusa, _b, _e = self._simular(acao, argumentos)
+                mudancas, _resumo, recusa, _b, _e = self._simular(acao, {k: v for k, v in argumentos.items() if k != "forcar"})
                 if recusa and recusa.codigo in ("NadaAFazer", "JaInstalado"):
                     escrever("Nada mais a fazer: " + str(recusa))
                     raise _JaFeito()
