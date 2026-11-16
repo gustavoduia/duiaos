@@ -88,6 +88,24 @@ def papel_da_tela(area, saida):
     return area["padrao"]
 
 
+BRILHOS = ("radial", "linear", "nenhum")
+ACESSO_PADRAO = {"veu": 15, "brilho": "radial", "brilho_extra": False}
+
+
+def acesso(secao):
+    """Tom azul e brilho das Telas de Bloqueio e de Entrada no estilo futurista (ADR 056), de uma seção (dict):
+    veu = transparência do tom azul, 0 (azul cheio) a 100 (só o papel de parede); brilho = radial | linear |
+    nenhum; brilho_extra = o brilho também atrás do relógio das outras telas."""
+    secao = secao or {}
+    try:
+        veu = max(0, min(100, int(secao.get("veu", ACESSO_PADRAO["veu"]))))
+    except ValueError:
+        veu = ACESSO_PADRAO["veu"]
+    brilho = secao.get("brilho", ACESSO_PADRAO["brilho"])
+    return {"veu": veu, "brilho": brilho if brilho in BRILHOS else ACESSO_PADRAO["brilho"],
+            "brilho_extra": secao.get("brilho_extra", "nao") == "sim"}
+
+
 def ler_bloqueio(preferencias, papel_padrao=PAPEL_PADRAO):
     """Papel da Tela de Bloqueio: o da área de trabalho (tela principal) ou um próprio; e se desfoca."""
     config = _ler(preferencias)
@@ -96,8 +114,8 @@ def ler_bloqueio(preferencias, papel_padrao=PAPEL_PADRAO):
     desfocar = secao.get("desfocar", "nao") == "sim"
     if secao.get("modo", "area") == "proprio":
         papel = _so_imagem(_existe_ou_padrao(_papel(secao, area["padrao"]), papel_padrao), papel_padrao)
-        return {**papel, "modo": "proprio", "desfocar": desfocar}
-    return {**_so_imagem(area["padrao"], papel_padrao), "modo": "area", "desfocar": desfocar}
+        return {**papel, "modo": "proprio", "desfocar": desfocar, "acesso": acesso(secao)}
+    return {**_so_imagem(area["padrao"], papel_padrao), "modo": "area", "desfocar": desfocar, "acesso": acesso(secao)}
 
 
 def _so_imagem(papel, papel_padrao):
@@ -114,9 +132,9 @@ def ler_entrada(conf=ENTRADA_CONF, papel_padrao=PAPEL_PADRAO):
     desfocar = secao.get("desfocar", "nao") == "sim"
     if secao.get("modo") == "proprio":
         papel = _so_imagem(_existe_ou_padrao(_papel(secao, {"arquivo": str(papel_padrao)}), papel_padrao), papel_padrao)
-        return {**papel, "modo": "proprio", "desfocar": desfocar}
+        return {**papel, "modo": "proprio", "desfocar": desfocar, "acesso": acesso(secao)}
     return {"arquivo": str(papel_padrao) if Path(papel_padrao).is_file() else "", "cor": COR_PADRAO,
-            "ajuste": "preencher", "modo": "padrao", "desfocar": desfocar}
+            "ajuste": "preencher", "modo": "padrao", "desfocar": desfocar, "acesso": acesso(secao)}
 
 
 def estilo_da_entrada(conf=ENTRADA_CONF):
@@ -153,3 +171,37 @@ def eh_imagem(dados):
     """Confere pelo começo do arquivo (não pelo nome) que é JPEG, PNG ou WebP."""
     return (dados.startswith(b"\xff\xd8\xff") or dados.startswith(b"\x89PNG\r\n\x1a\n")
             or (dados[:4] == b"RIFF" and dados[8:12] == b"WEBP"))
+
+
+# ------------------------------------------------------------- fundo imediato
+# Ao entrar na sessão, o autostart mostra o papel de parede na hora com o swaybg
+# (shell/sessao/fundo-imediato), antes de a Área de Trabalho terminar de abrir. Ele lê esta
+# dica, que a Área de Trabalho grava a cada mudança: três linhas (arquivo, cor, modo do swaybg).
+MODOS_SWAYBG = {"preencher": "fill", "ajustar": "fit", "esticar": "stretch", "centralizar": "center", "lado-a-lado": "tile"}
+IMAGENS_SWAYBG = (".jpg", ".jpeg", ".png")
+
+
+def arquivo_da_dica():
+    import os
+    return Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache") / "duiaos" / "papel-inicio"
+
+
+def dica_de_inicio(area):
+    """Texto da dica para o fundo imediato: só imagens que o swaybg abre; senão, só a cor."""
+    papel = area["padrao"]
+    arquivo = papel.get("arquivo", "")
+    if not arquivo.lower().endswith(IMAGENS_SWAYBG) or "\n" in arquivo:
+        arquivo = ""
+    return f"{arquivo}\n{papel.get('cor') or COR_PADRAO}\n{MODOS_SWAYBG.get(papel.get('ajuste'), 'fill')}\n"
+
+
+def gravar_dica(area, destino=None):
+    destino = Path(destino or arquivo_da_dica())
+    texto = dica_de_inicio(area)
+    try:
+        if destino.is_file() and destino.read_text(encoding="utf-8") == texto:
+            return
+        destino.parent.mkdir(parents=True, exist_ok=True)
+        destino.write_text(texto, encoding="utf-8")
+    except OSError:
+        pass

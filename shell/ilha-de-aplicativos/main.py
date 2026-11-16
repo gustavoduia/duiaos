@@ -68,8 +68,8 @@ if not DEMONSTRACAO:
     os.environ.setdefault("QT_QPA_PLATFORM", "wayland")
     os.environ["QT_WAYLAND_SHELL_INTEGRATION"] = "layer-shell"
 
-from PySide6.QtCore import QFileSystemWatcher, QObject, Property, QRect, QTimer, QUrl, Signal, Slot  # noqa: E402
-from PySide6.QtGui import QGuiApplication, QImage, QRegion, QWindow  # noqa: E402
+from PySide6.QtCore import QFileSystemWatcher, QObject, Property, QRect, Qt, QTimer, QUrl, Signal, Slot  # noqa: E402
+from PySide6.QtGui import QGuiApplication, QImage, QPainter, QRegion, QWindow  # noqa: E402
 import PySide6.QtQuick  # noqa: E402,F401  (as janelas do QML chegam ao Python como QQuickWindow)
 from PySide6.QtQml import QQmlApplicationEngine  # noqa: E402
 
@@ -255,6 +255,10 @@ class Ilha(QObject):
     efeito = Signal("QVariantMap")          # minimizar/restaurar: a Ilha desenha o efeito (EfeitoDeJanela.qml)
     pulando = Signal(str)                   # o aplicativo está abrindo: o ícone pula
     _efeito_pronto = Signal("QVariantMap")
+    efeitoCongelar = Signal(str, float)     # tela congelada (imagem) e a opacidade dela enquanto a janela some
+    efeitoCancelar = Signal()
+    _congelar = Signal(str, float)
+    _cancelar_efeito = Signal()
 
     def __init__(self):
         super().__init__()
@@ -265,6 +269,10 @@ class Ilha(QObject):
         self._minimizando = False
         self._numero_efeito = 0
         self._efeito_pronto.connect(self.efeito)
+        self._congelar.connect(self.efeitoCongelar)
+        self._cancelar_efeito.connect(self.efeitoCancelar)
+        self._etapas = {"congelada": threading.Event()}
+        self._imagens = IMAGENS_DO_EFEITO
         self._recentes = []
         if DEMONSTRACAO:
             self._preparar_demonstracao()
@@ -598,47 +606,83 @@ class Ilha(QObject):
             iniciar(["wlrctl", "toplevel", "minimize", "state:active"])
             return
         self._minimizando = True
-        threading.Thread(target=self._minimizar_com_efeito, args=(app_id,), daemon=True).start()
+        tela = next((t for t in QGuiApplication.screens() if t.name() == self._tela), QGuiApplication.primaryScreen())
+        threading.Thread(target=self._minimizar_com_efeito, args=(app_id, tela.geometry().width() if tela else 0),
+                         daemon=True).start()
 
-    def _minimizar_com_efeito(self, app_id):
+    def _capturar(self):
+        """A tela onde a Ilha está, em pixels reais (None se o grim falhar)."""
+        dados = subprocess.run(["grim", "-o", self._tela, "-t", "ppm", "-"], capture_output=True, timeout=3,
+                               check=False).stdout
+        imagem = QImage.fromData(dados, "PPM") if dados else QImage()
+        return None if imagem.isNull() else imagem
+
+    def _esperar_etapa(self, nome, segundos):
+        """Espera a camada do efeito confirmar que desenhou a etapa (efeitoEtapa)."""
+        chegou = self._etapas[nome].wait(segundos)
+        self._etapas[nome].clear()
+        return chegou
+
+    def _minimizar_com_efeito(self, app_id, largura_logica):
+        """Sem piscar (ADR 056): a camada do efeito mostra a tela congelada, a janela some por baixo
+        dela e só então o efeito começa. Para achar onde a janela estava, a camada fica um instante
+        com 75% de opacidade: a diferença entre as capturas de antes e de depois aparece atenuada,
+        mas no lugar certo. Se qualquer passo falhar, a janela é minimizada sem efeito."""
         inicio = time.monotonic()
+        minimizou = False
+        numero = self._numero_efeito = self._numero_efeito + 1
+        chave_tela = f"tela-{numero}"
         try:
             app_id = app_id or janela_ativa()
-            pasta = Path(os.environ.get("XDG_RUNTIME_DIR", "/tmp"))
-            grande = subprocess.Popen(["grim", "-o", self._tela, "-t", "ppm", "-"], stdout=subprocess.PIPE)
-            antes = subprocess.run(["grim", "-o", self._tela, "-s", "0.25", "-t", "ppm", "-"],
-                                   capture_output=True, timeout=3, check=False).stdout
-            imagem = grande.communicate(timeout=3)[0]
-            subprocess.run(["wlrctl", "toplevel", "minimize", "state:active"], timeout=2, check=False)
-            time.sleep(0.035)                     # o compositor desenha a tela sem a janela
-            depois = subprocess.run(["grim", "-o", self._tela, "-s", "0.25", "-t", "ppm", "-"],
-                                    capture_output=True, timeout=3, check=False).stdout
-            a, b = efeitos.ler_ppm(antes), efeitos.ler_ppm(depois)
-            if not a or not b or a[:2] != b[:2]:
+            tela = self._capturar()
+            if tela is None:
                 return
-            regiao = efeitos.regiao_alterada(a[2], b[2], a[0], a[1], a[0] * 3, 3)
+            escala = tela.width() / max(1, largura_logica)
+            self._imagens.guardar(chave_tela, tela)
+            for evento in self._etapas.values():
+                evento.clear()
+            self._congelar.emit("image://janelas/" + chave_tela, MISTURA_DO_EFEITO)
+            if not self._esperar_etapa("congelada", 0.8):
+                return
+            antes = self._capturar()
+            subprocess.run(["wlrctl", "toplevel", "minimize", "state:active"], timeout=2, check=False)
+            minimizou = True
+            time.sleep(0.05)                      # o compositor desenha a tela sem a janela
+            depois = self._capturar()
+            regiao = regiao_da_janela(antes, depois) if antes is not None and depois is not None else None
             if not regiao:
                 return
-            # Pequena (0,25 da tela lógica) → lógica; grande → pixels reais da tela
-            x, y, w, h = (v * 4 for v in regiao)
-            figura = QImage.fromData(imagem)
-            escala = figura.width() / max(1, a[0] * 4)
-            recorte = figura.copy(QRect(round(x * escala), round(y * escala), round(w * escala), round(h * escala)))
-            self._numero_efeito += 1
-            arquivo = pasta / f"duiaos-janela-{self._numero_efeito % 8}.ppm"
-            recorte.save(str(arquivo), "PPM")
+            x, y, w, h = regiao
+            chave = f"janela-{numero}"
+            self._imagens.guardar(chave, tela.copy(QRect(x, y, w, h)))
             dados = {"direcao": "minimizar", "efeito": self._opcoes["minimizar"], "appId": app_id,
-                     "imagem": QUrl.fromLocalFile(str(arquivo)).toString() + f"?{self._numero_efeito}",
-                     "x": x, "y": y, "w": w, "h": h}
+                     "imagem": "image://janelas/" + chave, "chave": chave,
+                     "x": x / escala, "y": y / escala, "w": w / escala, "h": h / escala}
             if app_id:
+                antiga = self._capturas.get(app_id)
+                if antiga:
+                    self._imagens.esquecer(antiga.get("chave", ""))
                 self._capturas[app_id] = dados
             self._efeito_pronto.emit(dados)
+            chave_tela_usada, chave_tela = chave_tela, ""
+            threading.Timer(1.5, self._imagens.esquecer, args=(chave_tela_usada,)).start()
         except (OSError, subprocess.SubprocessError, ValueError) as erro:
             print("Ilha: minimizar sem efeito:", erro, file=sys.stderr)
         finally:
+            if chave_tela:                        # não chegou ao efeito: desfaz a tela congelada
+                self._cancelar_efeito.emit()
+                self._imagens.esquecer(chave_tela)
+                if not minimizou:
+                    iniciar(["wlrctl", "toplevel", "minimize", "state:active"])
             self._minimizando = False
             if time.monotonic() - inicio > 1.5:
                 print("Ilha: o efeito de minimizar demorou", round(time.monotonic() - inicio, 2), "s", file=sys.stderr)
+
+    @Slot(str)
+    def efeitoEtapa(self, nome):
+        """A camada do efeito desenhou a etapa pedida (ex.: "congelada")."""
+        if nome in self._etapas:
+            self._etapas[nome].set()
 
     def restaurar(self, app_id):
         """Traz de volta uma janela minimizada pela Ilha, com o efeito ao contrário."""
@@ -652,7 +696,9 @@ class Ilha(QObject):
     def efeitoTerminou(self, app_id, direcao):
         """Fim do efeito de restaurar: agora a janela volta de verdade."""
         if direcao == "restaurar" and app_id and not DEMONSTRACAO:
-            self._capturas.pop(app_id, None)
+            antiga = self._capturas.pop(app_id, None)
+            if antiga:
+                threading.Timer(1.0, self._imagens.esquecer, args=(antiga.get("chave", ""),)).start()
             iniciar(["wlrctl", "toplevel", "focus", "app_id:" + app_id])
 
     @Slot(str)
@@ -732,6 +778,88 @@ class Ilha(QObject):
     demonstracao = Property(bool, lambda self: DEMONSTRACAO, constant=True)
 
 
+MISTURA_DO_EFEITO = 0.75          # opacidade da tela congelada enquanto a janela some por baixo
+
+
+class ImagensDoEfeito:
+    """Capturas em memória para o efeito (image://janelas/CHAVE), sem passar pelo disco."""
+
+    def __init__(self):
+        self._imagens = {}
+        self._trava = threading.Lock()
+
+    def guardar(self, chave, imagem):
+        with self._trava:
+            self._imagens[chave] = imagem
+            while len(self._imagens) > 24:                    # janelas minimizadas há muito tempo
+                self._imagens.pop(next(iter(self._imagens)))
+
+    def esquecer(self, chave):
+        with self._trava:
+            self._imagens.pop(chave, None)
+
+    def pegar(self, chave):
+        with self._trava:
+            return self._imagens.get(chave)
+
+    def provedor(self):
+        from PySide6.QtQuick import QQuickImageProvider
+        imagens = self
+
+        class Provedor(QQuickImageProvider):
+            def __init__(self):
+                super().__init__(QQuickImageProvider.ImageType.Image)
+
+            def requestImage(self, chave, tamanho, _pedido):
+                imagem = imagens.pegar(chave.split("?")[0]) or QImage(1, 1, QImage.Format.Format_ARGB32_Premultiplied)
+                if tamanho is not None:
+                    tamanho.setWidth(imagem.width())
+                    tamanho.setHeight(imagem.height())
+                return imagem
+        return Provedor()
+
+
+IMAGENS_DO_EFEITO = ImagensDoEfeito()
+
+
+def regiao_da_janela(antes, depois, celula=16, limiar=1):
+    """Onde estava a janela que sumiu entre duas capturas (QImage do mesmo tamanho) → (x, y, w, h)
+    em pixels, ou None. As capturas são feitas com a tela congelada por cima, quase opaca: a
+    diferença vem atenuada (por isso o limiar baixo), e a média por célula apaga o ruído."""
+    if antes.size() != depois.size() or antes.isNull():
+        return None
+    diferenca = antes.convertToFormat(QImage.Format.Format_RGB32)
+    pintor = QPainter(diferenca)
+    pintor.setCompositionMode(QPainter.CompositionMode.CompositionMode_Difference)
+    pintor.drawImage(0, 0, depois)
+    pintor.end()
+    largura, altura = diferenca.width(), diferenca.height()
+    colunas, linhas = max(1, largura // celula), max(1, altura // celula)
+
+    def reduzida(imagem, l, a):
+        pequena = imagem.scaled(l, a, Qt.AspectRatioMode.IgnoreAspectRatio,
+                                Qt.TransformationMode.SmoothTransformation).convertToFormat(QImage.Format.Format_RGB888)
+        return bytes(pequena.constBits()), pequena.bytesPerLine()
+    dados, linha_bytes = reduzida(diferenca, colunas, linhas)
+    caixa = efeitos.regiao_da_grade(efeitos.grade_da_diferenca(dados, colunas, linhas, linha_bytes, 3, limiar))
+    if not caixa:
+        return None
+    px, py = largura / colunas, altura / linhas
+    x0, y0 = round(caixa[0] * px), round(caixa[1] * py)
+    x1, y1 = round((caixa[0] + caixa[2]) * px), round((caixa[1] + caixa[3]) * py)
+    # Acerta as bordas ao pixel: perfil das linhas (dentro das colunas da caixa) e das colunas
+    amostras = 24
+    dados, linha_bytes = reduzida(diferenca.copy(x0, 0, x1 - x0, altura), amostras, altura)
+    perfil = [sum(1 for c in range(amostras) if max(dados[y * linha_bytes + c * 3:y * linha_bytes + c * 3 + 3]) > limiar)
+              >= amostras * 0.35 for y in range(altura)]
+    y0, y1 = efeitos.ajustar_limites(perfil, y0, y1, celula)
+    dados, linha_bytes = reduzida(diferenca.copy(0, y0, largura, y1 - y0), largura, amostras)
+    perfil = [sum(1 for l in range(amostras) if max(dados[l * linha_bytes + x * 3:l * linha_bytes + x * 3 + 3]) > limiar)
+              >= amostras * 0.35 for x in range(largura)]
+    x0, x1 = efeitos.ajustar_limites(perfil, x0, x1, celula)
+    return x0, y0, x1 - x0, y1 - y0
+
+
 def janela_de_exemplo():
     """Imagem de uma janela de mentira (demonstração do efeito de minimizar)."""
     from PySide6.QtGui import QColor, QPainter
@@ -773,6 +901,7 @@ def main():
     ilha = Ilha()
     engine = QQmlApplicationEngine()
     interface.preparar(engine)
+    engine.addImageProvider("janelas", IMAGENS_DO_EFEITO.provedor())
     engine.rootContext().setContextProperty("ilha", ilha)
     engine.rootContext().setContextProperty("papelDeParede", comum.papel_de_parede())
     engine.rootContext().setContextProperty("capturaArquivo", argumento("--captura"))

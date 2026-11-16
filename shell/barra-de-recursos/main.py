@@ -356,6 +356,8 @@ def main():
     estado = controles.Controles(demonstracao=DEMONSTRACAO)
     engine = QQmlApplicationEngine()
     interface.preparar(engine)
+    if not DEMONSTRACAO:
+        interface.aparencia().vigiar_horario()          # modo Automático: claro de dia, escuro à noite
     contexto = engine.rootContext()
     contexto.setContextProperty("configuracao", configuracao)
     contexto.setContextProperty("sistema", sistema)

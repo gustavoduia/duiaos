@@ -542,6 +542,7 @@ Window {
             property var imagens: ajustes.imagensDoUsuario()
             readonly property var i: ajustes.papelInfo
             readonly property var a: i.atual || ({})
+            readonly property var acesso: a.acesso || ({})
             readonly property bool naArea: i.alvo === "area"
             readonly property bool variasTelas: (i.telas || []).length > 1
             readonly property var opcoesAjuste: [{ valor: "preencher", rotulo: "Preencher a tela" }, { valor: "ajustar", rotulo: "Ajustar à tela" },
@@ -688,6 +689,40 @@ Window {
                 }
             }
 
+            // Tom azul e brilho do estilo futurista nas Telas de Bloqueio e de Entrada (ADR 056)
+            Grupo {
+                visible: !pp.naArea
+                titulo: "Tom azul e brilho"
+                Linha {
+                    icone: "paleta"; titulo: "Transparência do tom azul"
+                    descricao: "0% cobre o papel de parede de azul; 100% mostra só o papel de parede"
+                    Row {
+                        spacing: 10; anchors.verticalCenter: parent.verticalCenter
+                        Deslizante {
+                            id: deslizanteVeu
+                            width: 200
+                            property int escolhido: pp.acesso.veu !== undefined ? pp.acesso.veu : 15
+                            valor: escolhido
+                            onMovido: (v) => { escolhido = Math.round(v); if (pp.i.alvo === "bloqueio") ajustes.definirAcesso("veu", String(escolhido)) }
+                            onSolto: if (pp.i.alvo === "entrada") ajustes.definirAcesso("veu", String(escolhido))   // a Tela de Entrada grava com permissão de administrador: só ao soltar
+                        }
+                        Rotulo { anchors.verticalCenter: parent.verticalCenter; width: 40; text: deslizanteVeu.escolhido + "%" }
+                    }
+                }
+                Linha {
+                    icone: "brilho"; titulo: "Brilho perto da senha"; descricao: "Um clarão no centro da tela"
+                    Segmentos { opcoes: [{ valor: "radial", rotulo: "Radial" }, { valor: "linear", rotulo: "Linear" }, { valor: "nenhum", rotulo: "Desligado" }]
+                                valor: pp.acesso.brilho || "radial"; onEscolhido: (v) => ajustes.definirAcesso("brilho", v) }
+                }
+                Linha {
+                    icone: "monitor"; titulo: "Brilho no relógio das outras telas"
+                    descricao: "Com mais de um monitor, o brilho também aparece atrás do relógio"; ultima: true
+                    Interruptor { ligado: pp.acesso.brilho_extra === true; onAlternado: (l) => ajustes.definirAcesso("brilho_extra", l ? "sim" : "nao") }
+                }
+            }
+            Rotulo { visible: !pp.naArea; width: parent.width; secundario: true
+                     text: "O tom azul e o brilho aparecem no estilo Futurista. " + (pp.i.alvo === "entrada" ? "A Tela de Entrada muda na próxima vez que ela aparecer." : "Bloqueie a tela (Super + L) para ver.") }
+
             Botao { texto: pp.naArea ? "Importar imagem ou vídeo…" : "Importar imagem…"; icone: "mais"; tipo: "primario"
                     onClicado: { escolherArquivo.destino = "papel"; escolherArquivo.open() } }
             Rotulo { width: parent.width; secundario: true
@@ -824,32 +859,41 @@ Window {
             Row {
                 spacing: 18
                 Repeater {
-                    model: [{ id: false, nome: "Claro" }, { id: true, nome: "Escuro" }]
+                    model: [{ id: false, nome: "Claro", modo: "claro" }, { id: true, nome: "Escuro", modo: "escuro" }, { id: false, nome: "Automático", modo: "automatico" }]
                     Column {
+                        id: opcaoModo
                         required property var modelData
+                        readonly property bool atual: aparencia.modo === modelData.modo
+                        readonly property bool auto: modelData.modo === "automatico"
                         spacing: 8
                         Rectangle {
                             width: 180; height: 116; radius: 14
                             color: modelData.id ? "#1B1F27" : "#F7F9FC"
-                            border { color: Tema.escuro === modelData.id ? Tema.azulDuia : Tema.borda; width: Tema.escuro === modelData.id ? 3 : 1 }
-                            Rectangle { x: 12; y: 12; width: parent.width - 24; height: 12; radius: 4; color: modelData.id ? "#262B34" : "#FFFFFF"
+                            border { color: opcaoModo.atual ? Tema.azulDuia : Tema.borda; width: opcaoModo.atual ? 3 : 1 }
+                            clip: true
+                            // Automático: metade clara (dia), metade escura (noite)
+                            Rectangle { visible: opcaoModo.auto; x: parent.width / 2; y: 3; width: parent.width / 2 - 3; height: parent.height - 6; radius: 11; color: "#1B1F27"; z: 0
+                                        Rectangle { width: parent.radius; height: parent.height; color: parent.color } }
+                            Icone { visible: opcaoModo.auto; nome: "brilho"; tamanho: 30; cor: "#E8A33D"; x: parent.width / 4 - 15; y: parent.height / 2 - 15; z: 2 }
+                            Icone { visible: opcaoModo.auto; nome: "lua"; tamanho: 28; cor: "#C9D4F5"; x: parent.width * 3 / 4 - 14; y: parent.height / 2 - 14; z: 2 }
+                            Rectangle { visible: !opcaoModo.auto; x: 12; y: 12; width: parent.width - 24; height: 12; radius: 4; color: modelData.id ? "#262B34" : "#FFFFFF"
                                         border { color: modelData.id ? "#353B46" : "#DDE3EC"; width: 1 } }
-                            Rectangle { x: 12; y: 32; width: 100; height: 64; radius: 8; color: modelData.id ? "#262B34" : "#FFFFFF"
+                            Rectangle { visible: !opcaoModo.auto; x: 12; y: 32; width: 100; height: 64; radius: 8; color: modelData.id ? "#262B34" : "#FFFFFF"
                                         border { color: modelData.id ? "#353B46" : "#DDE3EC"; width: 1 }
                                         Row { x: parent.width - width - 8; y: 8; spacing: 4
                                               Repeater { model: ["#8DB8FF", "#3D7BF2", "#2447A8"]; Rectangle { required property string modelData; width: 7; height: 7; radius: 3.5; color: modelData } } }
                                         Rectangle { x: 8; y: 26; width: 60; height: 6; radius: 3; color: modelData.id ? "#4A5363" : "#C9D2DE" }
                                         Rectangle { x: 8; y: 38; width: 40; height: 6; radius: 3; color: "#2E6BE6" } }
-                            Rectangle { x: 120; y: 32; width: 48; height: 64; radius: 8; color: modelData.id ? "#20242C" : "#EEF2F7" }
-                            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: aparencia.definirEscuro(modelData.id) }
+                            Rectangle { visible: !opcaoModo.auto; x: 120; y: 32; width: 48; height: 64; radius: 8; color: modelData.id ? "#20242C" : "#EEF2F7" }
+                            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: aparencia.definirModo(modelData.modo) }
                         }
                         Text { anchors.horizontalCenter: parent.horizontalCenter; text: modelData.nome; color: Tema.texto
-                               font { family: Tema.fonteTexto; pixelSize: 13; weight: Tema.escuro === modelData.id ? Font.Bold : Font.Normal } }
+                               font { family: Tema.fonteTexto; pixelSize: 13; weight: opcaoModo.atual ? Font.Bold : Font.Normal } }
                     }
                 }
             }
             Rotulo { width: parent.width; secundario: true
-                     text: "Vale para a Barra, a Ilha, as janelas e os aplicativos do DuiaOS na hora. Outros aplicativos podem precisar ser abertos de novo." }
+                     text: "Vale para a Barra, a Ilha, as janelas e os aplicativos do DuiaOS na hora. Outros aplicativos podem precisar ser abertos de novo. No Automático, o DuiaOS fica claro de dia e escuro à noite, pela hora do nascer e do pôr do sol na região do fuso horário do computador." }
         }
     }
 

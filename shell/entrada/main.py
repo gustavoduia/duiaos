@@ -231,6 +231,7 @@ class Entrada(QObject):
     futurista = Property(bool, lambda self: (sys.argv[sys.argv.index("--estilo") + 1] if "--estilo" in sys.argv[:-1]
                                              else papel.estilo_da_entrada()) == "futurista", constant=True)
     desfocarFundo = Property(bool, lambda self: self._papel()["desfocar"], constant=True)
+    acesso = Property("QVariantMap", lambda self: self._papel().get("acesso", {}), constant=True)
 
     def _papel(self):
         """Papel de parede desta tela (shell/comum/papel.py), lido uma vez."""

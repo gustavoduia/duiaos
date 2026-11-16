@@ -162,6 +162,46 @@ def regiao_alterada(antes, depois, largura, altura, linha_bytes, bpp, celula=4, 
     return x * celula, y * celula, min(w * celula, largura - x * celula), min(h * celula, altura - y * celula)
 
 
+def grade_da_diferenca(dados, colunas, linhas, linha_bytes, bpp, limiar):
+    """Imagem pequena da diferença entre duas capturas (um pixel por célula, a média da célula) →
+    grade [linha][coluna] de booleanos: True onde algum canal passa do limiar."""
+    grade = []
+    for y in range(linhas):
+        inicio = y * linha_bytes
+        linha = dados[inicio:inicio + colunas * bpp]
+        grade.append([max(linha[c * bpp:c * bpp + 3]) > limiar for c in range(colunas)])
+    return grade
+
+
+def regiao_da_grade(grade, minimo=3):
+    """Maior região alterada da grade, aparada → (coluna, linha, largura, altura) em células, ou None."""
+    caixa = maior_regiao(grade)
+    if not caixa:
+        return None
+    x, y, w, h = aparar(grade, caixa)
+    return (x, y, w, h) if w >= minimo and h >= minimo else None
+
+
+def ajustar_limites(perfil, inicio, fim, folga):
+    """Acerta ao pixel os limites [inicio, fim) achados em células. perfil[i] diz se a linha (ou
+    coluna) i mudou; procura a borda de verdade até `folga` para cada lado."""
+    total = len(perfil)
+
+    def firme(i, passo):                      # três seguidas mudaram: é a janela, não um risco solto
+        return all(0 <= i + k * passo < total and perfil[i + k * passo] for k in range(3))
+    novo_inicio = inicio
+    for i in range(max(0, inicio - folga), min(total, inicio + folga + 1)):
+        if firme(i, 1):
+            novo_inicio = i
+            break
+    novo_fim = fim
+    for i in range(min(total - 1, fim + folga - 1), max(-1, fim - folga - 2), -1):
+        if firme(i, -1):
+            novo_fim = i + 1
+            break
+    return (novo_inicio, novo_fim) if novo_fim - novo_inicio >= 3 else (inicio, fim)
+
+
 def ler_ppm(dados):
     """PPM binário (P6, o que o grim escreve) → (largura, altura, bytes RGB). None se não for P6."""
     if not dados.startswith(b"P6"):

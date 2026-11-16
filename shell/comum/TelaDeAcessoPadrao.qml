@@ -259,19 +259,6 @@ Item {
         }
     }
 
-    // ------------------------------------------------------------ rodapé
-    Row {
-        anchors { left: parent.left; bottom: parent.bottom; margins: 28 }
-        spacing: 10
-        Simbolo { width: 24; height: 24; anchors.verticalCenter: parent.verticalCenter }
-        Text {
-            anchors.verticalCenter: parent.verticalCenter
-            text: tela.versao
-            font { family: Estilo.fonteTexto; pixelSize: 13 }
-            color: Estilo.textoSecundario
-        }
-    }
-
     // Botão Energia e o menu que ele abre
     MouseArea {   // clique fora do menu fecha o menu
         anchors.fill: parent

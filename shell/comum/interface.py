@@ -69,6 +69,7 @@ def _criar_aparencia():
         def __init__(self):
             super().__init__()
             self._escuro = pastas.ler_preferencia("aparencia", "modo", "claro") == "escuro"
+            self._automatico = pastas.ler_preferencia("aparencia", "automatico", "nao") == "sim"
             self._estilo = self._ler_estilo()
             pastas.PREFERENCIAS.parent.mkdir(parents=True, exist_ok=True)
             self._vigia = QFileSystemWatcher([str(pastas.PREFERENCIAS.parent)], self)
@@ -81,9 +82,10 @@ def _criar_aparencia():
 
         def recarregar(self):
             escuro = pastas.ler_preferencia("aparencia", "modo", "claro") == "escuro"
+            automatico = pastas.ler_preferencia("aparencia", "automatico", "nao") == "sim"
             estilo = self._ler_estilo()
-            if escuro != self._escuro or estilo != self._estilo:
-                self._escuro, self._estilo = escuro, estilo
+            if escuro != self._escuro or estilo != self._estilo or automatico != self._automatico:
+                self._escuro, self._estilo, self._automatico = escuro, estilo, automatico
                 self.mudou.emit()
 
         @Slot(str)
@@ -99,13 +101,42 @@ def _criar_aparencia():
 
         @Slot(bool)
         def definirEscuro(self, escuro):
-            pastas.gravar_preferencia("aparencia", "modo", "escuro" if escuro else "claro")
-            self.recarregar()
+            self.definirModo("escuro" if escuro else "claro")
+
+        @Slot(str)
+        def definirModo(self, modo):
+            """Modo da interface: "claro", "escuro" ou "automatico" (claro de dia, escuro à noite; ADR 056)."""
+            if modo not in ("claro", "escuro", "automatico"):
+                return
             import sessao
             import threading
+            pastas.gravar_preferencia("aparencia", "automatico", "sim" if modo == "automatico" else "nao")
+            if modo == "automatico":
+                sessao.atualizar_modo_automatico()
+            else:
+                pastas.gravar_preferencia("aparencia", "modo", modo)
+            self.recarregar()
             threading.Thread(target=sessao.aplicar_aparencia, daemon=True).start()
 
+        def vigiar_horario(self):
+            """Um programa da sessão (a Barra de Recursos) confere a cada minuto se o sol nasceu ou se pôs
+            e, no modo Automático, troca o modo. Os outros programas veem a mudança pelo arquivo."""
+            def conferir():
+                import sessao
+                import threading
+                try:
+                    if sessao.atualizar_modo_automatico():
+                        self.recarregar()
+                        threading.Thread(target=sessao.aplicar_aparencia, daemon=True).start()
+                except Exception as erro:                   # nunca derruba a Barra por causa disto
+                    print("Modo automático:", erro, file=sys.stderr)
+            self._horario = QTimer(self, interval=60000, timeout=conferir)
+            self._horario.start()
+            QTimer.singleShot(4000, conferir)
+
         escuro = Property(bool, lambda self: self._escuro, notify=mudou)
+        automatico = Property(bool, lambda self: self._automatico, notify=mudou)
+        modo = Property(str, lambda self: "automatico" if self._automatico else ("escuro" if self._escuro else "claro"), notify=mudou)
         estilo = Property(str, lambda self: self._estilo, notify=mudou)
 
     return Aparencia()

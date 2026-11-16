@@ -121,6 +121,10 @@ Window {
         LayerShell.Window.keyboardInteractivity: LayerShell.Window.KeyboardInteractivityNone
         LayerShell.Window.scope: "duiaos-efeito-de-janela"
         onVisibleChanged: if (visible) ilha.definirMascara(janelaEfeito, 0, 0, 1, 1)
+        // Avisa a Ilha quando a tela congelada já chegou ao monitor (um quadro desenhado e mais um instante)
+        property string etapaPendente: ""
+        onFrameSwapped: if (etapaPendente !== "" && !confirmar.running) confirmar.start()
+        Timer { id: confirmar; interval: 34; onTriggered: { var e = janelaEfeito.etapaPendente; janelaEfeito.etapaPendente = ""; if (e !== "") ilha.efeitoEtapa(e) } }
         EfeitoDeJanela {
             id: efeito
             anchors.fill: parent
@@ -142,6 +146,14 @@ Window {
     }
     Connections {
         target: ilha
+        function onEfeitoCongelar(imagem, opacidade) {
+            efeito.telaCongelada = imagem
+            efeito.opacidadeDaTela = opacidade
+            efeito.visible = true
+            janelaEfeito.etapaPendente = "congelada"
+            janelaEfeito.requestUpdate()
+        }
+        function onEfeitoCancelar() { janelaEfeito.etapaPendente = ""; efeito.cancelar() }
         function onEfeito(dados) {
             if (!janela.mostrada) { janela.mostrada = true; esconder.restart() }   // a Ilha aparece para receber a janela
             efeito.iniciar(dados, janela.alvoNaTela(dados.appId))

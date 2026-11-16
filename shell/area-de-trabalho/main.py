@@ -124,10 +124,22 @@ class Area(QObject):
         if papel_atual != self._papel or posicao != self._posicao_barra:
             self._papel, self._posicao_barra = papel_atual, posicao
             self.mudou.emit()
+        if not DEMONSTRACAO:
+            papel.gravar_dica(papel_atual)             # para o fundo imediato da próxima entrada
         self._programar_troca()
         if itens != self._itens:
             self._itens = itens
             self.itensMudaram.emit()
+
+    @Slot()
+    def fundoPronto(self):
+        """O papel de parede apareceu: avisa o fundo imediato (shell/sessao/fundo-imediato) que pode sair."""
+        pasta = os.environ.get("XDG_RUNTIME_DIR")
+        if pasta and not DEMONSTRACAO:
+            try:
+                Path(pasta, "duiaos-area-pronta").touch()
+            except OSError:
+                pass
 
     # ------------------------------------------------------------ ações
     @Slot(str)

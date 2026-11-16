@@ -162,6 +162,65 @@ except ImportError:
     TEM_QT = False
 
 
+class TesteLimites(unittest.TestCase):
+    def test_grade_e_ajuste(self):
+        dados = bytes([0, 0, 0, 9, 0, 0, 0, 2, 0, 0, 0, 0])              # 4 células numa linha
+        self.assertEqual(efeitos.grade_da_diferenca(dados, 4, 1, 12, 3, 1), [[False, True, True, False]])
+        perfil = [False] * 10 + [True] * 30 + [False] * 10
+        self.assertEqual(efeitos.ajustar_limites(perfil, 16, 32, 16), (10, 40))     # das células ao pixel
+        self.assertEqual(efeitos.ajustar_limites([False] * 50, 16, 32, 16), (16, 32))   # sem sinal: fica como estava
+        solto = [False] * 5 + [True] + [False] * 4 + [True] * 30 + [False] * 10    # um risco solto não é a borda
+        self.assertEqual(efeitos.ajustar_limites(solto, 16, 32, 16), (10, 40))
+
+
+@unittest.skipUnless(TEM_QT, "PySide6 não instalado")
+class TesteRegiaoComTelaCongelada(unittest.TestCase):
+    """Minimizar sem piscar (ADR 056): as capturas são feitas com a tela congelada por cima, a 75%."""
+
+    def _capturas(self, janela, cor_janela, cor_fundo=(232, 240, 254)):
+        from PySide6.QtGui import QColor, QImage, QPainter
+        fundo = QImage(1920, 1080, QImage.Format.Format_RGB32)
+        fundo.fill(QColor(*cor_fundo))
+        pintor = QPainter(fundo)
+        for i in range(0, 1920, 120):                                   # um papel de parede com desenho
+            pintor.fillRect(i, 0, 40, 1080, QColor(cor_fundo[0] - 12, cor_fundo[1] - 8, cor_fundo[2]))
+        pintor.end()
+        com_janela = fundo.copy()
+        pintor = QPainter(com_janela)
+        pintor.fillRect(*janela, QColor(*cor_janela))
+        pintor.fillRect(janela[0], janela[1], janela[2], 30, QColor(cor_janela[0] - 20, cor_janela[1] - 20, cor_janela[2] - 20))
+        pintor.end()
+        # Depois de minimizar: 75% da tela congelada (com a janela) + 25% da tela de verdade (sem ela)
+        depois = fundo.copy()
+        pintor = QPainter(depois)
+        pintor.setOpacity(0.75)
+        pintor.drawImage(0, 0, com_janela)
+        pintor.end()
+        return com_janela, depois
+
+    def _modulo(self):
+        especificacao = importlib.util.spec_from_file_location("ilha_main", RAIZ / "shell/ilha-de-aplicativos/main.py")
+        modulo = importlib.util.module_from_spec(especificacao)
+        with mock.patch.object(sys, "argv", ["main.py", "--demonstracao"]):
+            especificacao.loader.exec_module(modulo)
+        return modulo
+
+    def test_acha_a_janela_ao_pixel(self):
+        modulo = self._modulo()
+        for janela, cor in (((301, 97, 803, 611), (255, 255, 255)), ((40, 40, 1500, 900), (30, 34, 52)),
+                            ((1000, 500, 333, 222), (250, 250, 252))):
+            antes, depois = self._capturas(janela, cor)
+            regiao = modulo.regiao_da_janela(antes, depois)
+            self.assertIsNotNone(regiao, janela)
+            for achado, certo in zip(regiao, janela):
+                self.assertLessEqual(abs(achado - certo), 2, (regiao, janela))
+
+    def test_nada_mudou(self):
+        modulo = self._modulo()
+        antes, _ = self._capturas((10, 10, 50, 50), (255, 255, 255))
+        self.assertIsNone(modulo.regiao_da_janela(antes, antes.copy()))
+
+
 @unittest.skipUnless(TEM_QT, "PySide6 não instalado")
 class TesteAmpliacao(unittest.TestCase):
     """Os ícones piscavam ao passar o mouse (16/11): cada mudança de tamanho refazia a imagem do ícone,

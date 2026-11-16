@@ -3,8 +3,20 @@
 # (padrão /usr/share/duiaos/shell).
 DUIAOS_SHELL="${DUIAOS_SHELL:-/usr/share/duiaos/shell}"
 
+# Entrar sem tela preta (ADR 056). A ordem importa:
+# 1. o papel de parede aparece na hora (fundo imediato, um programa pequeno);
+# 2. os serviços que o sistema inicia sob demanda (portais, etc.) ficam sabendo da tela — sem
+#    isso eles falham ao abrir e os aplicativos esperam por eles;
+# 3. Área de Trabalho, Barra e Ilha abrem ao mesmo tempo;
+# 4. o que não aparece na tela (preferências, Wise, IA) vem depois, sem disputar o processador.
+"${DUIAOS_SHELL}/sessao/fundo-imediato" >/dev/null 2>&1 || true
+if command -v dbus-update-activation-environment >/dev/null 2>&1; then
+  timeout 5 dbus-update-activation-environment --systemd \
+    WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE XDG_SESSION_DESKTOP >/dev/null 2>&1 || true
+fi
+
 # Pastas do usuário (Área de Trabalho, Documentos, Downloads, Imagens, Música, Vídeos)
-xdg-user-dirs-update >/dev/null 2>&1 || true
+(xdg-user-dirs-update >/dev/null 2>&1 || true) &
 
 # Área de Trabalho: papel de parede (imagem, GIF, vídeo ou cor) e ícones da pasta Área de
 # Trabalho, por baixo das janelas. Se fechar ou travar, volta em 2 segundos.
@@ -18,16 +30,6 @@ xdg-user-dirs-update >/dev/null 2>&1 || true
 # Notificações (org.freedesktop.Notifications do DuiaOS): balões no canto e histórico
 python3 "${DUIAOS_SHELL}/notificacoes/main.py" >/tmp/duiaos-notificacoes.log 2>&1 &
 
-# Escolhas das Configurações (~/.config/duiaos/preferencias.conf): modo escuro,
-# resolução e escala das telas, luz noturna, Tela de Descanso e a Tela de Bloqueio
-# automática (padrão: bloqueia após 10 minutos sem uso, antes de repousar e quando
-# o sistema pede). Sem o Python, o fundo e o bloqueio de sempre.
-if ! python3 "${DUIAOS_SHELL}/comum/sessao.py" aplicar >/tmp/duiaos-sessao.log 2>&1; then
-  swaybg -c '#E8F0FE' >/dev/null 2>&1 &
-  swayidle -w timeout 600 "${DUIAOS_SHELL}/bloqueio/bloquear" \
-    before-sleep "${DUIAOS_SHELL}/bloqueio/bloquear" lock "${DUIAOS_SHELL}/bloqueio/bloquear" >/dev/null 2>&1 &
-fi
-
 # Barra de Recursos e Ilha de Aplicativos: se fecharem ou travarem, voltam em 3 segundos
 # (o registro fica em /tmp e, com o duiaos_registro, no journal)
 for COMPONENTE in barra-de-recursos ilha-de-aplicativos; do
@@ -39,6 +41,18 @@ for COMPONENTE in barra-de-recursos ilha-de-aplicativos; do
   ) &
 done
 
+# Escolhas das Configurações (~/.config/duiaos/preferencias.conf): modo escuro,
+# resolução e escala das telas, luz noturna, Tela de Descanso e a Tela de Bloqueio
+# automática (padrão: bloqueia após 10 minutos sem uso, antes de repousar e quando
+# o sistema pede). Em segundo plano, para não segurar a Barra e a Ilha. Sem o Python,
+# o bloqueio de sempre.
+(
+  if ! python3 "${DUIAOS_SHELL}/comum/sessao.py" aplicar >/tmp/duiaos-sessao.log 2>&1; then
+    swayidle -w timeout 600 "${DUIAOS_SHELL}/bloqueio/bloquear" \
+      before-sleep "${DUIAOS_SHELL}/bloqueio/bloquear" lock "${DUIAOS_SHELL}/bloqueio/bloquear" >/dev/null 2>&1 &
+  fi
+) &
+
 # Acessibilidade do sistema (AT-SPI, ADR 035): leitores de tela e o Wise leem e
 # usam as janelas por ela. Avisa os aplicativos que há quem leia (Firefox e
 # outros só se descrevem quando isto está ligado).
@@ -46,9 +60,12 @@ busctl --user set-property org.a11y.Bus /org/a11y/bus org.a11y.Status IsEnabled 
 
 # Wise (se instalado): fica sempre rodando enquanto a sessão estiver aberta.
 # --fundo: começa descansando no canto da tela e cumprimenta a pessoa. Se ele
-# fechar ou travar, volta em 2 segundos.
+# fechar ou travar, volta em 2 segundos. Começa 8 segundos depois da área de trabalho:
+# ao abrir, ele aquece o modelo de IA, o que ocupa o processador inteiro por quase um
+# minuto (medido no Dell: 49 s) e deixava a entrada na sessão travada.
 if [ -x /usr/bin/duiaos-wise ]; then
   (
+    sleep 8
     while kill -0 "${LABWC_PID}" 2>/dev/null; do
       /usr/bin/duiaos-wise --fundo >>/tmp/duiaos-wise.log 2>&1
       sleep 2
@@ -59,7 +76,7 @@ fi
 # IA do sistema (ADR 030): sem modelo ativo (1º login), ativa o modelo padrão
 # ou começa a baixá-lo; o Wise e a Central de IA mostram o progresso.
 if [ -x /usr/bin/duiaos-ia ]; then
-  /usr/bin/duiaos-ia garantir-padrao >/tmp/duiaos-ia.log 2>&1 &
+  (sleep 6; /usr/bin/duiaos-ia garantir-padrao >/tmp/duiaos-ia.log 2>&1) &
 fi
 
 # "Ajude a melhorar o DuiaOS" (ADR 040): enquanto ninguém escolheu o que o computador envia, a pergunta

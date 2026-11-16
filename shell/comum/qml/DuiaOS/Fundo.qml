@@ -12,7 +12,16 @@ Rectangle {
     property string ajuste: "preencher"
     property var estendido: null
     property real escala: 1              // miniaturas: a imagem como ficaria numa tela maior
-    color: corFundo
+    // Enquanto a primeira imagem carrega, o fundo usa corCarregando (a Área de Trabalho põe
+    // "transparent" para não piscar a cor clara ao entrar na sessão). Depois, a cor de sempre.
+    property color corCarregando: corFundo
+    readonly property bool pronto: tipo === "cor" || tipo === "video"
+        || (tipo === "imagem" && (imagem.status === Image.Ready || imagem.status === Image.Error))
+        || (tipo === "animada" && (animada.status === Image.Ready || animada.status === Image.Error))
+    property bool jaMostrou: false
+    onProntoChanged: if (pronto) jaMostrou = true
+    Component.onCompleted: if (pronto) jaMostrou = true
+    color: jaMostrou ? corFundo : corCarregando
     clip: true
 
     readonly property int modoImagem: ajuste === "ajustar" ? Image.PreserveAspectFit
@@ -49,6 +58,7 @@ Rectangle {
             cache: false
         }
         AnimatedImage {
+            id: animada
             visible: fundo.tipo === "animada"
             width: parent.width / fundo.escala; height: parent.height / fundo.escala
             scale: fundo.escala

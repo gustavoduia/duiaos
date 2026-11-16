@@ -9,6 +9,7 @@ ativa). A Tela de Entrada roda como _greetd e não lê as pastas pessoais: a ima
   papel-entrada imagem AJUSTE COR DESFOCAR          lê a imagem (JPEG, PNG ou WebP, até 40 MB) na entrada padrão
   papel-entrada opcoes AJUSTE COR DESFOCAR          muda só as opções, mantendo a imagem
   papel-entrada estilo padrao|futurista             estilo da Tela de Entrada (ADR 052), mantendo o resto
+  papel-entrada acesso VEU radial|linear|nenhum sim|nao   tom azul (transparência 0–100), brilho e brilho nas outras telas (ADR 056)
 AJUSTE: preencher | ajustar | esticar | centralizar | lado-a-lado · COR: #RRGGBB · DESFOCAR: sim | nao
 Saída: 0 ok · 2 uso errado · 1 outra falha.
 """
@@ -50,7 +51,7 @@ def gravar(valores):
     temporario = CONF + ".tmp"
     with open(temporario, "w", encoding="utf-8") as arquivo:
         arquivo.write("# DuiaOS — papel de parede da Tela de Entrada (Configurações › Papel de parede)\n[papel]\n")
-        for chave in ("modo", "arquivo", "cor", "ajuste", "desfocar", "estilo"):
+        for chave in ("modo", "arquivo", "cor", "ajuste", "desfocar", "estilo", "veu", "brilho", "brilho_extra"):
             if chave in valores:
                 arquivo.write(f"{chave} = {valores[chave]}\n")
     os.chmod(temporario, 0o644)
@@ -65,7 +66,16 @@ def main():
         gravar({"modo": "padrao", **ler_conf(), "estilo": argumentos[0]})
         return 0
     if acao == "padrao" and len(argumentos) == 1 and argumentos[0] in ("sim", "nao"):
-        gravar({"modo": "padrao", "desfocar": argumentos[0], "estilo": ler_conf().get("estilo", "futurista")})
+        atual = ler_conf()
+        gravar({"modo": "padrao", "desfocar": argumentos[0], "estilo": atual.get("estilo", "futurista"),
+                **{chave: atual[chave] for chave in ("veu", "brilho", "brilho_extra") if chave in atual}})
+        return 0
+    if acao == "acesso" and len(argumentos) == 3:
+        veu, brilho, extra = argumentos
+        if not re.fullmatch(r"[0-9]{1,3}", veu) or int(veu) > 100 or brilho not in ("radial", "linear", "nenhum") \
+                or extra not in ("sim", "nao"):
+            return 2
+        gravar({"modo": "padrao", **ler_conf(), "veu": str(int(veu)), "brilho": brilho, "brilho_extra": extra})
         return 0
     if acao not in ("imagem", "opcoes") or len(argumentos) != 3:
         return 2

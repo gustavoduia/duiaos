@@ -24,6 +24,11 @@ Item {
     property color corFundo: Estilo.fundo
     property bool desfocar: false
     property bool somenteFundo: false    // monitores extras: só o fundo e o relógio
+    // Estilo futurista: o tom azul por cima do papel de parede e o brilho (shell/comum/papel.py: acesso)
+    property var acesso: ({})
+    readonly property int transparenciaDoVeu: acesso.veu !== undefined ? acesso.veu : 15
+    readonly property string brilho: acesso.brilho || "radial"
+    readonly property bool brilhoNasOutrasTelas: acesso.brilho_extra === true
 
     signal entrar(string usuario, string senha)
     signal acaoEnergia(string id)

@@ -206,6 +206,20 @@ osd.label.text.color: {c['menu_texto']}
 """
 
 
+def atualizar_modo_automatico(agora=None):
+    """Modo Automático (ADR 056): claro de dia, escuro à noite, pelo nascer e pôr do sol (sol.py).
+    A escolha fica em [aparencia] automatico = sim; o modo em vigor continua em "modo" (claro ou
+    escuro), que é o que todos os programas leem. Devolve True se o modo mudou agora."""
+    if pastas.ler_preferencia("aparencia", "automatico", "nao") != "sim":
+        return False
+    import sol
+    certo = "escuro" if sol.e_noite(agora) else "claro"
+    if pastas.ler_preferencia("aparencia", "modo", "claro") == certo:
+        return False
+    pastas.gravar_preferencia("aparencia", "modo", certo)
+    return True
+
+
 def aplicar_aparencia(escuro=None):
     """Modo escuro e estilo nas janelas (labwc) e nos aplicativos GTK; os do DuiaOS mudam sozinhos."""
     if escuro is None:
@@ -271,6 +285,7 @@ def main(argumentos):
     if acao == "papel-de-parede":          # só de reserva: na sessão, quem desenha é a Área de Trabalho
         aplicar_papel_de_parede()
     if acao in ("aplicar", "aparencia"):
+        atualizar_modo_automatico()
         aplicar_aparencia()
     if acao in ("aplicar", "telas"):
         aplicar_telas()

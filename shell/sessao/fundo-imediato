@@ -1,0 +1,47 @@
+#!/bin/sh
+# =============================================================================
+# DuiaOS — fundo imediato da sessão (ADR 056).
+#
+# Chamado pelo autostart, antes de tudo. Mostra o papel de parede na hora com o
+# swaybg (um programa pequeno, que abre em décimos de segundo), para a pessoa não
+# ver uma tela preta enquanto a Área de Trabalho, a Barra e a Ilha abrem. Sai
+# quando a Área de Trabalho avisa que o papel dela apareceu (ou em 60 segundos).
+#
+# A dica (arquivo, cor, modo) é gravada pela Área de Trabalho (shell/comum/papel.py).
+# Qualquer falha aqui só deixa a tela preta por mais um instante: nada depende dele.
+# =============================================================================
+command -v swaybg >/dev/null 2>&1 || exit 0
+
+DICA="${XDG_CACHE_HOME:-${HOME}/.cache}/duiaos/papel-inicio"
+ARQUIVO=/usr/share/duiaos/papel-de-parede/orbita.jpg
+COR='#000000'
+MODO=fill
+if [ -r "${DICA}" ]; then
+  { IFS= read -r A; IFS= read -r C; IFS= read -r M; } < "${DICA}" || true
+  ARQUIVO="${A:-}"
+  case "${C:-}" in
+    '#'[0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f]) COR="${C}" ;;
+  esac
+  case "${M:-}" in fill|fit|stretch|center|tile) MODO="${M}" ;; esac
+fi
+
+PRONTA="${XDG_RUNTIME_DIR:-/nonexistent}/duiaos-area-pronta"
+rm -f "${PRONTA}" 2>/dev/null
+
+if [ -n "${ARQUIVO}" ] && [ -r "${ARQUIVO}" ]; then
+  swaybg -i "${ARQUIVO}" -m "${MODO}" -c "${COR}" >/dev/null 2>&1 &
+else
+  swaybg -c "${COR}" >/dev/null 2>&1 &
+fi
+FUNDO=$!
+
+(
+  ESPERA=0
+  while [ "${ESPERA}" -lt 240 ] && [ ! -e "${PRONTA}" ] && kill -0 "${FUNDO}" 2>/dev/null; do
+    sleep 0.25
+    ESPERA=$((ESPERA + 1))
+  done
+  sleep 0.6            # a Área de Trabalho já desenhou; dá tempo de o quadro chegar à tela
+  kill "${FUNDO}" 2>/dev/null
+) >/dev/null 2>&1 &
+exit 0

@@ -51,6 +51,10 @@ Item {
         anchors.fill: parent
         arquivo: raiz.meuPapel.arquivo || ""
         corFundo: raiz.meuPapel.cor || "#E8F0FE"
+        // Ao entrar na sessão: nada de cor clara antes da imagem (o fundo imediato do autostart aparece por baixo)
+        corCarregando: "transparent"
+        onJaMostrouChanged: if (jaMostrou && raiz.mostrarIcones) area.fundoPronto()
+        Component.onCompleted: if (jaMostrou && raiz.mostrarIcones) area.fundoPronto()
         ajuste: raiz.meuPapel.ajuste || "preencher"
         estendido: area.papeis.telas === "estender" ? raiz.estendido : null
     }

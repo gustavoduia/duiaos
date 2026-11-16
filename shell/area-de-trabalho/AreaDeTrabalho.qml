@@ -25,7 +25,7 @@ Item {
             screen: modelData
             width: modelData.width; height: modelData.height
             visible: true
-            color: "black"
+            color: "transparent"       // até o papel de parede carregar, aparece o fundo imediato (shell/sessao/fundo-imediato)
             title: "Área de Trabalho"
             LayerShell.Window.anchors: LayerShell.Window.AnchorTop | LayerShell.Window.AnchorBottom
                                        | LayerShell.Window.AnchorLeft | LayerShell.Window.AnchorRight

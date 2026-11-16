@@ -49,6 +49,7 @@ Window {
             corFundo: entrada.corFundo
             desfocar: entrada.desfocarFundo
             futurista: entrada.futurista
+            acesso: entrada.acesso
             onEntrar: (usuario, senha) => entrada.entrar(usuario, senha)
             onAcaoEnergia: (id) => entrada.energia(id)
 

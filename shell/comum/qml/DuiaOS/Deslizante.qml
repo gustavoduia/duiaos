@@ -8,6 +8,7 @@ Item {
     property string iconeBaixo: icone
     property bool ativo: true
     signal movido(real valor)
+    signal solto(real valor)         // ao largar o controle (para o que custa caro aplicar a cada passo)
     signal iconeClicado()
     height: 30
     opacity: ativo ? 1 : 0.45
@@ -49,6 +50,7 @@ Item {
         }
         onPressed: (mouse) => mover(mouse)
         onPositionChanged: (mouse) => { if (pressed) mover(mouse) }
+        onReleased: raiz.solto(raiz.valor)
         onWheel: (roda) => raiz.movido(Math.max(0, Math.min(100, raiz.valor + (roda.angleDelta.y > 0 ? 5 : -5))))
     }
 }

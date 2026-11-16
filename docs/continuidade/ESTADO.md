@@ -54,6 +54,10 @@ fundos com GIF/vídeo, Atualizações nas Configurações, foto da conta, menu d
    Entrada/Bloqueio, Central de IA e "Ajude a melhorar"; janelas presas aos cantos.
 
 ## 5. Decisões recentes (detalhe nos ADRs)
+- 16/11: **Entrar sem tela preta, gênio sem piscar, modo Automático, tom das telas de acesso** (ADR 056, ficha
+  DUIA-2026-0015). Causa da espera ao entrar achada nos relatórios do Dell (Wise aquecendo a IA no login).
+  Ambiente de teste novo aqui: `xvfb-run` com `QT_QPA_PLATFORM=xcb` desenha com OpenGL (serve para efeitos que o
+  modo offscreen não mostra). **Sem teste no Dell.**
 - 16/11: **Dell caiu no login em modo texto depois da 0013** (ADR 055, ficha DUIA-2026-0014, crítica): o compositor
   era chamado por `systemd-cat`; agora só redirecionamento do shell, e `test_inicio_da_tela.py` cobre o caso. Causa
   exata no Dell não confirmada (sem relatório daquele boot). **Aguardando o Gustavo aplicar pelo terminal e confirmar.**

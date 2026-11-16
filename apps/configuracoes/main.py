@@ -439,6 +439,30 @@ class Ajustes(QObject):
             pastas.gravar_preferencia("papel-bloqueio", "desfocar", "sim" if ligado else "nao")
             self.mudou.emit()
 
+    @Slot(str, str)
+    def definirAcesso(self, chave, valor):
+        """Tom azul e brilho das Telas de Bloqueio e de Entrada (estilo futurista; ADR 056).
+        chave: veu (0–100), brilho (radial | linear | nenhum) ou brilho_extra (sim | nao)."""
+        import papel
+        alvo = getattr(self, "_alvo_papel", "area")
+        if alvo not in ("bloqueio", "entrada") or chave not in ("veu", "brilho", "brilho_extra"):
+            return
+        atual = (self._papel_entrada() if alvo == "entrada" else papel.ler_bloqueio(pastas.PREFERENCIAS, sessao.PAPEL_PADRAO))
+        novo = dict(atual.get("acesso") or papel.ACESSO_PADRAO)
+        novo["brilho_extra"] = "sim" if novo.get("brilho_extra") else "nao"
+        novo[chave] = valor
+        novo = papel.acesso({k: str(v) for k, v in novo.items()})          # valida
+        if alvo == "bloqueio":
+            pastas.gravar_preferencia("papel-bloqueio", "veu", str(novo["veu"]))
+            pastas.gravar_preferencia("papel-bloqueio", "brilho", novo["brilho"])
+            pastas.gravar_preferencia("papel-bloqueio", "brilho_extra", "sim" if novo["brilho_extra"] else "nao")
+            self.mudou.emit()
+        elif DEMONSTRACAO:
+            self._entrada_demo = {**self._papel_entrada(), "acesso": novo}
+            self.mudou.emit()
+        else:
+            self._rodar_ajudante_da_entrada(["acesso", str(novo["veu"]), novo["brilho"], "sim" if novo["brilho_extra"] else "nao"], b"")
+
     @Slot()
     def usarPapelDaArea(self):
         """Bloqueio: volta a seguir a área de trabalho. Entrada: copia o papel da área de trabalho."""
@@ -503,6 +527,9 @@ class Ajustes(QObject):
                     return
             argumentos = ["imagem", ajuste, cor, sim]
 
+        self._rodar_ajudante_da_entrada(argumentos, dados)
+
+    def _rodar_ajudante_da_entrada(self, argumentos, dados):
         def mudar():
             processo = subprocess.run(["pkexec", AJUDANTE_PAPEL_ENTRADA, *argumentos], input=dados,
                                       capture_output=True, timeout=120, check=False)

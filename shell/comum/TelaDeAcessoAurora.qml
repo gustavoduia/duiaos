@@ -21,6 +21,8 @@ Item {
     readonly property color bordaVidro: Qt.rgba(0.72, 0.80, 1, 0.30)
     readonly property color erro: "#FF7A93"
     property bool senhaVisivel: false
+    // Com o tom azul mais transparente, o texto claro ganha um contorno escuro para não sumir num papel de parede claro
+    readonly property color contorno: Qt.rgba(0.03, 0.05, 0.15, 0.6 * Math.max(0, Math.min(100, tela.transparenciaDoVeu)) / 100)
 
     function limparSenha() {
         campoSenha.text = ""
@@ -48,19 +50,23 @@ Item {
     }
 
     // ------------------------------------------------------------ véu
+    // O tom azul-noite por cima do papel de parede. A transparência (0 a 100%) e o brilho vêm das
+    // Configurações › Papel de parede › Tela de Bloqueio / Tela de Entrada (ADR 056).
     Rectangle {
         anchors.fill: parent
+        opacity: 1 - Math.max(0, Math.min(100, tela.transparenciaDoVeu)) / 100
         gradient: Gradient {
-            GradientStop { position: 0.0; color: Qt.rgba(0.03, 0.05, 0.15, 0.84) }
-            GradientStop { position: 0.55; color: Qt.rgba(0.04, 0.06, 0.19, 0.86) }
-            GradientStop { position: 1.0; color: Qt.rgba(0.02, 0.03, 0.10, 0.96) }
+            GradientStop { position: 0.0; color: "#080D26" }
+            GradientStop { position: 0.55; color: "#0A0F30" }
+            GradientStop { position: 1.0; color: "#05081A" }
         }
     }
-    // Luz atrás da pessoa: um clarão azul-violeta, pintado uma vez
+    // Brilho perto da senha (e, se pedido, atrás do relógio das outras telas): radial ou linear
+    readonly property bool comBrilho: tela.brilho !== "nenhum" && (!tela.somenteFundo || tela.brilhoNasOutrasTelas)
     Canvas {
-        visible: !tela.somenteFundo
+        visible: raiz.comBrilho && tela.brilho === "radial"
         width: Math.min(parent.width, 900); height: width
-        anchors { horizontalCenter: parent.horizontalCenter; verticalCenter: centro.verticalCenter }
+        anchors { horizontalCenter: parent.horizontalCenter; verticalCenter: tela.somenteFundo ? parent.verticalCenter : centro.verticalCenter }
         onPaint: {
             const ctx = getContext("2d")
             ctx.reset()
@@ -70,6 +76,16 @@ Item {
             g.addColorStop(1, "rgba(10, 15, 31, 0)")
             ctx.fillStyle = g
             ctx.fillRect(0, 0, width, height)
+        }
+    }
+    Rectangle {
+        visible: raiz.comBrilho && tela.brilho === "linear"
+        width: parent.width; height: Math.min(parent.height * 0.5, 460)
+        anchors.verticalCenter: tela.somenteFundo ? parent.verticalCenter : centro.verticalCenter
+        gradient: Gradient {
+            GradientStop { position: 0.0; color: Qt.rgba(0.36, 0.55, 1, 0) }
+            GradientStop { position: 0.5; color: Qt.rgba(0.40, 0.48, 1, 0.30) }
+            GradientStop { position: 1.0; color: Qt.rgba(0.49, 0.36, 0.96, 0) }
         }
     }
 
@@ -87,23 +103,16 @@ Item {
         Text {
             text: raiz.agora.toLocaleTimeString(raiz.local, "HH:mm")
             color: raiz.textoClaro
+            style: Text.Outline; styleColor: raiz.contorno
             font { family: Estilo.fonteTitulo; pixelSize: Math.max(72, Math.round(raiz.height * 0.15)); weight: Font.ExtraLight; letterSpacing: -4 }
         }
         Text {
             leftPadding: 6
             text: { var t = raiz.agora.toLocaleDateString(raiz.local, "dddd, d 'de' MMMM"); return t.charAt(0).toUpperCase() + t.slice(1) }
             color: raiz.textoSuave
+            style: Text.Outline; styleColor: raiz.contorno
             font { family: Estilo.fonteTexto; pixelSize: 19; weight: Font.Medium }
         }
-    }
-
-    // Marca, no alto
-    Row {
-        anchors { left: parent.left; top: parent.top; margins: 32; leftMargin: 48 }
-        spacing: 10
-        Simbolo { width: 22; height: 22; anchors.verticalCenter: parent.verticalCenter; corTraco: raiz.textoClaro; corPonto: raiz.ciano }
-        Text { anchors.verticalCenter: parent.verticalCenter; text: tela.versao; color: raiz.textoSuave
-               font { family: Estilo.fonteTexto; pixelSize: 13; weight: Font.Medium } }
     }
 
     // ------------------------------------------------------------ a pessoa e a senha
@@ -166,6 +175,7 @@ Item {
             elide: Text.ElideRight
             text: tela.pessoa.nome
             color: raiz.textoClaro
+            style: Text.Outline; styleColor: raiz.contorno
             font { family: Estilo.fonteTitulo; pixelSize: 30; weight: Font.Bold; letterSpacing: -0.5 }
         }
         Item { width: 1; height: 6 }
@@ -174,6 +184,7 @@ Item {
             horizontalAlignment: Text.AlignHCenter
             text: tela.ocupado ? "Conferindo a senha…" : (tela.emBloqueio ? "Sessão bloqueada" : "Digite a senha para entrar")
             color: raiz.textoSuave
+            style: Text.Outline; styleColor: raiz.contorno
             font { family: Estilo.fonteTexto; pixelSize: 14 }
         }
         Item { width: 1; height: 26 }
