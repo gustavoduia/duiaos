@@ -217,6 +217,22 @@ class TesteArquivos(unittest.TestCase):
         self.assertTrue((cache / "duiaos" / "avisos.json").exists())
         self.assertTrue(fora.exists())
 
+    def test_flathub_da_pessoa_nao_conta_duas_vezes(self):
+        """Os aplicativos do Flathub da pessoa ficam em ~/.local/share/flatpak: entram em "Aplicativos" e não
+        podem entrar de novo em "Outros arquivos seus" (a soma passava do usado e a barra cortava partes, 16/11)."""
+        self.criar(".local/share/flatpak/app/x/arquivo", 300000)
+        self.criar("notas.txt", 1000)
+        with mock.patch.object(ar, "pastas_do_flathub", return_value=(self.inicio / ".local/share/flatpak", Path("/nao/existe"))):
+            uso = ar.uso_por_categoria(self.inicio, {}, None, None, aplicativos=0, ia=False)
+        pessoal = next(u for u in uso if u["id"] == "pessoal")["tamanho"]
+        self.assertLess(pessoal, 300000)
+
+    def test_arquivo_com_varios_nomes_conta_uma_vez(self):
+        original = self.criar("a/grande.bin", 200000)
+        (self.inicio / "b").mkdir()
+        os.link(original, self.inicio / "b" / "mesmo.bin")
+        self.assertLess(ar.tamanho_da_pasta(self.inicio), 2 * original.stat().st_blocks * 512)
+
     def test_uso_por_categoria(self):
         medidas = {"Documentos": 5 * GB, "Vídeos": 20 * GB, ".cache": GB}
         (self.inicio / "Documentos").mkdir()

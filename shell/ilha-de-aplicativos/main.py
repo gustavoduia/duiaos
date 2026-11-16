@@ -561,19 +561,24 @@ class Ilha(QObject):
 
     @Slot(str, int)
     def moverFixado(self, id_desktop, destino):
-        """Arrastar na Ilha: muda a ordem dos fixados (destino = posição entre os itens da Ilha)."""
+        """Arrastar na Ilha: muda a ordem dos fixados (destino = posição entre os itens da Ilha). Um aplicativo
+        aberto que não estava fixado e foi arrastado para os fixados passa a ficar na Ilha, ali (como no macOS)."""
         fixos = [i for i in (WISE_DESKTOP, EXPLORADOR_DESKTOP) if i in self._ids_fixados]
         fixados = [i for i in self._ids_fixados if i not in fixos]
-        if id_desktop not in fixados:
+        if not id_desktop or id_desktop in fixos:
             return
-        fixados.remove(id_desktop)
+        if id_desktop in fixados:
+            fixados.remove(id_desktop)
+        elif not any(i.get("id") == id_desktop for i in self._itens):
+            return
         posicao = max(0, min(len(fixados), destino - len(fixos)))
         fixados.insert(posicao, id_desktop)
         if DEMONSTRACAO:                       # só na memória (também serve ao teste do arrasto)
             ordem = fixos + fixados
             self._ids_fixados = ordem
-            fixados_itens = sorted((i for i in self._itens if i.get("fixado")), key=lambda d: ordem.index(d["id"]) if d.get("id") in ordem else len(ordem))
-            self._itens = fixados_itens + [i for i in self._itens if not i.get("fixado")]
+            novos = [{**i, "fixado": True} if i.get("id") == id_desktop else i for i in self._itens]
+            fixados_itens = sorted((i for i in novos if i.get("fixado")), key=lambda d: ordem.index(d["id"]) if d.get("id") in ordem else len(ordem))
+            self._itens = fixados_itens + [i for i in novos if not i.get("fixado")]
             self.mudou.emit()
             return
         gravar_fixados(fixados)

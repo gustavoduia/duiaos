@@ -52,6 +52,7 @@ def andar(raiz, limite_s=20.0, limite_arquivos=400_000, mesmo_disco=True, pular=
     pular = {Path(p) for p in pular}
     fim = time.monotonic() + limite_s
     pilha, contados = [raiz], 0
+    vistos = set()          # arquivos com mais de um nome (o Flathub guarda tudo assim) contam uma vez só
     while pilha:
         pasta = pilha.pop()
         if pasta in pular:
@@ -70,6 +71,10 @@ def andar(raiz, limite_s=20.0, limite_arquivos=400_000, mesmo_disco=True, pular=
                     pilha.append(Path(entrada.path))
             elif stat.S_ISREG(info.st_mode):
                 contados += 1
+                if info.st_nlink > 1:
+                    if (info.st_dev, info.st_ino) in vistos:
+                        continue
+                    vistos.add((info.st_dev, info.st_ino))
                 yield entrada.path, info.st_blocks * 512, info.st_mtime
         if contados >= limite_arquivos or time.monotonic() > fim:
             return
@@ -204,12 +209,16 @@ def pasta_da_ia():
     return None
 
 
+def pastas_do_flathub():
+    return (Path.home() / ".local/share/flatpak", Path("/var/lib/flatpak"))
+
+
 def tamanho_dos_aplicativos(rodar=None):
     """Aplicativos e bibliotecas instalados: pacotes do Debian (Installed-Size) e do Flathub."""
     rodar = rodar or (lambda c: subprocess.run(c, capture_output=True, text=True, timeout=30, check=False).stdout)
     debian = sum(int(l) * 1024 for l in rodar(["dpkg-query", "-W", "-f=${Installed-Size}\\n"]).split() if l.isdigit())
     flathub = 0
-    for pasta in (Path.home() / ".local/share/flatpak", Path("/var/lib/flatpak")):
+    for pasta in pastas_do_flathub():
         if pasta.is_dir():
             flathub += tamanho_da_pasta(pasta, limite_s=15)
     return debian + flathub
@@ -236,8 +245,12 @@ def uso_por_categoria(inicio=None, pastas_usuario=None, lixeira=None, cache=None
         caminho = ia if ia is not None else pasta_da_ia()
         if caminho and Path(caminho).is_dir():
             partes.append({"id": "ia", "nome": "Modelos de IA (Wise)", "tamanho": medir(caminho)})
+            medidas.add(Path(caminho))
     partes.append({"id": "aplicativos", "nome": "Aplicativos", "tamanho": aplicativos if aplicativos is not None else tamanho_dos_aplicativos()})
-    # O resto da pasta pessoal (configurações, outras pastas)
+    # O resto da pasta pessoal (configurações, outras pastas), sem o que já entrou em outra parte: os
+    # aplicativos do Flathub da pessoa ficam em ~/.local/share/flatpak e eram contados duas vezes — a soma
+    # passava do usado e a barra cortava as últimas partes (16/11)
+    medidas.update(pastas_do_flathub())
     resto = sum(t for c, t, _m in andar(inicio, limite_s=20, pular=medidas))
     partes.append({"id": "pessoal", "nome": "Outros arquivos seus", "tamanho": resto})
     if disco:

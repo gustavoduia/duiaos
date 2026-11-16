@@ -43,8 +43,8 @@ Item {
     property real foco: -100
     property bool sobre: hover.hovered
     property bool arrastando: false
-    // Sem ampliação enquanto arrasta: os ícones têm o tamanho de repouso e cada passo do arrasto é exato
-    property real forca: sobre && !arrastando && o.ampliacao ? 1 : 0
+    // A ampliação continua enquanto arrasta (como no Dock do macOS): o foco segue o ícone arrastado
+    property real forca: (sobre || arrastando) && o.ampliacao ? 1 : 0
     Behavior on forca { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
     HoverHandler {
         id: hover
@@ -100,15 +100,18 @@ Item {
         return { x: width / 2, y: height / 2, tamanho: base }
     }
 
-    // Arrastar para reorganizar (como no Dock do macOS): enquanto um fixado é arrastado, os outros
-    // abrem espaço na posição em que ele vai cair. "origem" é o índice arrastado (em ilha.itens),
-    // "destino" onde ele cai; ao soltar, os ícones ficam onde estão até a lista nova chegar.
-    readonly property real passoArrasto: base + 8                 // vaga de repouso (base + 6) + espaço 2
+    // Arrastar para reorganizar (como no Dock do macOS): o ícone arrastado segue o mouse, continua
+    // ampliado, e os outros abrem espaço, deslizando, na posição em que ele vai cair. "origem" é o índice
+    // arrastado (em ilha.itens), "destino" onde ele cai, "passoArrasto" o espaço que ele ocupa (a largura
+    // da vaga dele, ampliada). Ao soltar, ele desliza até a vaga e só então a lista muda.
+    property real passoArrasto: base + 8
     property int origem: -1
     property int destino: -1
     property bool tirando: false                                  // arrastado para fora: vai sair da Ilha
-    // Faixa em que um fixado pode cair: depois do Wise e do Explorador, até o último fixado
-    function limitesDoArrasto() {
+    property point ponteiro: Qt.point(0, 0)                       // o mouse, em coordenadas da Ilha, durante o arrasto
+    // Faixa em que o ícone pode cair: depois do Wise e do Explorador, até o último fixado (um aberto que
+    // ainda não está fixado pode ir até uma vaga depois do último fixado: ao soltar, ele passa a ficar na Ilha)
+    function limitesDoArrasto(indice) {
         var primeiro = 0, ultimo = -1
         for (var i = 0; i < ilha.itens.length; i++) {
             var it = ilha.itens[i]
@@ -116,13 +119,18 @@ Item {
             if (it.id === "duiaos-wise.desktop" || it.id === "duiaos-explorador-de-arquivos.desktop") primeiro = i + 1
             ultimo = i
         }
-        return [primeiro, Math.max(primeiro, ultimo)]
+        var fixado = ilha.itens[indice] && ilha.itens[indice].fixado
+        return [primeiro, Math.max(primeiro, fixado ? ultimo : ultimo + 1)]
     }
-    function arrastou(indice, deslocamento, tirar) {
-        var l = limitesDoArrasto()
+    // O mouse ao longo da Ilha → em que vaga o ícone cai (a mesma conta estável da ampliação)
+    function arrastou(indice, ponto, largura, tirar) {
+        var l = limitesDoArrasto(indice)
+        ponteiro = ponto
         origem = indice
         tirando = tirar
-        destino = Math.max(l[0], Math.min(l[1], indice + Math.round(deslocamento / passoArrasto)))
+        passoArrasto = largura
+        foco = focoEm(vertical ? ponto.y - height / 2 : ponto.x - width / 2)
+        destino = Math.max(l[0], Math.min(l[1], Math.floor(foco) - 1))
     }
     // Quanto o ícone de índice i anda para abrir (ou fechar) espaço
     function desvio(i) {
@@ -132,10 +140,20 @@ Item {
         if (destino < origem && i >= destino && i < origem) return passoArrasto
         return 0
     }
+    // Onde a vaga de destino fica em relação à de origem (soma das vagas entre as duas, como estão agora)
+    function deslocamentoAte(origemI, destinoI) {
+        var total = 0
+        if (destinoI > origemI) for (var i = origemI + 1; i <= destinoI; i++) total += (repetidor.itemAt(i) ? (vertical ? repetidor.itemAt(i).height : repetidor.itemAt(i).width) : 0) + grade.spacing
+        else for (var j = destinoI; j < origemI; j++) total -= (repetidor.itemAt(j) ? (vertical ? repetidor.itemAt(j).height : repetidor.itemAt(j).width) : 0) + grade.spacing
+        return total
+    }
     function terminarArrasto() { origem = -1; destino = -1; tirando = false }
     // A lista nova chegou (ou não vai chegar: demonstração, nada mudou): volta ao normal
     Connections { target: ilha; function onMudou() { if (!ilhaFundo.arrastando) ilhaFundo.terminarArrasto() } }
-    Timer { id: limparArrasto; interval: 700; onTriggered: if (!ilhaFundo.arrastando) ilhaFundo.terminarArrasto() }
+    Timer { id: limparArrasto; interval: 900; onTriggered: if (!ilhaFundo.arrastando) ilhaFundo.terminarArrasto() }
+    // Depois de soltar: espera o ícone deslizar até a vaga e só então muda a lista
+    property var aoPousar: null
+    Timer { id: pousar; interval: 230; onTriggered: { var f = ilhaFundo.aoPousar; ilhaFundo.aoPousar = null; if (f) f() } }
 
     // Fundo arredondado, encostado na borda da tela
     Rectangle {
@@ -173,13 +191,19 @@ Item {
         property bool arrastavel: false
         property bool podeTirar: false
         default property alias desenho: dentro.data
-        readonly property real tam: ilhaFundo.base + (ilhaFundo.maximo - ilhaFundo.base) * ilhaFundo.zoom(ordem)
+        // Arrastado: ampliado por inteiro (está debaixo do mouse). Os outros: pela posição em que estão
+        // agora (a vaga mais o deslize), para a onda da ampliação acompanhar quem abriu espaço
+        readonly property bool arrastada: ilhaFundo.origem >= 0 && indice === ilhaFundo.origem
+        readonly property real ordemVisual: ordem + (ilhaFundo.passoArrasto > 0 ? desvio / ilhaFundo.passoArrasto : 0)
+        readonly property real tam: ilhaFundo.base + (ilhaFundo.maximo - ilhaFundo.base) * (arrastada ? ilhaFundo.forca : ilhaFundo.zoom(ordemVisual))
         property real salto: 0
         property point arrasto: Qt.point(0, 0)
+        // Ao soltar, o ícone desliza até a vaga (durante o arrasto, segue o mouse sem atraso)
+        Behavior on arrasto { enabled: !area.pressed; PropertyAnimation { duration: 220; easing.type: Easing.OutCubic } }
         property int indice: -1                     // em ilha.itens (-1: Central, pasta, Downloads, Lixeira)
         // Abrindo espaço para o ícone arrastado, com animação (o arrastado segue o mouse, sem animação)
         property real desvio: indice >= 0 ? ilhaFundo.desvio(indice) : 0
-        Behavior on desvio { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+        Behavior on desvio { NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
         signal clicado()
         signal menu(real ancora)
         signal soltou(int destino, bool tirar)
@@ -205,12 +229,12 @@ Item {
         Item {
             id: dentro
             width: vaga.tam; height: width
-            // Encostado do lado da borda: cresce para longe dela
-            x: (ilhaFundo.posicao === "esquerda" ? 11 : (ilhaFundo.posicao === "direita" ? vaga.width - width - 11 : (vaga.width - width) / 2))
-               + (ilhaFundo.posicao === "esquerda" ? vaga.salto : (ilhaFundo.posicao === "direita" ? -vaga.salto : 0)) + vaga.arrasto.x
-               + (ilhaFundo.vertical ? 0 : vaga.desvio)
-            y: (ilhaFundo.vertical ? (vaga.height - height) / 2 : vaga.height - height - 11) - (ilhaFundo.vertical ? 0 : vaga.salto) + vaga.arrasto.y
-               + (ilhaFundo.vertical ? vaga.desvio : 0)
+            // Encostado do lado da borda: cresce para longe dela. xBase/yBase: a posição na própria vaga
+            readonly property real xBase: (ilhaFundo.posicao === "esquerda" ? 11 : (ilhaFundo.posicao === "direita" ? vaga.width - width - 11 : (vaga.width - width) / 2))
+                                          + (ilhaFundo.posicao === "esquerda" ? vaga.salto : (ilhaFundo.posicao === "direita" ? -vaga.salto : 0))
+            readonly property real yBase: (ilhaFundo.vertical ? (vaga.height - height) / 2 : vaga.height - height - 11) - (ilhaFundo.vertical ? 0 : vaga.salto)
+            x: xBase + vaga.arrasto.x + (ilhaFundo.vertical ? 0 : vaga.desvio)
+            y: yBase + vaga.arrasto.y + (ilhaFundo.vertical ? vaga.desvio : 0)
             scale: area.pressed && !ilhaFundo.arrastando ? 0.9 : 1.0
             opacity: ilhaFundo.arrastando && area.pressed && vaga.podeTirar && vaga.foraDaIlha ? 0.5 : 1.0
             Behavior on scale { NumberAnimation { duration: 100 } }
@@ -227,34 +251,47 @@ Item {
             acceptedButtons: Qt.LeftButton | Qt.RightButton
             property point inicio
             property bool movendo: false
-            onPressed: (m) => { inicio = Qt.point(m.x, m.y); movendo = false }
+            property point pega: Qt.point(0.5, 0.5)        // onde o ícone foi pego (fração da largura e da altura)
+            onPressed: (m) => {
+                inicio = Qt.point(m.x, m.y); movendo = false
+                pega = Qt.point((m.x - dentro.xBase) / dentro.width, (m.y - dentro.yBase) / dentro.height)
+            }
+            // O ícone arrastado fica sempre debaixo do mouse, mesmo quando a vaga dele anda (a ampliação muda
+            // as larguras): a posição é refeita a cada quadro a partir do mouse, não só quando ele se move
+            // (o mesmo ponto do ícone fica debaixo do mouse, mesmo com o ícone crescendo)
+            function seguir() {
+                var p = vaga.mapFromItem(ilhaFundo, ilhaFundo.ponteiro.x, ilhaFundo.ponteiro.y)
+                vaga.arrasto = Qt.point(p.x - pega.x * dentro.width - dentro.xBase, p.y - pega.y * dentro.height - dentro.yBase)
+            }
+            Timer { interval: 16; repeat: true; running: area.movendo && area.pressed; onTriggered: area.seguir() }
             onPositionChanged: (m) => {
                 if (!(m.buttons & Qt.LeftButton) || !vaga.arrastavel) return
                 var dx = m.x - inicio.x, dy = m.y - inicio.y
-                if (!movendo && Math.abs(dx) + Math.abs(dy) > 8) { movendo = true; ilhaFundo.arrastando = true; limparArrasto.stop() }
+                if (!movendo && Math.abs(dx) + Math.abs(dy) > 8) { movendo = true; ilhaFundo.arrastando = true; limparArrasto.stop(); pousar.stop() }
                 if (movendo) {
-                    vaga.arrasto = Qt.point(dx, dy)
-                    ilhaFundo.arrastou(vaga.indice, ilhaFundo.vertical ? dy : dx, vaga.podeTirar && vaga.foraDaIlha)
+                    var largura = (ilhaFundo.vertical ? vaga.height : vaga.width) + grade.spacing
+                    ilhaFundo.arrastou(vaga.indice, area.mapToItem(ilhaFundo, m.x, m.y), largura, vaga.podeTirar && vaga.foraDaIlha)
+                    seguir()
                 }
             }
             onReleased: (m) => {
-                // Primeiro o estado volta ao normal; a mudança da lista vem depois (Qt.callLater), porque
-                // ela recria os ícones — inclusive este, no meio do próprio clique. Antes, o "soltou" vinha
-                // primeiro, o ícone era destruído e o resto não rodava: a Ilha ficava presa em "arrastando"
-                // (recebendo cliques na janela inteira, sem ampliação) até reiniciar a sessão (16/11).
+                // Primeiro o estado volta ao normal; a mudança da lista vem depois, porque ela recria os ícones
+                // — inclusive este, no meio do próprio clique. Antes, o "soltou" vinha primeiro, o ícone era
+                // destruído e o resto não rodava: a Ilha ficava presa em "arrastando" (16/11).
                 var eraArrasto = movendo, tirar = vaga.podeTirar && vaga.foraDaIlha, destino = ilhaFundo.destino
+                var deslocamento = eraArrasto && !tirar ? ilhaFundo.deslocamentoAte(vaga.indice, destino) : 0
                 movendo = false
                 ilhaFundo.arrastando = false
                 if (m.button === Qt.RightButton) {
                     vaga.arrasto = Qt.point(0, 0)
                     vaga.menu(ilhaFundo.ancora(vaga))
                 } else if (eraArrasto) {
-                    // O ícone fica na vaga onde caiu até a lista nova chegar (sem voltar e pular de novo)
-                    var deslocamento = (destino - vaga.indice) * ilhaFundo.passoArrasto
-                    vaga.arrasto = tirar ? vaga.arrasto : Qt.point(ilhaFundo.vertical ? 0 : deslocamento, ilhaFundo.vertical ? deslocamento : 0)
+                    // Desliza até a vaga onde caiu (Behavior) e fica lá até a lista nova chegar
+                    if (!tirar) vaga.arrasto = Qt.point(ilhaFundo.vertical ? 0 : deslocamento, ilhaFundo.vertical ? deslocamento : 0)
                     limparArrasto.restart()
                     var alvo = vaga
-                    Qt.callLater(function () { alvo.soltou(destino, tirar) })
+                    ilhaFundo.aoPousar = function () { alvo.soltou(destino, tirar) }
+                    pousar.restart()
                 } else {
                     vaga.arrasto = Qt.point(0, 0)
                     if (containsMouse) vaga.clicado()
@@ -324,7 +361,10 @@ Item {
                     nome: delegado.modelData.nome
                     idDesktop: delegado.modelData.id || ""
                     aberto: delegado.modelData.aberto
-                    arrastavel: delegado.modelData.fixado === true
+                    // Fixados e abertos com atalho (um aberto arrastado para os fixados passa a ficar na Ilha)
+                    arrastavel: (delegado.modelData.fixado === true || (delegado.modelData.aberto && (delegado.modelData.id || "") !== ""
+                                                                        && !delegado.modelData.recente))
+                                && delegado.modelData.id !== "duiaos-wise.desktop" && delegado.modelData.id !== "duiaos-explorador-de-arquivos.desktop"
                     podeTirar: delegado.modelData.fixado === true && delegado.modelData.id !== "duiaos-wise.desktop"
                                && delegado.modelData.id !== "duiaos-explorador-de-arquivos.desktop"
                     opacity: delegado.modelData.recente ? 0.85 : 1

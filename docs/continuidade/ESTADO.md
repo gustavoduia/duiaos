@@ -54,6 +54,8 @@ fundos com GIF/vídeo, Atualizações nas Configurações, foto da conta, menu d
    Entrada/Bloqueio, Central de IA e "Ajude a melhorar"; janelas presas aos cantos.
 
 ## 5. Decisões recentes (detalhe nos ADRs)
+- 16/11: **Barra do Armazenamento completa (com o livre) e arrastar na Ilha como no Dock do macOS** (ADR 062,
+  ficha DUIA-2026-0020). **Sem teste no Dell** (suavidade real só lá).
 - 16/11: **Menu do ☰ do GNOME na Barra, Ilha que reorganiza ao arrastar, listas das Configurações, procura a
   cada hora, aquecimento do Wise** (ADR 061, ficha DUIA-2026-0019). Causas achadas: lista com propriedade de
   mesmo nome do campo de busca (nenhum Seletor abria); lista nova recriando o ícone no meio do clique (Ilha

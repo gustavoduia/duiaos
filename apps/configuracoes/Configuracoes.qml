@@ -1034,8 +1034,9 @@ Window {
     }
     // Cor de cada parte da barra do disco: tons do azul DuiaOS para o que é da pessoa, cinza para o sistema
     function corDoUso(id) {
-        return ({ aplicativos: "#5B8CFF", videos: "#2447A8", pictures: "#22D3EE", music: "#A78BFA", documents: "#3D5BFF",
-                  download: "#7FB2FF", desktop: "#4A76E8", ia: "#2DD4A7", cache: "#E8A33D", lixeira: "#FF8A65",
+        // Cores bem diferentes entre si (azuis para o que é do sistema e dos aplicativos, quentes e vivas para os arquivos)
+        return ({ aplicativos: "#5B8CFF", videos: "#2447A8", pictures: "#22D3EE", music: "#A78BFA", documents: "#FACC15",
+                  download: "#F472B6", desktop: "#4A76E8", ia: "#2DD4A7", cache: "#F97316", lixeira: "#EF4444",
                   pessoal: "#9AA6C7", sistema: Tema.textoApagado })[id] || Tema.bordaForte
     }
 
@@ -1130,30 +1131,46 @@ Window {
                                      : "Os discos deste computador, o que ocupa espaço e o que dá para liberar."
             }
 
-            // Barra do disco do sistema, dividida pelo que ocupa
+            // Barra do disco do sistema, dividida pelo que ocupa, com o espaço livre no fim. A escala é a
+            // maior entre o tamanho do disco e (partes + livre): se as medidas somarem mais que o usado, nenhuma
+            // parte é cortada no fim da barra (antes só as primeiras apareciam; 16/11)
+            readonly property real somaUso: { var t = 0; for (var i = 0; i < ar.uso.length; i++) t += ar.uso[i].tamanho; return t }
+            readonly property real escalaBarra: Math.max(sis.total || 1, (ar.uso.length ? somaUso : (sis.usado || 0)) + (sis.livre || 0))
             Column {
                 visible: par.lista.tipo === "" && !!par.sis.total
                 width: parent.width
                 spacing: 10
                 Rectangle {
+                    id: barraDisco
                     width: parent.width; height: 22; radius: 11; clip: true
                     color: Tema.controleDesligado
+                    // Partes visíveis: as menores que 4 px ganham 4 px (tiradas do livre), para nenhuma sumir
+                    readonly property var larguras: {
+                        var w = width - (par.ar.uso.length - 1) * 2, lista = [], usado = 0
+                        for (var i = 0; i < par.ar.uso.length; i++) {
+                            var l = w * par.ar.uso[i].tamanho / par.escalaBarra
+                            if (par.ar.uso[i].tamanho > 0) l = Math.max(4, l)
+                            lista.push(l); usado += l
+                        }
+                        return lista
+                    }
                     Row {
-                        anchors.fill: parent
+                        anchors { top: parent.top; bottom: parent.bottom; left: parent.left }
+                        spacing: 2                                   // fresta entre as partes
                         Repeater {
                             model: par.ar.uso
                             Rectangle {
                                 required property var modelData
+                                required property int index
                                 height: parent.height
-                                width: par.sis.total ? parent.width * modelData.tamanho / par.sis.total : 0
+                                width: barraDisco.larguras[index] || 0
                                 color: janela.corDoUso(modelData.id)
-                                Rectangle { anchors.right: parent.right; width: 1.5; height: parent.height; color: Tema.cartao; opacity: 0.8 }
                             }
                         }
+                        // Enquanto mede, só o usado em tom neutro
+                        Rectangle { visible: par.ar.uso.length === 0; height: parent.height
+                                    width: barraDisco.width * (par.sis.usado || 0) / par.escalaBarra; color: Tema.bordaForte }
                     }
-                    // Enquanto mede, só o usado em tom neutro
-                    Rectangle { visible: par.ar.uso.length === 0; height: parent.height; radius: 11
-                                width: par.sis.total ? parent.width * par.sis.usado / par.sis.total : 0; color: Tema.bordaForte }
                 }
                 Flow {
                     width: parent.width
@@ -1167,6 +1184,13 @@ Window {
                             Text { text: modelData.nome + "  " + janela.bytes(modelData.tamanho); color: Tema.textoSecundario
                                    font { family: Tema.fonteTexto; pixelSize: 12 } }
                         }
+                    }
+                    Row {
+                        spacing: 6
+                        Rectangle { width: 9; height: 9; radius: 4.5; anchors.verticalCenter: parent.verticalCenter
+                                    color: Tema.controleDesligado; border { color: Tema.bordaForte; width: 1 } }
+                        Text { text: "Livre  " + janela.bytes(par.sis.livre); color: Tema.texto
+                               font { family: Tema.fonteTexto; pixelSize: 12; weight: Font.DemiBold } }
                     }
                 }
             }

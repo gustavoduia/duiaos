@@ -55,12 +55,24 @@ def conferir():
     for k in range(1, 21):                                   # 2 vagas para a direita, aos poucos
         QTest.mouseMove(janela, inicio + QPoint(int(2 * passo * k / 20), 0))
         QTest.qWait(10)
-    QTest.qWait(300)                                         # a animação do vizinho termina
+    QTest.qWait(400)                                         # a animação dos vizinhos termina
     if not ilha.property("arrastando"):
         falhar("o arrasto não começou")
-    desvio = vagas[origem + 1].property("desvio")
-    if abs(desvio + passo) > 0.5:
-        falhar(f"o vizinho não abriu espaço durante o arrasto (desvio {desvio:.1f}, esperado {-passo:.1f})")
+    if os.environ.get("CAPTURA_ARRASTO"):                    # para ver o arrasto (python3 ilha_arrasto.py … com a variável)
+        janela.grabWindow().save(os.environ["CAPTURA_ARRASTO"])
+    # O arrastado continua do tamanho ampliado (não encolhe ao ser pego)
+    if vaga.property("tam") < ilha.property("maximo") - 0.5:
+        falhar(f"o ícone arrastado encolheu ({vaga.property('tam'):.1f} px, ampliado é {ilha.property('maximo')})")
+    # Todos os ícones entre a origem e o destino abrem espaço (andam uma vaga para a esquerda); os outros não
+    espaco = ilha.property("passoArrasto")
+    for i, v in sorted(vagas.items()):
+        esperado = -espaco if origem < i <= origem + 2 else 0
+        if abs(v.property("desvio") - esperado) > 0.5:
+            falhar(f"o ícone {i} não se reorganizou (desvio {v.property('desvio'):.1f}, esperado {esperado:.1f})")
+    # O arrastado está debaixo do mouse
+    centro = vaga.mapToScene(QPointF(vaga.width() / 2 + vaga.property("arrasto").x(), 0)).x()
+    if abs(centro - (inicio.x() + 2 * passo)) > 3:
+        falhar(f"o ícone arrastado não acompanha o mouse ({centro:.0f} × {inicio.x() + 2 * passo:.0f})")
     QTest.mouseRelease(janela, Qt.LeftButton, Qt.NoModifier, inicio + QPoint(int(2 * passo), 0))
     QTest.qWait(900)
     if ilha.property("arrastando"):
