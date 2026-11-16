@@ -116,7 +116,8 @@ class TestArquivosDoPacote(unittest.TestCase):
     def test_polkit_tem_uma_acao_por_acao_do_agente(self):
         politica = ET.parse(RAIZ_PACOTE / "usr/share/polkit-1/actions/org.duiaos.agente.policy")
         ids = {a.get("id") for a in politica.findall("action")}
-        self.assertEqual(ids, {f"org.duiaos.agente.{acao}" for acao in pl.ACOES})
+        # Uma por ação do apt, mais a da atualização automática (ADR 058)
+        self.assertEqual(ids, {f"org.duiaos.agente.{acao}" for acao in pl.ACOES} | {"org.duiaos.agente.configurar_atualizacoes"})
         for acao in politica.findall("action"):
             self.assertNotEqual(acao.find("defaults/allow_any").text, "yes")
 

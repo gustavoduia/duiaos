@@ -19,9 +19,11 @@ Item {
     readonly property int folgaSalto: o.animar_abrir ? 22 : 0
     readonly property real raioAmpliacao: 3          // quantos ícones de cada lado crescem
 
-    // Espessura do fundo (sem ampliação) e da janela (com espaço para a ampliação e o salto)
+    // Espessura do fundo (sem ampliação) e da janela: espaço para a ampliação E o salto juntos — o
+    // ícone clicado costuma estar ampliado (o mouse está em cima) quando pula; com só o maior dos
+    // dois, o topo do ícone saía da janela e era cortado (16/11)
     readonly property int espessuraFundo: base + 22
-    readonly property int espessura: espessuraFundo + Math.max(maximo - base, folgaSalto)
+    readonly property int espessura: espessuraFundo + (maximo - base) + folgaSalto + 4
     // Comprimento da janela: o da faixa de ícones em repouso (calculado, para não mudar a cada
     // movimento do mouse), mais a folga que a ampliação pode somar
     readonly property int comprimentoBase: {

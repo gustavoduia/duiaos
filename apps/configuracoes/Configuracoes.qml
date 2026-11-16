@@ -1029,6 +1029,24 @@ Window {
                               : (pa.a.etapa === "atualizando" ? "Você pode continuar usando o computador. Não desligue até terminar."
                               : (pa.a.mensagem || "O DuiaOS, o Wise e os aplicativos instalados recebem correções e novidades por aqui.")) }
 
+            // ------------------------------------------------ atualização automática (ADR 058)
+            Grupo {
+                titulo: "Atualização automática"
+                Linha {
+                    icone: "atualizacao"; titulo: "Quando houver atualizações"
+                    descricao: ajustes.explicacaoAtualizacaoAutomatica
+                    ultima: true
+                    Seletor { width: 300
+                              opcoes: [{ valor: "desativado", rotulo: "Desativada" },
+                                       { valor: "avisar", rotulo: "Só avisar" },
+                                       { valor: "baixar", rotulo: "Avisar e baixar" },
+                                       { valor: "instalar-avisando", rotulo: "Avisar, baixar e instalar" },
+                                       { valor: "instalar", rotulo: "Baixar e instalar sem avisar" }]
+                              valor: ajustes.atualizacaoAutomatica
+                              onEscolhido: (v) => ajustes.definirAtualizacaoAutomatica(v) }
+                }
+            }
+
             // ------------------------------------------------ andamento ao vivo
             Rectangle {
                 visible: pa.a.etapa === "atualizando" || pa.a.etapa === "procurando"

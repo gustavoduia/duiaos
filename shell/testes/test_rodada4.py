@@ -217,3 +217,50 @@ class TesteAutostart(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TesteBarraDosNavegadores(unittest.TestCase):
+    """Chrome e afins com a barra do DuiaOS; os aplicativos com barra própria com os três botões (ADR 058)."""
+
+    def test_liga_a_barra_do_sistema_sem_estragar_o_perfil(self):
+        import json
+        with tempfile.TemporaryDirectory() as pasta:
+            config = Path(pasta)
+            perfil = config / "google-chrome" / "Default" / "Preferences"
+            perfil.parent.mkdir(parents=True)
+            perfil.write_text(json.dumps({"browser": {"window_placement": {"top": 10}}, "profile": {"name": "Pessoa"}}))
+            outro = config / "google-chrome" / "Profile 2" / "Preferences"
+            outro.parent.mkdir(parents=True)
+            outro.write_text("{}")
+            instalado = lambda nomes: nomes[0] in ("google-chrome", "chromium")      # noqa: E731
+            mudados = sessao.barra_do_sistema_nos_navegadores(config, instalado)
+            self.assertEqual(sorted(p.parent.name for p in mudados), ["Default", "Default", "Profile 2"])  # chromium nasce com a opção
+            dados = json.loads(perfil.read_text())
+            self.assertIs(dados["browser"]["custom_chrome_frame"], False)
+            self.assertEqual(dados["browser"]["window_placement"], {"top": 10})      # o resto fica
+            self.assertEqual(dados["profile"]["name"], "Pessoa")
+            self.assertFalse((config / "BraveSoftware").exists())                    # não instalado: nada
+            self.assertEqual(sessao.barra_do_sistema_nos_navegadores(config, instalado), [])   # já ligado: nada
+
+    def test_nao_mexe_em_navegador_aberto_nem_em_arquivo_estranho(self):
+        with tempfile.TemporaryDirectory() as pasta:
+            config = Path(pasta)
+            (config / "google-chrome" / "Default").mkdir(parents=True)
+            (config / "google-chrome" / "Default" / "Preferences").write_text('{"browser": {}}')
+            (config / "google-chrome" / "SingletonLock").symlink_to("dell-1234")
+            (config / "chromium" / "Default").mkdir(parents=True)
+            (config / "chromium" / "Default" / "Preferences").write_text("isto não é json")
+            mudados = sessao.barra_do_sistema_nos_navegadores(config, lambda nomes: True)
+            self.assertNotIn(config / "google-chrome" / "Default" / "Preferences", mudados)
+            self.assertEqual((config / "chromium" / "Default" / "Preferences").read_text(), "isto não é json")
+
+    def test_botoes_dos_aplicativos_gtk(self):
+        self.assertEqual(sessao.BOTOES_GTK, ":maximize,minimize,close")
+        override = (RAIZ / "pacotes/duiaos-shell/raiz/usr/share/glib-2.0/schemas/90_duiaos.gschema.override").read_text()
+        self.assertIn("button-layout=':maximize,minimize,close'", override)
+        with tempfile.TemporaryDirectory() as pasta, mock.patch.object(sessao.pastas, "CONFIG", Path(pasta)), \
+                mock.patch.object(sessao, "_rodar"), mock.patch.object(sessao.pastas, "estilo_da_interface", lambda: "padrao"):
+            sessao.aplicar_aparencia(False)
+            sessao.aplicar_aparencia(True)
+            texto = (Path(pasta) / "gtk-3.0" / "settings.ini").read_text()
+            self.assertEqual(texto.count("gtk-decoration-layout=:maximize,minimize,close"), 1)

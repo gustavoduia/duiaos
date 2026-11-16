@@ -34,6 +34,8 @@ wlrctl
 at-spi2-core
 # Menu do aplicativo em foco na Barra (ADR 057): o Python lê os menus pelo AT-SPI
 gir1.2-atspi-2.0
+# Botões da barra de título dos aplicativos GTK e dos navegadores (ADR 058): 90_duiaos.gschema.override
+gsettings-desktop-schemas
 grim
 wtype
 

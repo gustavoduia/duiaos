@@ -2,7 +2,8 @@
 # DuiaOS — duiaos-agente: o registro das ações (/var/log/duiaos-agente) só sai no purge.
 set -e
 if [ "$1" = "purge" ]; then
-  rm -rf /var/log/duiaos-agente
+  rm -rf /var/log/duiaos-agente /var/lib/duiaos/atualizacoes
+  rm -f /etc/duiaos/atualizacoes.conf
 fi
 if [ -d /run/systemd/system ]; then
   systemctl daemon-reload || true

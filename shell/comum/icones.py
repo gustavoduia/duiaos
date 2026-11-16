@@ -95,6 +95,8 @@ DESENHOS = {
                           '<path d="M9.2 16.8l2.8-6.3 2.8 6.3M10.2 14.6h3.6" stroke-width="1.6"/>'),
     "pasta-downloads": ('<path d="M3 7.5a2 2 0 0 1 2-2h4.2l2 2.2H19a2 2 0 0 1 2 2v7.8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'
                         '<path d="M12 10.5v6M9.5 14.3l2.5 2.5 2.5-2.5" stroke-width="1.6"/>'),
+    # Atualizações do sistema: duas setas em círculo com uma seta para baixo no meio (ADR 058)
+    "atualizacao": '<path d="M19.5 9.5A8 8 0 0 0 5.2 7.6M4.5 14.5a8 8 0 0 0 14.3 1.9"/><path d="M5 3.8v4h4M19 20.2v-4h-4"/><path d="M12 8.5v6M9.6 12.3l2.4 2.4 2.4-2.4"/>',
     "download": '<path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/>',
     "documento": '<path d="M6 3h8l4 4v14H6zM14 3v4h4M9 12h6M9 16h6"/>',
     "imagem": '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.7"/><path d="M21 16l-5-5-9 8"/>',

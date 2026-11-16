@@ -54,6 +54,10 @@ fundos com GIF/vídeo, Atualizações nas Configurações, foto da conta, menu d
    Entrada/Bloqueio, Central de IA e "Ajude a melhorar"; janelas presas aos cantos.
 
 ## 5. Decisões recentes (detalhe nos ADRs)
+- 16/11: **Atualização automática (5 modos), notificações próprias, botões em todos os apps, pulo da Ilha**
+  (ADR 058, ficha DUIA-2026-0017). Menus da Barra: no último relatório o Dell ainda estava na 0015 (sem os
+  menus); leitor mais robusto e com registro nos relatórios. **Sem teste no Dell.** A confirmar com o Gustavo:
+  modo padrão da atualização automática (`baixar`).
 - 16/11: **Menus de cada aplicativo na Barra** (ADR 057, ficha DUIA-2026-0016): pela acessibilidade (AT-SPI),
   sem modificar o labwc; leitor em processo à parte. Testado aqui com apps GTK 3 e Qt 6 reais
   (`shell/testes/menus/`, Xvfb + dbus-run-session). Firefox, Electron e apps do DuiaOS ficam só com o menu do

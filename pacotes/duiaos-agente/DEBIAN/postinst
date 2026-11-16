@@ -4,6 +4,8 @@ set -e
 if [ "$1" = "configure" ] && [ -d /run/systemd/system ]; then
   systemctl daemon-reload || true
   systemctl reload dbus.service >/dev/null 2>&1 || true
+  # Atualização automática (ADR 058): o modo vem de /etc/duiaos/atualizacoes.conf (padrão: baixar)
+  systemctl enable --now duiaos-atualizacao-automatica.timer >/dev/null 2>&1 || true
   # Nunca reiniciar o agente aqui: muitas vezes é ele mesmo que está rodando este apt (atualizar o
   # sistema pela Central de Atualizações) e parar o serviço no meio derrubava a atualização. A versão
   # antiga percebe que foi trocada e sai sozinha quando termina; o D-Bus abre a nova no próximo pedido.

@@ -67,6 +67,7 @@ class Notificacoes(QObject):
     def __init__(self):
         super().__init__()
         self._visiveis, self._historico, self._timers = [], [], {}
+        self._restante = {}                 # id → (quando o tempo começou a correr, quanto faltava em ms)
         self.servico = None
         self._chegou.connect(self._ao_chegar)
         self._fechar.connect(lambda i: self._tirar(i))
@@ -100,7 +101,9 @@ class Notificacoes(QObject):
             self._tirar(sobrando["id"])
         self._visiveis = self._visiveis[:MAXIMO_NA_TELA]
         tempo = item["tempo"] if item["tempo"] > 0 else TEMPO_PADRAO
-        if item["urgencia"] < 2 and item["tempo"] != 0 or item["tempo"] > 0:
+        vence = item["urgencia"] < 2 and item["tempo"] != 0 or item["tempo"] > 0
+        item["duracao"] = tempo if vence else 0              # a linha do tempo do balão (Baloes.qml)
+        if vence:
             timer = self._timers.pop(identificador, None)
             if timer:
                 timer.stop()
@@ -108,6 +111,7 @@ class Notificacoes(QObject):
             timer.timeout.connect(lambda i=identificador: self._vencer(i))
             timer.start()
             self._timers[identificador] = timer
+            self._restante[identificador] = (time.monotonic(), tempo)
         self.mudou.emit()
 
     def _vencer(self, identificador):
@@ -116,6 +120,7 @@ class Notificacoes(QObject):
             self.servico.fechada(identificador, 1)
 
     def _tirar(self, identificador):
+        self._restante.pop(identificador, None)
         timer = self._timers.pop(identificador, None)
         if timer:
             timer.stop()
@@ -149,17 +154,46 @@ class Notificacoes(QObject):
         if self.servico:
             self.servico.fechada(identificador, 2)
 
+    @Slot(int, bool)
+    def pausar(self, identificador, pausado):
+        """Mouse em cima do balão: o tempo para; ao sair, continua de onde parou."""
+        timer = self._timers.get(identificador)
+        if not timer or identificador not in self._restante:
+            return
+        inicio, faltava = self._restante[identificador]
+        if pausado and timer.isActive():
+            timer.stop()
+            self._restante[identificador] = (0.0, max(500, faltava - int((time.monotonic() - inicio) * 1000)))
+        elif not pausado and not timer.isActive():
+            self._restante[identificador] = (time.monotonic(), faltava)
+            timer.start(faltava)
+
     @Slot(int)
     def clicar(self, identificador):
         item = next((v for v in self._visiveis if v["id"] == identificador), None)
         if item and item.get("temPadrao") and self.servico:
             self.servico.acao(identificador, "default")
+        if item:
+            self._abrir(item)
         self.fechar(identificador)
+
+    def _abrir(self, item):
+        """Dica x-duiaos-abrir (servico.py): abre a tela do DuiaOS pedida, como "configuracoes:atualizacoes"."""
+        destino = item.get("abrir", "")
+        if not destino or DEMONSTRACAO:
+            return
+        import sistema
+        nome, _, secao = destino.partition(":")
+        sistema.abrir_app_duiaos(nome, *(["--secao", secao] if secao and nome == "configuracoes" else
+                                         (["--pagina", secao] if secao and nome == "loja" else [])))
 
     @Slot(int, str)
     def acionar(self, identificador, chave):
         if self.servico:
             self.servico.acao(identificador, chave)
+        item = next((v for v in self._visiveis if v["id"] == identificador), None)
+        if item and chave == "abrir":
+            self._abrir(item)
         self.fechar(identificador)
 
     visiveis = Property("QVariantList", lambda self: self._visiveis, notify=mudou)
@@ -173,7 +207,8 @@ class Notificacoes(QObject):
             {"app": "Atualizações", "icone": "", "titulo": "Sistema atualizado", "texto": "Reinicie quando puder para terminar.",
              "acoes": [{"chave": "reiniciar", "rotulo": "Reiniciar"}], "temPadrao": False, "urgencia": 2, "tempo": 0},
         ]
-        self._visiveis = [{**e, "id": n + 1, "tipoIcone": "", "valorIcone": "", "quando": "12:4" + str(n)} for n, e in enumerate(exemplos)]
+        self._visiveis = [{**e, "id": n + 1, "tipoIcone": "", "valorIcone": "", "quando": "12:4" + str(n),
+                           "duracao": 0 if e["urgencia"] >= 2 else 600000} for n, e in enumerate(exemplos)]
         self.mudou.emit()
 
 

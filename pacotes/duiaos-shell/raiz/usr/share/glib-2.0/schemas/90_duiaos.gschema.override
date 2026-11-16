@@ -1,0 +1,5 @@
+# DuiaOS (pacote duiaos-shell, ADR 058) — padrões para os aplicativos GTK/GNOME e os navegadores.
+# Botões da barra de título dos aplicativos que desenham a própria barra: os mesmos da barra do DuiaOS,
+# à direita (expandir, minimizar, fechar). O padrão do GNOME mostra só o de fechar.
+[org.gnome.desktop.wm.preferences]
+button-layout=':maximize,minimize,close'

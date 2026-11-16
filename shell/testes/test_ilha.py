@@ -226,6 +226,17 @@ class TesteAmpliacao(unittest.TestCase):
     """Os ícones piscavam ao passar o mouse (16/11): cada mudança de tamanho refazia a imagem do ícone,
     e o foco era medido nos ícones já ampliados. O auxiliar passa o mouse pela Ilha e confere os dois."""
 
+    def test_pulo_de_icone_ampliado_nao_e_cortado(self):
+        """O ícone clicado (ampliado, com o mouse em cima) pula ao abrir: saía 7,7 px pelo alto (16/11)."""
+        raiz = Path(__file__).resolve().parents[2]
+        with tempfile.TemporaryDirectory() as inicio:
+            ambiente = {**os.environ, "HOME": inicio, "XDG_CONFIG_HOME": inicio + "/.config",
+                        "XDG_RUNTIME_DIR": inicio, "XDG_DATA_HOME": inicio + "/.local/share"}
+            resultado = subprocess.run([sys.executable, str(raiz / "shell/testes/ilha_pulo.py"),
+                                        str(raiz / "shell/ilha-de-aplicativos/main.py")],
+                                       capture_output=True, text=True, timeout=120, env=ambiente, cwd=raiz)
+        self.assertIn("PULO-OK", resultado.stdout, resultado.stdout[-1500:] + resultado.stderr[-1500:])
+
     def test_ampliacao_estavel_e_sem_recarregar_imagens(self):
         raiz = Path(__file__).resolve().parents[2]
         with tempfile.TemporaryDirectory() as inicio:

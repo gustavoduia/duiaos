@@ -185,6 +185,62 @@ def chamar_notificacoes(metodo, *argumentos):
     QDBusConnection.sessionBus().asyncCall(mensagem)
 
 
+AVISADOS = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache") / "duiaos" / "atualizacoes-avisadas.json"
+
+
+def ler_avisados():
+    try:
+        import json
+        dados = json.loads(AVISADOS.read_text(encoding="utf-8"))
+        return dados if isinstance(dados, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def gravar_avisados(dados):
+    try:
+        import json
+        AVISADOS.parent.mkdir(parents=True, exist_ok=True)
+        AVISADOS.write_text(json.dumps(dados), encoding="utf-8")
+    except OSError:
+        pass
+
+
+def inicio_da_sessao():
+    """Quando a sessão começou: o início do labwc (o autostart passa LABWC_PID); senão, agora."""
+    import time
+    try:
+        return os.stat(f"/proc/{int(os.environ['LABWC_PID'])}").st_ctime
+    except (KeyError, ValueError, OSError):
+        return time.time()
+
+
+def notificar(titulo, texto):
+    """Balão de notificação das Atualizações; clicar abre Configurações › Atualizações (x-duiaos-abrir)."""
+    try:
+        import gi
+        gi.require_version("Gio", "2.0")
+        from gi.repository import Gio, GLib
+        conexao = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+        dicas = {"x-duiaos-abrir": GLib.Variant("s", "configuracoes:atualizacoes"),
+                 "desktop-entry": GLib.Variant("s", "duiaos-configuracoes")}
+        conexao.call_sync("org.freedesktop.Notifications", "/org/freedesktop/Notifications", "org.freedesktop.Notifications",
+                          "Notify", GLib.Variant("(susssasa{sv}i)", ("Atualizações", 0, "", titulo, texto,
+                                                                     ["default", "Ver", "abrir", "Ver atualizações"], dicas, -1)),
+                          None, Gio.DBusCallFlags.NONE, 5000, None)
+    except Exception as erro:                  # noqa: BLE001 — sem o serviço de notificações, fica o ícone
+        print("Barra: aviso de atualização não enviado:", erro, file=sys.stderr, flush=True)
+
+
+def registrar(nivel, texto, **dados):
+    """Evento nos relatórios do DuiaOS (duiaos_registro), sem nada se ele não estiver instalado."""
+    try:
+        import duiaos_registro
+        getattr(duiaos_registro, nivel)("barra.menus", texto, **dados)
+    except (ImportError, AttributeError, TypeError):
+        pass
+
+
 def _item(rotulo, atalho="", ativo=True, marcado=None, itens=None):
     tipo = "submenu" if itens else ("marcavel" if marcado is not None else "item")
     return {"id": abs(hash(rotulo)) % 10000 + 1, "rotulo": rotulo, "tipo": tipo, "ativo": ativo, "marcado": bool(marcado),
@@ -214,6 +270,7 @@ class Sistema(QObject):
     painelMudou = Signal()
     notificacoesMudaram = Signal()
     menusMudaram = Signal()
+    atualizacaoMudou = Signal()
     _foco = Signal(str, str, str)
     _menus = Signal(str, "QVariantList")
     _itens = Signal(int, "QVariantList")
@@ -234,6 +291,8 @@ class Sistema(QObject):
         self._menus.connect(self._ao_menus)
         self._itens.connect(self._ao_itens)
         self._leitor = None
+        self._atualizacao = {"icone": DEMONSTRACAO, "dica": "3 atualizações disponíveis" if DEMONSTRACAO else ""}
+        self._inicio_da_sessao = inicio_da_sessao()
         if DEMONSTRACAO:
             self._titulos_menu = [nome for nome, _itens in MENUS_DE_EXEMPLO]
             self._historico = [
@@ -246,12 +305,18 @@ class Sistema(QObject):
             self._timer_wise.start()
             import menus
             self._leitor = menus.ProcessoDeMenus(lambda app, nomes: self._menus.emit(app, list(nomes)),
-                                                 lambda indice, itens: self._itens.emit(indice, list(itens)))
+                                                 lambda indice, itens: self._itens.emit(indice, list(itens)),
+                                                 ao_registro=registrar)
+            self._apps_sem_menu = set()
             self._timer_foco = QTimer(self, interval=1000, timeout=self._buscar_foco)
             self._timer_foco.start()
             threading.Thread(target=self._ver_windows, daemon=True).start()
             self._timer_notificacoes = QTimer(self, interval=1000, timeout=self._ver_historico)
             self._timer_notificacoes.start()
+            # Atualização automática (ADR 058): ícone ao lado do relógio e avisos
+            self._timer_atualizacao = QTimer(self, interval=30000, timeout=self._ver_atualizacao)
+            self._timer_atualizacao.start()
+            QTimer.singleShot(5000, self._ver_atualizacao)
 
     def _ver_historico(self):
         try:
@@ -304,13 +369,36 @@ class Sistema(QObject):
             self._app = nome
             self.mudou.emit()
         if self._leitor:
-            self._leitor.foco(app_id)
+            self._leitor.foco(app_id, titulo)
+
+    # ---------------------------------------------------- atualização automática
+    def _ver_atualizacao(self):
+        import atualizacao_automatica as aa
+        avisados = ler_avisados()
+        agora = aa.avisos(aa.ler_estado(), aa.ler_modo(), avisados, aa.momento_do_inicio(), self._inicio_da_sessao)
+        estado = {"icone": agora["icone"], "dica": agora["dica"]}
+        if estado != self._atualizacao:
+            self._atualizacao = estado
+            self.atualizacaoMudou.emit()
+        for aviso in agora["notificacoes"]:
+            tipo, valor = aviso["chave"]
+            avisados[tipo] = valor
+            threading.Thread(target=notificar, args=(aviso["titulo"], aviso["texto"]), daemon=True).start()
+        if agora["notificacoes"]:
+            gravar_avisados(avisados)
+
+    atualizacaoIcone = Property(bool, lambda self: self._atualizacao["icone"], notify=atualizacaoMudou)
+    atualizacaoDica = Property(str, lambda self: self._atualizacao["dica"], notify=atualizacaoMudou)
 
     # ---------------------------------------------------- menu do aplicativo
     def _ao_menus(self, app_id, nomes):
         if self._painel.startswith("appmenu"):
             return
         nomes = list(nomes) if app_id else []
+        # Para os relatórios: cada aplicativo sem barra de menus aparece uma vez por sessão
+        if app_id and not nomes and app_id not in getattr(self, "_apps_sem_menu", {app_id}):
+            self._apps_sem_menu.add(app_id)
+            registrar("info", "Menus dos aplicativos: sem barra de menus pela acessibilidade", aplicativo=app_id)
         if nomes != self._titulos_menu:
             self._titulos_menu = nomes
             self.menusMudaram.emit()

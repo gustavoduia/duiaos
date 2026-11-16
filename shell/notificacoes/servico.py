@@ -48,6 +48,13 @@ XML = """
 VENCEU, FECHADA, PEDIDO = 1, 2, 3
 
 
+import re  # noqa: E402
+
+# Dica própria do DuiaOS: abrir uma tela do sistema ao clicar no balão (ex.: "configuracoes:atualizacoes").
+# Só aplicativos do DuiaOS e uma seção com letras e hífen: nada de comandos arbitrários por notificação.
+ABRIR_PERMITIDO = re.compile(r"^(configuracoes|loja|explorador-de-arquivos|central-de-ia)(:[a-z-]{1,40})?$")
+
+
 def interpretar(app_name, replaces_id, app_icon, summary, body, actions, hints, expire_timeout):
     """Notify → dicionário simples para a interface."""
     urgencia = hints.get("urgency", 1)
@@ -68,6 +75,7 @@ def interpretar(app_name, replaces_id, app_icon, summary, body, actions, hints, 
         "urgencia": urgencia,
         "tempo": int(expire_timeout),
         "residente": bool(hints.get("resident", False)),
+        "abrir": str(hints.get("x-duiaos-abrir", "")) if ABRIR_PERMITIDO.match(str(hints.get("x-duiaos-abrir", ""))) else "",
     }
 
 

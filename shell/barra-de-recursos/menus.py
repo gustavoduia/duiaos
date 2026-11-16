@@ -244,8 +244,8 @@ class LeitorDeMenus:
         self._linha.start()
 
     # Pedidos (chamados da linha principal)
-    def foco(self, app_id):
-        self._fila.put(("foco", app_id))
+    def foco(self, app_id, titulo=""):
+        self._fila.put(("foco", (app_id, titulo)))
 
     def itens(self, indice):
         self._fila.put(("itens", indice))
@@ -282,7 +282,7 @@ class LeitorDeMenus:
                 return
             try:
                 if pedido == "foco":
-                    self._ler_foco(valor)
+                    self._ler_foco(*valor)
                 elif pedido == "itens":
                     self._ler_itens(valor)
                 elif pedido == "acionar":
@@ -292,9 +292,11 @@ class LeitorDeMenus:
                 if pedido == "itens":
                     self._ao_itens(valor, [])
 
-    def _janela_ativa(self, app_id):
+    def _janela_ativa(self, app_id, titulo=""):
         """A janela com o estado ACTIVE entre os aplicativos que se descrevem pelo AT-SPI. Os que
-        têm o nome parecido com o app_id do labwc são vistos primeiro."""
+        têm o nome parecido com o app_id do labwc são vistos primeiro. Se nenhuma estiver ACTIVE
+        (alguns aplicativos não marcam a janela ativa no Wayland), vale a janela com o mesmo título
+        que o labwc diz estar em foco."""
         A, arvore = self._atspi, self._arvore
         mesa = A.get_desktop(0)
         aplicativos = [mesa.get_child_at_index(i) for i in range(min(mesa.get_child_count(), 80))]
@@ -307,6 +309,7 @@ class LeitorDeMenus:
             except Exception:                   # noqa: BLE001
                 return 2
             return 0 if chave and (chave in nome or nome in chave) else 1
+        pelo_titulo = None
         for app in sorted((a for a in aplicativos if a is not None), key=ordem):
             try:
                 if app.get_process_id() in proprios or (app.get_name() or "") in CAMADAS_DO_DUIAOS:
@@ -314,23 +317,25 @@ class LeitorDeMenus:
                 for janela in arvore.filhos(app, 30):
                     if "ACTIVE" in arvore.estados(janela):
                         return janela, (app.get_toolkit_name() or "")
+                    if titulo and pelo_titulo is None and arvore.nome(janela) == titulo:
+                        pelo_titulo = (janela, app.get_toolkit_name() or "")
             except Exception:                   # noqa: BLE001 — aplicativo que fechou no meio
                 continue
-        return None, ""
+        return pelo_titulo or (None, "")
 
-    def _ler_foco(self, app_id):
+    def _ler_foco(self, app_id, titulo=""):
         if self._arvore is None:
             self._enviar_menus(app_id, [])
             return
         janela, toolkit = None, ""
         if self._janela is not None:            # a mesma janela continua ativa? (uma chamada, sem varrer tudo)
             try:
-                if "ACTIVE" in self._arvore.estados(self._janela):
+                if "ACTIVE" in self._arvore.estados(self._janela) or (titulo and self._arvore.nome(self._janela) == titulo):
                     janela, toolkit = self._janela, self._toolkit
             except Exception:                   # noqa: BLE001 — a janela fechou
                 pass
         if janela is None:
-            janela, toolkit = self._janela_ativa(app_id)
+            janela, toolkit = self._janela_ativa(app_id, titulo)
         if janela is None:
             self._janela, self._menus = None, []
             self._enviar_menus(app_id, [])
@@ -420,7 +425,7 @@ def servico(entrada=sys.stdin, saida=sys.stdout):
             continue
         tipo = pedido.get("pedido")
         if tipo == "foco":
-            leitor.foco(str(pedido.get("app_id", "")))
+            leitor.foco(str(pedido.get("app_id", "")), str(pedido.get("titulo", "")))
         elif tipo == "itens" and isinstance(pedido.get("indice"), int):
             leitor.itens(pedido["indice"])
         elif tipo == "acionar" and isinstance(pedido.get("numero"), int):
@@ -435,8 +440,9 @@ class ProcessoDeMenus:
     em 3 segundos; sem o barramento de acessibilidade, tenta de novo a cada 30 segundos (até lá, só
     o menu da janela)."""
 
-    def __init__(self, ao_menus, ao_itens, comando=None):
+    def __init__(self, ao_menus, ao_itens, comando=None, ao_registro=None):
         self._ao_menus, self._ao_itens = ao_menus, ao_itens
+        self._registrar = ao_registro or (lambda _nivel, _texto, **_dados: None)
         self._comando = comando or [sys.executable, os.path.abspath(__file__), "--servico"]
         self._processo = None
         self._trava = threading.Lock()
@@ -469,7 +475,11 @@ class ProcessoDeMenus:
                     self._ao_itens(dados.get("indice", -9), dados.get("itens", []))
                 elif evento == "sem_atspi":
                     sem_atspi = True
-            processo.wait()
+            codigo = processo.wait()
+            if sem_atspi:
+                self._registrar("aviso", "Menus dos aplicativos: sem o barramento de acessibilidade (AT-SPI)")
+            elif not self._parado:
+                self._registrar("aviso", "Menus dos aplicativos: o leitor parou", codigo=codigo)
             with self._trava:
                 self._processo = None
             self._ao_menus("", [])                  # sem leitor: só o menu da janela
@@ -487,9 +497,9 @@ class ProcessoDeMenus:
         except (OSError, ValueError):
             return False
 
-    def foco(self, app_id):
+    def foco(self, app_id, titulo=""):
         self._ultimo_foco = app_id
-        self._mandar({"pedido": "foco", "app_id": app_id})
+        self._mandar({"pedido": "foco", "app_id": app_id, "titulo": titulo})
 
     def itens(self, indice):
         if not self._mandar({"pedido": "itens", "indice": indice}):

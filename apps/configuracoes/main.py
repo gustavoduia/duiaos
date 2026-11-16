@@ -890,6 +890,8 @@ class Ajustes(QObject):
                 if v.error().name().endswith(".Ocupado"):
                     # Já há uma atualização rodando (de outra janela ou do Wise): acompanha ela, sem começar outra
                     self.acompanharAgente()
+                elif metodo == "Configurar":
+                    self.aviso.emit(v.error().message())       # ex.: só administrador muda
                 elif metodo in ("Registros", "LerRegistro", "Estado"):
                     self._registro_aberto = {"titulo": "Registro", "texto": v.error().message()} if metodo == "LerRegistro" else getattr(self, "_registro_aberto", {})
                 else:
@@ -1002,6 +1004,29 @@ class Ajustes(QObject):
 
     registros = Property("QVariantList", lambda self: getattr(self, "_registros", []), notify=atualizacaoMudou)
     registroAberto = Property("QVariantMap", lambda self: getattr(self, "_registro_aberto", {}) or {}, notify=atualizacaoMudou)
+
+    # ---------------------------------------------- atualização automática (ADR 058)
+    def _modo_automatico(self):
+        import atualizacao_automatica as aa
+        return getattr(self, "_modo_automatico_demo", aa.MODO_PADRAO) if DEMONSTRACAO else aa.ler_modo()
+
+    @Slot(str)
+    def definirAtualizacaoAutomatica(self, modo):
+        """Vale para o computador todo: grava pelo duiaos-agente (administrador, pelo polkit)."""
+        import atualizacao_automatica as aa
+        if modo not in aa.MODOS:
+            return
+        if DEMONSTRACAO:
+            self._modo_automatico_demo = modo
+            self.atualizacaoMudou.emit()
+            return
+        import json
+        self._agente("Configurar", json.dumps({"modo": modo}), ao_responder=lambda _r: self.atualizacaoMudou.emit())
+        QTimer.singleShot(1500, self.atualizacaoMudou.emit)
+
+    atualizacaoAutomatica = Property(str, _modo_automatico, notify=atualizacaoMudou)
+    explicacaoAtualizacaoAutomatica = Property(str, lambda self: __import__("atualizacao_automatica").EXPLICACOES[self._modo_automatico()],
+                                               notify=atualizacaoMudou)
 
     @Slot()
     def procurarAtualizacoes(self):

@@ -220,6 +220,58 @@ def atualizar_modo_automatico(agora=None):
     return True
 
 
+# Botões dos aplicativos que desenham a própria barra de título (Chrome, Firefox, aplicativos GNOME):
+# os mesmos da barra do DuiaOS, à direita — expandir, minimizar e, no canto, fechar (ADR 054 e 058).
+# O padrão do GNOME é "appmenu:close": só o botão de fechar.
+BOTOES_GTK = ":maximize,minimize,close"
+
+# Navegadores feitos sobre o Chromium: "browser.custom_chrome_frame" falso = "Usar a barra de título e as
+# bordas do sistema", ou seja, a barra do DuiaOS (bolinhas azuis), em vez da barra própria.
+NAVEGADORES_CHROMIUM = {
+    "google-chrome": ("google-chrome", "google-chrome-stable"), "google-chrome-beta": ("google-chrome-beta",),
+    "chromium": ("chromium", "chromium-browser"), "BraveSoftware/Brave-Browser": ("brave-browser", "brave"),
+    "microsoft-edge": ("microsoft-edge", "microsoft-edge-stable"), "vivaldi": ("vivaldi", "vivaldi-stable"),
+}
+
+
+def barra_do_sistema_nos_navegadores(configuracao=None, instalado=None):
+    """Liga a barra de título do sistema nos navegadores Chromium instalados, perfil por perfil. Não mexe
+    num navegador aberto (ele regravaria o arquivo ao fechar): fica para a próxima entrada na sessão.
+    Navegador instalado e nunca aberto: o arquivo de preferências já nasce com a opção. Devolve os
+    arquivos que mudaram."""
+    import json
+    import shutil
+    configuracao = Path(configuracao or pastas.CONFIG)
+    instalado = instalado or (lambda nomes: any(shutil.which(n) for n in nomes))
+    mudados = []
+    for pasta, programas in NAVEGADORES_CHROMIUM.items():
+        dados = configuracao / pasta
+        if not instalado(programas):
+            continue
+        if dados.joinpath("SingletonLock").is_symlink() or dados.joinpath("SingletonLock").exists():
+            continue                                   # aberto agora
+        perfis = [p for p in dados.glob("*/Preferences") if p.parent.name == "Default" or p.parent.name.startswith("Profile ")]
+        if not perfis:
+            perfis = [dados / "Default" / "Preferences"]
+        for arquivo in perfis:
+            try:
+                atual = json.loads(arquivo.read_text(encoding="utf-8")) if arquivo.is_file() else {}
+                if not isinstance(atual, dict):
+                    continue
+                navegador = atual.setdefault("browser", {})
+                if not isinstance(navegador, dict) or navegador.get("custom_chrome_frame") is False:
+                    continue
+                navegador["custom_chrome_frame"] = False
+                arquivo.parent.mkdir(parents=True, exist_ok=True)
+                temporario = arquivo.with_name("Preferences.duiaos-tmp")
+                temporario.write_text(json.dumps(atual, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+                os.replace(temporario, arquivo)
+                mudados.append(arquivo)
+            except (OSError, ValueError):
+                continue
+    return mudados
+
+
 def aplicar_aparencia(escuro=None):
     """Modo escuro e estilo nas janelas (labwc) e nos aplicativos GTK; os do DuiaOS mudam sozinhos."""
     if escuro is None:
@@ -239,15 +291,17 @@ def aplicar_aparencia(escuro=None):
         arquivo = pastas.CONFIG / versao / "settings.ini"
         try:
             linhas = arquivo.read_text(encoding="utf-8").splitlines() if arquivo.is_file() else ["[Settings]"]
-            linhas = [l for l in linhas if not l.startswith("gtk-application-prefer-dark-theme")]
+            linhas = [l for l in linhas if not l.startswith(("gtk-application-prefer-dark-theme", "gtk-decoration-layout"))]
             if "[Settings]" not in linhas:
                 linhas.insert(0, "[Settings]")
             linhas.insert(linhas.index("[Settings]") + 1, f"gtk-application-prefer-dark-theme={'1' if escuro else '0'}")
+            linhas.insert(linhas.index("[Settings]") + 1, f"gtk-decoration-layout={BOTOES_GTK}")
             arquivo.parent.mkdir(parents=True, exist_ok=True)
             arquivo.write_text("\n".join(linhas) + "\n", encoding="utf-8")
         except OSError:
             pass
     _rodar("gsettings", "set", "org.gnome.desktop.interface", "color-scheme", "prefer-dark" if escuro else "default")
+    _rodar("gsettings", "set", "org.gnome.desktop.wm.preferences", "button-layout", BOTOES_GTK)
     _rodar("labwc", "--reconfigure")
 
 
@@ -293,6 +347,7 @@ def main(argumentos):
         aplicar_bloqueio()
     if acao == "aplicar":
         pastas.criar_pastas_padrao()
+        barra_do_sistema_nos_navegadores()
         import controles
         controles.aplicar_luz_noturna()
     return 0

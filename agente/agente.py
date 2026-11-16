@@ -17,6 +17,8 @@ sistema, instalar e remover aplicativos pelo apt. Fala pelo D-Bus do sistema
   Cancelar()   só enquanto baixa (parar no meio da instalação estraga pacotes)
   Registros() -> [{nome, quando, acao, resultado, mensagem}]   os últimos registros completos
   LerRegistro(nome) -> texto   a saída inteira do apt/dpkg de uma execução
+  Configuracao() -> {"modo"}   a atualização automática (automatica.py, ADR 058)
+  Configurar(json)   muda o modo da atualização automática (polkit: org.duiaos.agente.configurar_atualizacoes)
   sinal Mudou(json)   o mesmo de Estado, no máximo 2 vezes por segundo
 
 Andamento e travamentos (ADR 047): a tarefa traz início, tempo previsto, etapa atual (o processo que
@@ -47,6 +49,7 @@ gi.require_version("Gio", "2.0")
 from gi.repository import Gio, GLib  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import automatica  # noqa: E402
 import plano as pl  # noqa: E402
 from plano import Recusa  # noqa: E402
 
@@ -75,6 +78,8 @@ XML = """
       <arg name="nome" type="s" direction="in"/>
       <arg name="texto" type="s" direction="out"/>
     </method>
+    <method name="Configuracao"><arg name="json" type="s" direction="out"/></method>
+    <method name="Configurar"><arg name="json" type="s" direction="in"/></method>
     <signal name="Mudou"><arg name="json" type="s"/></signal>
   </interface>
 </node>
@@ -238,7 +243,7 @@ def descendentes(pid, proc="/proc"):
 
 
 class Agente:
-    def __init__(self, apt=None, usar_polkit=True, registro=REGISTRO):
+    def __init__(self, apt=None, usar_polkit=True, registro=REGISTRO, conf_atualizacoes=None):
         self.apt = apt or Apt()
         self.usar_polkit = usar_polkit
         self.registro = Path(registro)
@@ -253,6 +258,11 @@ class Agente:
         self.ultimo_uso = time.monotonic()
         self.pasta_registros = self.registro.parent / "registros"
         self.arquivo_estado = self.registro.parent / "estado.json"
+        # Atualização automática (ADR 058): o de verdade no sistema; nos testes, ao lado do registro
+        de_verdade = self.registro == REGISTRO
+        self.estado_atualizacoes = automatica.ESTADO if de_verdade else self.registro.parent / "atualizacoes.json"
+        self.conf_atualizacoes = Path(conf_atualizacoes) if conf_atualizacoes else (
+            automatica.CONF if de_verdade else self.registro.parent / "atualizacoes.conf")
         self._travou = ""
         self._carregar_estado()
 
@@ -347,6 +357,8 @@ class Agente:
                  "recusa": {"codigo": recusa.codigo, "mensagem": str(recusa)} if recusa else None}
         if not recusa:
             self.planos[plano["id"]] = {**plano, "uid": uid, "quando": agora}
+        if acao == "atualizar_sistema" and (not recusa or recusa.codigo == "NadaAFazer"):
+            automatica.registrar_verificacao(mudancas, self.estado_atualizacoes)   # o ícone da Barra
         self.registrar("preparado", uid=uid, acao=acao, argumentos=argumentos, resumo=resumo,
                        recusa=plano["recusa"])
         return plano
@@ -464,6 +476,10 @@ class Agente:
         self.registrar("executado", uid=self.tarefa["uid"] if self.tarefa else None, acao=acao,
                        argumentos=argumentos, resultado=resultado, mensagem=mensagem, saida=detalhe[-2000:])
         self._indexar(self.ultima)
+        if acao == "atualizar_sistema" and resultado in ("ok", "erro"):
+            pacotes = [f"{m['pacote']} {m.get('para', '')}".strip()
+                       for m in plano["mudancas"].get("atualizar", []) + plano["mudancas"].get("instalar", [])]
+            automatica.registrar_instalacao(resultado, pacotes, self.estado_atualizacoes)
         self.tarefa = None
         self.mudou()
 
@@ -564,6 +580,20 @@ class Agente:
         if self._processo and self._processo.poll() is None:
             self._processo.send_signal(signal.SIGINT)
 
+    def configurar(self, texto, uid, autorizado):
+        """Muda o modo da atualização automática (vale para o computador todo)."""
+        try:
+            modo = json.loads(texto or "{}").get("modo")
+        except (ValueError, AttributeError) as erro:
+            raise Recusa("Invalido", "Configuração inválida.") from erro
+        if modo not in automatica.MODOS:
+            raise Recusa("Invalido", f"Modo desconhecido: {str(modo)[:40]!r}.")
+        if not autorizado("org.duiaos.agente.configurar_atualizacoes"):
+            raise Recusa("NaoAutorizado", "Só um administrador deste computador muda a atualização automática.")
+        automatica.gravar_modo(modo, self.conf_atualizacoes)
+        automatica.gravar_estado({"modo": modo}, self.estado_atualizacoes)
+        self.registrar("configurado", uid=uid, atualizacao_automatica=modo)
+
     # --------------------------------------------------------------- D-Bus
     def _uid(self, remetente):
         return self.conexao.call_sync(
@@ -614,6 +644,11 @@ class Agente:
                     valor = GLib.Variant("(s)", (json.dumps(self.registros(), ensure_ascii=False),))
                 elif metodo == "LerRegistro":
                     valor = GLib.Variant("(s)", (self.ler_registro(parametros.unpack()[0]),))
+                elif metodo == "Configuracao":
+                    valor = GLib.Variant("(s)", (json.dumps({"modo": automatica.ler_modo(self.conf_atualizacoes)}),))
+                elif metodo == "Configurar":
+                    self.configurar(parametros.unpack()[0], uid, self._autorizador(remetente, uid))
+                    valor = None
                 else:
                     raise Recusa("Invalido", f"Método desconhecido: {metodo}")
                 GLib.idle_add(lambda: (invocacao.return_value(valor), False)[1])

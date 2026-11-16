@@ -1,0 +1,13 @@
+[Unit]
+Description=Atualização automática do DuiaOS (procurar, baixar e instalar conforme as Configurações)
+Documentation=file:///usr/share/duiaos/agente/automatica.py
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/share/duiaos/agente/automatica.py --ciclo
+# Baixar e instalar sem atrapalhar quem está usando o computador
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec=5h

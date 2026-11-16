@@ -236,6 +236,22 @@ Rectangle {
                 onClicado: barra.abrir("central", botaoCentral)
                 Icone { nome: "controles"; tamanho: 17 }
             }
+            // Atualizações (ADR 058): aparece quando há atualizações ou quando falta reiniciar
+            BotaoDaBarra {
+                id: botaoAtualizacao
+                visible: sistema.atualizacaoIcone
+                Accessible.role: Accessible.Button
+                Accessible.name: sistema.atualizacaoDica || "Atualizações"
+                onClicado: sistema.abrir("configuracoes:atualizacoes")
+                Item {
+                    width: 18; height: 18
+                    Icone { anchors.centerIn: parent; nome: "atualizacao"; tamanho: 17; cor: Tema.texto }
+                    Rectangle { x: 12; y: -1; width: 7; height: 7; radius: 3.5; color: Tema.azulDuia
+                                border { color: Tema.barra; width: 1 } }
+                }
+                // A dica aparece ao passar o mouse, no centro da barra (onde ficam os avisos)
+                HoverHandler { onHoveredChanged: if (hovered && sistema.atualizacaoDica !== "") aviso.mostrar(sistema.atualizacaoDica) }
+            }
             BotaoDaBarra {
                 id: botaoRelogio
                 painel: "calendario"
