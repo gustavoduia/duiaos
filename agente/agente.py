@@ -17,6 +17,8 @@ sistema, instalar e remover aplicativos pelo apt. Fala pelo D-Bus do sistema
   Cancelar()   só enquanto baixa (parar no meio da instalação estraga pacotes)
   Registros() -> [{nome, quando, acao, resultado, mensagem}]   os últimos registros completos
   LerRegistro(nome) -> texto   a saída inteira do apt/dpkg de uma execução
+  EspacoDoSistema() -> {"apt", "registros"}   o que dá para limpar no sistema, em bytes (ADR 060)
+  LimparSistema(json {"apt": bool, "registros": bool}) -> {"liberado"}   polkit: org.duiaos.agente.limpar_sistema
   Configuracao() -> {"modo"}   a atualização automática (automatica.py, ADR 058)
   Configurar(json)   muda o modo da atualização automática (polkit: org.duiaos.agente.configurar_atualizacoes)
   sinal Mudou(json)   o mesmo de Estado, no máximo 2 vezes por segundo
@@ -77,6 +79,11 @@ XML = """
     <method name="LerRegistro">
       <arg name="nome" type="s" direction="in"/>
       <arg name="texto" type="s" direction="out"/>
+    </method>
+    <method name="EspacoDoSistema"><arg name="json" type="s" direction="out"/></method>
+    <method name="LimparSistema">
+      <arg name="opcoes" type="s" direction="in"/>
+      <arg name="json" type="s" direction="out"/>
     </method>
     <method name="Configuracao"><arg name="json" type="s" direction="out"/></method>
     <method name="Configurar"><arg name="json" type="s" direction="in"/></method>
@@ -580,6 +587,49 @@ class Agente:
         if self._processo and self._processo.poll() is None:
             self._processo.send_signal(signal.SIGINT)
 
+    # ------------------------------------------------------- espaço (ADR 060)
+    PASTA_APT = Path("/var/cache/apt/archives")
+    PASTA_REGISTROS = Path("/var/log/journal")
+    LIMITE_REGISTROS = "200M"
+
+    def espaco_do_sistema(self):
+        """O que dá para limpar com segurança: pacotes já baixados pelo apt e registros antigos do sistema."""
+        def medir(pasta, sufixo=""):
+            total = 0
+            for raiz, _pastas, arquivos in os.walk(pasta):
+                for nome in arquivos:
+                    if nome.endswith(sufixo):
+                        try:
+                            total += os.lstat(os.path.join(raiz, nome)).st_blocks * 512
+                        except OSError:
+                            pass
+            return total
+        registros = medir(self.PASTA_REGISTROS)
+        # Os registros recentes ficam (até 200 MB): só o que passa disso é limpável
+        return {"apt": medir(self.PASTA_APT, ".deb"), "registros": max(0, registros - 200 * 1024 * 1024)}
+
+    def limpar_sistema(self, texto, uid, autorizado):
+        try:
+            opcoes = json.loads(texto or "{}")
+        except ValueError as erro:
+            raise Recusa("Invalido", "Opções inválidas.") from erro
+        if not isinstance(opcoes, dict) or not (opcoes.get("apt") or opcoes.get("registros")):
+            raise Recusa("Invalido", "Escolha o que limpar.")
+        if not autorizado("org.duiaos.agente.limpar_sistema"):
+            raise Recusa("NaoAutorizado", "Só um administrador deste computador limpa os arquivos do sistema.")
+        if self.tarefa:
+            raise Recusa("Ocupado", "Espere a atualização ou instalação terminar.")
+        antes = self.espaco_do_sistema()
+        if opcoes.get("apt"):
+            self.apt.rodar(["apt-get", "-q", "-o", "DPkg::Lock::Timeout=60", "clean"], tempo=300)
+        if opcoes.get("registros"):
+            self.apt.rodar(["journalctl", f"--vacuum-size={self.LIMITE_REGISTROS}"], tempo=300)
+        depois = self.espaco_do_sistema()
+        liberado = (antes["apt"] - depois["apt"] if opcoes.get("apt") else 0) + \
+                   (antes["registros"] - depois["registros"] if opcoes.get("registros") else 0)
+        self.registrar("limpeza", uid=uid, opcoes=opcoes, liberado=liberado)
+        return {"liberado": max(0, liberado)}
+
     def configurar(self, texto, uid, autorizado):
         """Muda o modo da atualização automática (vale para o computador todo)."""
         try:
@@ -644,6 +694,11 @@ class Agente:
                     valor = GLib.Variant("(s)", (json.dumps(self.registros(), ensure_ascii=False),))
                 elif metodo == "LerRegistro":
                     valor = GLib.Variant("(s)", (self.ler_registro(parametros.unpack()[0]),))
+                elif metodo == "EspacoDoSistema":
+                    valor = GLib.Variant("(s)", (json.dumps(self.espaco_do_sistema()),))
+                elif metodo == "LimparSistema":
+                    valor = GLib.Variant("(s)", (json.dumps(self.limpar_sistema(parametros.unpack()[0], uid,
+                                                                                self._autorizador(remetente, uid))),))
                 elif metodo == "Configuracao":
                     valor = GLib.Variant("(s)", (json.dumps({"modo": automatica.ler_modo(self.conf_atualizacoes)}),))
                 elif metodo == "Configurar":

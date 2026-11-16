@@ -325,7 +325,7 @@ class LeitorDeMenus:
 
     def _ler_foco(self, app_id, titulo=""):
         if self._arvore is None:
-            self._enviar_menus(app_id, [])
+            self._enviar_menus(app_id, [], "sem AT-SPI")
             return
         janela, toolkit = None, ""
         if self._janela is not None:            # a mesma janela continua ativa? (uma chamada, sem varrer tudo)
@@ -338,7 +338,7 @@ class LeitorDeMenus:
             janela, toolkit = self._janela_ativa(app_id, titulo)
         if janela is None:
             self._janela, self._menus = None, []
-            self._enviar_menus(app_id, [])
+            self._enviar_menus(app_id, [], "o aplicativo não se descreve pela acessibilidade")
             return
         barra = achar_barra(self._arvore, janela)
         menus = titulos(self._arvore, barra) if barra is not None else []
@@ -346,11 +346,13 @@ class LeitorDeMenus:
             self._nos = {}
             self._geracao += 1
         self._janela, self._toolkit, self._menus = janela, toolkit, menus
-        self._enviar_menus(app_id, [nome for _no, nome in menus])
+        motivo = "" if menus else ("a janela não tem barra de menus" if barra is None else "os menus estão vazios até serem abertos")
+        self._enviar_menus(app_id, [nome for _no, nome in menus], motivo)
 
-    def _enviar_menus(self, app_id, nomes):
+    def _enviar_menus(self, app_id, nomes, motivo=""):
         if (app_id, nomes) != self._ultimo:
             self._ultimo = (app_id, nomes)
+            self.motivo = motivo
             self._ao_menus(app_id, nomes)
 
     def _registrador(self, indice):
@@ -415,7 +417,8 @@ def servico(entrada=sys.stdin, saida=sys.stdout):
     def enviar(dados):
         with trava:
             print(json.dumps(dados, ensure_ascii=False), file=saida, flush=True)
-    leitor = LeitorDeMenus(lambda app, nomes: enviar({"evento": "menus", "app_id": app, "titulos": nomes}),
+    leitor = LeitorDeMenus(lambda app, nomes: enviar({"evento": "menus", "app_id": app, "titulos": nomes,
+                                                      "motivo": getattr(leitor, "motivo", "")}),
                            lambda indice, itens: enviar({"evento": "itens", "indice": indice, "itens": itens}),
                            lambda numero: enviar({"evento": "acionado", "numero": numero}))
     for linha in entrada:
@@ -448,6 +451,7 @@ class ProcessoDeMenus:
         self._trava = threading.Lock()
         self._parado = False
         self._ultimo_foco = ""
+        self.motivos = {}                   # app_id → por que ficou sem menus (para os relatórios)
         threading.Thread(target=self._manter, name="processo-de-menus", daemon=True).start()
 
     def _manter(self):
@@ -470,6 +474,8 @@ class ProcessoDeMenus:
                     continue
                 evento = dados.get("evento")
                 if evento == "menus":
+                    if dados.get("app_id") and not dados.get("titulos") and dados.get("motivo"):
+                        self.motivos[dados["app_id"]] = dados["motivo"]
                     self._ao_menus(dados.get("app_id", ""), dados.get("titulos", []))
                 elif evento == "itens":
                     self._ao_itens(dados.get("indice", -9), dados.get("itens", []))

@@ -558,6 +558,10 @@ def main():
     engine = QQmlApplicationEngine()
     interface.preparar(engine)
     engine.rootContext().setContextProperty("explorador", explorador)
+    # Menus na Barra de Recursos (Arquivo, Editar, Exibir, Ir; menu_do_app.py, ADR 059)
+    import menu_do_app
+    menu = menu_do_app.criar("explorador_de_arquivos", [])
+    engine.rootContext().setContextProperty("menuDoApp", menu)
     engine.rootContext().setContextProperty("capturaArquivo", captura)
     engine.load(PASTA / "ExploradorDeArquivos.qml")
     if not engine.rootObjects():

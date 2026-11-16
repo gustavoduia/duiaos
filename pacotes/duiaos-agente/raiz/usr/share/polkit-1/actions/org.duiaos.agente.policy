@@ -45,4 +45,13 @@
       <allow_active>auth_admin_keep</allow_active>
     </defaults>
   </action>
+  <action id="org.duiaos.agente.limpar_sistema">
+    <description>Limpar arquivos do sistema</description>
+    <message>É preciso autorização para limpar os arquivos do sistema</message>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+  </action>
 </policyconfig>

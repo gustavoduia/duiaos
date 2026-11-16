@@ -48,3 +48,4 @@ linha nova ou atualizada no mesmo envio.
 | --- | --- | --- | --- | --- |
 | Endereços num lugar só (trocar para duiaos.com.br aqui) | `compartilhado/enderecos.js` | `compartilhado/enderecos.js::duiaos.gustavoduia.workers.dev` | ADR 039 | main |
 | Publicação automática por aplicativo | `.github/workflows/` | `.github/workflows/site.yml::wrangler deploy`, `.github/workflows/documentacao.yml::wrangler deploy` | ADR 039 | main |
+| Página "Liberar espaço em disco" (Configurações › Armazenamento e avisos de espaço); menus dos aplicativos do DuiaOS; tamanho na loja | `documentacao/src/content/docs/como-fazer/` | `documentacao/src/content/docs/como-fazer/liberar-espaco-em-disco.md::Avisos de espaço`, `documentacao/src/content/docs/como-fazer/usar-os-menus-dos-aplicativos.md::Quais aplicativos mostram os menus`, `documentacao/src/content/docs/como-fazer/usar-a-duia-app-store.md::quanto o aplicativo baixa` | ADR 059/060 | main |

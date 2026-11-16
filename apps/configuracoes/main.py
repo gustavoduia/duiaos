@@ -49,7 +49,7 @@ from PySide6.QtQml import QQmlApplicationEngine  # noqa: E402
 
 DEMONSTRACAO = "--demonstracao" in sys.argv
 SECOES = ("wifi", "bluetooth", "notificacoes", "som", "tela", "energia", "aparencia", "papel", "descanso", "barra",
-          "usuario", "data", "teclado", "padroes", "atualizacoes", "privacidade", "ia", "sobre")
+          "usuario", "data", "teclado", "padroes", "armazenamento", "atualizacoes", "privacidade", "ia", "sobre")
 PASTA_FUNDOS = pastas.DADOS / "duiaos" / "fundos"          # imagens e vídeos importados
 EXTENSOES_FUNDO = (".jpg", ".jpeg", ".png", ".webp", ".gif", ".mp4", ".webm", ".mkv", ".mov", ".m4v")
 AGENTE = ("org.duiaos.Agente1", "/org/duiaos/Agente1")
@@ -136,6 +136,73 @@ def _catalogo_do_repositorio():
         return fichas.catalogo()
     except Exception:          # noqa: BLE001
         return {"atualizacoes": []}
+
+
+def recomendacoes_de_limpeza():
+    """O que dá para apagar com segurança na conta da pessoa, com o tamanho de cada coisa."""
+    import armazenamento as ar
+    lista = []
+    lixeira = ar.tamanho_da_pasta(pastas.LIXEIRA, limite_s=10) if pastas.LIXEIRA.is_dir() else 0
+    if lixeira:
+        lista.append({"id": "lixeira", "titulo": "Esvaziar a Lixeira", "tamanho": lixeira, "acao": "Esvaziar",
+                      "texto": "O que você já apagou continua ocupando espaço até esvaziar a Lixeira."})
+    cache = sum(c["tamanho"] for c in ar.caches())
+    if cache > 50 * 1024 * 1024:
+        lista.append({"id": "caches", "titulo": "Arquivos temporários dos aplicativos", "tamanho": cache, "acao": "Revisar",
+                      "texto": "Cópias que navegadores e aplicativos guardam para abrir mais rápido. Eles refazem o que precisarem."})
+    antigos = ar.antigos(pastas.pasta("DOWNLOAD"))
+    if antigos:
+        lista.append({"id": "antigos", "titulo": "Downloads antigos", "tamanho": sum(a["tamanho"] for a in antigos), "acao": "Revisar",
+                      "texto": f"{len(antigos)} {'arquivo' if len(antigos) == 1 else 'arquivos'} em Downloads sem uso há mais de 90 dias."})
+    grandes = ar.maiores_por_categoria(pastas.INICIO, "grandes", minimo=500 * 1000 ** 2, pular=[pastas.INICIO / ".cache", pastas.LIXEIRA])
+    if grandes:
+        lista.append({"id": "grandes", "titulo": "Arquivos grandes", "tamanho": sum(a["tamanho"] for a in grandes), "acao": "Revisar",
+                      "texto": f"{len(grandes)} {'arquivo' if len(grandes) == 1 else 'arquivos'} com mais de 500 MB na sua pasta pessoal."})
+    if ar.tem_flatpak_da_pessoa():
+        lista.append({"id": "flatpak", "titulo": "Ambientes do Flathub sem uso", "tamanho": 0, "acao": "Limpar",
+                      "texto": "Partes que aplicativos já removidos usavam. O Flathub remove só o que nenhum aplicativo usa."})
+    lista.append({"id": "duplicados", "titulo": "Arquivos repetidos", "tamanho": 0, "acao": "Procurar",
+                  "texto": "Procura cópias iguais do mesmo arquivo na sua pasta pessoal (leva alguns segundos)."})
+    return lista
+
+
+def armazenamento_de_exemplo():
+    gb = 1000 ** 3
+    return {"carregando": False, "sistema": {"total": 256 * gb, "usado": 231 * gb, "livre": 25 * gb},
+            "dispositivos": [
+                {"nome": "Disco do sistema", "montado": "/", "caminho": "/dev/nvme0n1p5", "sistema": "ext4", "total": 256 * gb,
+                 "usado": 231 * gb, "livre": 25 * gb, "removivel": False, "nivel": "pouco", "modelo": "SAMSUNG MZVLB256"},
+                {"nome": "Windows", "montado": "", "caminho": "/dev/nvme0n1p3", "sistema": "ntfs", "total": 180 * gb, "usado": 0, "livre": 0,
+                 "removivel": False, "nivel": "", "modelo": "SAMSUNG MZVLB256"},
+                {"nome": "PENDRIVE", "montado": "/media/gustavo/PENDRIVE", "caminho": "/dev/sda1", "sistema": "vfat", "total": 32 * gb,
+                 "usado": 9 * gb, "livre": 23 * gb, "removivel": True, "nivel": "ok", "modelo": "SanDisk"}],
+            "uso": [{"id": "aplicativos", "nome": "Aplicativos", "tamanho": 38 * gb}, {"id": "videos", "nome": "Vídeos", "tamanho": 61 * gb},
+                    {"id": "ia", "nome": "Modelos de IA (Wise)", "tamanho": 9 * gb}, {"id": "pictures", "nome": "Imagens", "tamanho": 27 * gb},
+                    {"id": "download", "nome": "Downloads", "tamanho": 22 * gb}, {"id": "documents", "nome": "Documentos", "tamanho": 12 * gb},
+                    {"id": "music", "nome": "Música", "tamanho": 8 * gb}, {"id": "cache", "nome": "Arquivos temporários (caches)", "tamanho": 6 * gb},
+                    {"id": "lixeira", "nome": "Lixeira", "tamanho": 4 * gb}, {"id": "pessoal", "nome": "Outros arquivos seus", "tamanho": 14 * gb},
+                    {"id": "sistema", "nome": "Sistema e outros", "tamanho": 30 * gb}],
+            "recomendacoes": [
+                {"id": "antigos", "titulo": "Downloads antigos", "tamanho": 14 * gb, "acao": "Revisar",
+                 "texto": "37 arquivos em Downloads sem uso há mais de 90 dias."},
+                {"id": "caches", "titulo": "Arquivos temporários dos aplicativos", "tamanho": 6 * gb, "acao": "Revisar",
+                 "texto": "Cópias que navegadores e aplicativos guardam para abrir mais rápido. Eles refazem o que precisarem."},
+                {"id": "lixeira", "titulo": "Esvaziar a Lixeira", "tamanho": 4 * gb, "acao": "Esvaziar",
+                 "texto": "O que você já apagou continua ocupando espaço até esvaziar a Lixeira."},
+                {"id": "apt", "titulo": "Pacotes de instalação já usados", "tamanho": int(1.8 * gb), "acao": "Limpar",
+                 "texto": "Cópias dos pacotes que o sistema já instalou. Podem ser apagadas: baixam de novo se precisar."},
+                {"id": "duplicados", "titulo": "Arquivos repetidos", "tamanho": 0, "acao": "Procurar",
+                 "texto": "Procura cópias iguais do mesmo arquivo na sua pasta pessoal (leva alguns segundos)."}],
+            "lista": {"tipo": "", "titulo": "", "itens": [], "carregando": False}}
+
+
+def lista_de_exemplo(tipo):
+    mb = 1000 ** 2
+    nomes = {"videos": [("Viagem Gramado 2025.mp4", 4200), ("Aniversário.mov", 2900), ("Tutorial gravado.mkv", 1300)],
+             "programas": [("GIMP", 1368), ("LibreOffice", 620), ("VLC", 95)]}
+    return [{"caminho": f"/home/demo/Vídeos/{n}" if tipo != "programas" else f"flathub:org.exemplo.{n}", "nome": n,
+             "tamanho": t * mb, "pasta": "/home/demo/Vídeos" if tipo != "programas" else "Flathub", "mudou": 1760000000}
+            for n, t in nomes.get(tipo, nomes["videos"])]
 
 
 def detalhar_plano(plano):
@@ -235,6 +302,9 @@ class Ajustes(QObject):
         threading.Thread(target=tarefa, daemon=True).start()
 
     def _ao_pronto(self, nome, resultado):
+        if nome.startswith("armazenamento"):
+            self._ao_armazenamento(nome, resultado)
+            return
         if isinstance(resultado, Exception):
             return
         if nome == "aviso-papel":
@@ -892,6 +962,11 @@ class Ajustes(QObject):
                     self.acompanharAgente()
                 elif metodo == "Configurar":
                     self.aviso.emit(v.error().message())       # ex.: só administrador muda
+                elif metodo in ("EspacoDoSistema", "LimparSistema"):
+                    if metodo == "LimparSistema":
+                        self.aviso.emit(v.error().message())
+                    self._mudar_armaz(carregando=False)
+                    return v.deleteLater()
                 elif metodo in ("Registros", "LerRegistro", "Estado"):
                     self._registro_aberto = {"titulo": "Registro", "texto": v.error().message()} if metodo == "LerRegistro" else getattr(self, "_registro_aberto", {})
                 else:
@@ -1004,6 +1079,155 @@ class Ajustes(QObject):
 
     registros = Property("QVariantList", lambda self: getattr(self, "_registros", []), notify=atualizacaoMudou)
     registroAberto = Property("QVariantMap", lambda self: getattr(self, "_registro_aberto", {}) or {}, notify=atualizacaoMudou)
+
+    # ---------------------------------------------- armazenamento (ADR 060)
+    armazenamentoMudou = Signal()
+
+    def _armazenamento(self):
+        return getattr(self, "_armaz", {"carregando": True, "dispositivos": [], "uso": [], "recomendacoes": [],
+                                        "lista": {"tipo": "", "titulo": "", "itens": [], "carregando": False}})
+
+    def _mudar_armaz(self, **mudar):
+        self._armaz = {**self._armazenamento(), **mudar}
+        self.armazenamentoMudou.emit()
+
+    @Slot()
+    def medirArmazenamento(self):
+        """Mede tudo de novo (discos, uso por categoria e o que dá para limpar), em segundo plano."""
+        import armazenamento as ar
+        self._mudar_armaz(carregando=True)
+        if DEMONSTRACAO:
+            self._mudar_armaz(**armazenamento_de_exemplo())
+            if "--lista" in sys.argv:                       # demonstração de uma lista (ex.: --lista videos)
+                self.listarArmazenamento(argumento("--lista", "videos"))
+            return
+
+        def medir():
+            discos = ar.dispositivos()
+            sistema = next((d for d in discos if d["montado"] == "/"), None)
+            usuario = {chave: pastas.pasta(chave) for chave in pastas.PADRAO}
+            uso = ar.uso_por_categoria(pastas.INICIO, usuario, pastas.LIXEIRA, os.environ.get("XDG_CACHE_HOME") or pastas.INICIO / ".cache",
+                                       disco=sistema)
+            return {"dispositivos": discos, "uso": uso, "sistema": sistema or {}}
+        self._em_fundo("armazenamento-medir", medir)
+        self._em_fundo("armazenamento-recomendacoes", recomendacoes_de_limpeza)
+        self._agente("EspacoDoSistema", ao_responder=lambda r: self._ao_armazenamento("armazenamento-sistema", r[0]))
+
+    def _ao_armazenamento(self, nome, resultado):
+        import json as _json
+        if isinstance(resultado, Exception):
+            self.aviso.emit("Não consegui medir o armazenamento: " + str(resultado)[:120])
+            self._mudar_armaz(carregando=False)
+            return
+        if nome == "armazenamento-medir":
+            self._mudar_armaz(carregando=False, **resultado)
+        elif nome == "armazenamento-recomendacoes":
+            atual = [r for r in self._armazenamento()["recomendacoes"] if r.get("id") in ("apt", "registros")]
+            self._mudar_armaz(recomendacoes=sorted(resultado + atual, key=lambda r: -r.get("tamanho", 0)))
+        elif nome == "armazenamento-sistema":
+            dados = _json.loads(resultado)
+            extras = [{"id": "apt", "titulo": "Pacotes de instalação já usados", "tamanho": dados.get("apt", 0), "acao": "Limpar",
+                       "texto": "Cópias dos pacotes que o sistema já instalou. Podem ser apagadas: baixam de novo se precisar."},
+                      {"id": "registros", "titulo": "Registros antigos do sistema", "tamanho": dados.get("registros", 0), "acao": "Limpar",
+                       "texto": "Histórico técnico do sistema. Os registros mais recentes ficam."}]
+            atual = [r for r in self._armazenamento()["recomendacoes"] if r.get("id") not in ("apt", "registros")]
+            self._mudar_armaz(recomendacoes=sorted(atual + [e for e in extras if e["tamanho"] > 1024 * 1024],
+                                                   key=lambda r: -r.get("tamanho", 0)))
+        elif nome == "armazenamento-lista":
+            self._mudar_armaz(lista={**self._armazenamento()["lista"], **resultado, "carregando": False})
+        elif nome == "armazenamento-feito":
+            if resultado:
+                self.aviso.emit(resultado)
+            self.medirArmazenamento()
+
+    @Slot(str)
+    def listarArmazenamento(self, tipo):
+        """Uma lista para escolher o que apagar: um tipo de arquivo (videos, imagens…), "grandes", "antigos"
+        (Downloads), "duplicados", "caches" ou "programas"."""
+        import armazenamento as ar
+        if not tipo:                                        # "Voltar": fecha a lista
+            self._mudar_armaz(lista={"tipo": "", "titulo": "", "itens": [], "carregando": False})
+            return
+        titulos = {"grandes": "Arquivos grandes", "antigos": "Downloads com mais de 90 dias", "duplicados": "Arquivos repetidos",
+                   "caches": "Arquivos temporários dos aplicativos", "programas": "Aplicativos instalados",
+                   **{k: v[0] for k, v in ar.CATEGORIAS.items()}}
+        self._mudar_armaz(lista={"tipo": tipo, "titulo": titulos.get(tipo, tipo), "itens": [], "carregando": True})
+        if DEMONSTRACAO:
+            self._mudar_armaz(lista={"tipo": tipo, "titulo": titulos.get(tipo, tipo), "itens": lista_de_exemplo(tipo), "carregando": False})
+            return
+
+        def listar():
+            ocultas = [pastas.INICIO / ".cache", pastas.LIXEIRA]
+            if tipo == "antigos":
+                itens = ar.antigos(pastas.pasta("DOWNLOAD"))
+            elif tipo == "duplicados":
+                itens = []
+                for grupo in ar.duplicados(pastas.INICIO, pular=ocultas)[:80]:
+                    for extra in grupo["arquivos"][1:]:          # o primeiro fica: os outros são as cópias
+                        itens.append({"caminho": extra, "nome": os.path.basename(extra), "tamanho": grupo["tamanho"],
+                                      "pasta": os.path.dirname(extra), "detalhe": "Igual a " + grupo["arquivos"][0]})
+            elif tipo == "caches":
+                itens = [{**c, "pasta": c["caminho"]} for c in ar.caches()]
+            elif tipo == "programas":
+                itens = [{**p, "caminho": p["id_loja"], "pasta": "Flathub" if p["fonte"] == "flathub" else "Debian"}
+                         for p in ar.programas_por_tamanho()]
+            else:
+                itens = ar.maiores_por_categoria(pastas.INICIO, tipo, pular=ocultas)
+            return {"tipo": tipo, "itens": itens}
+        self._em_fundo("armazenamento-lista", listar)
+
+    @Slot(str, "QVariantList")
+    def apagarDoArmazenamento(self, tipo, caminhos):
+        """Apaga o que a pessoa marcou: arquivos vão para a Lixeira; caches são apagados de vez."""
+        import armazenamento as ar
+        caminhos = [str(c) for c in caminhos]
+        if DEMONSTRACAO or not caminhos:
+            return
+        from tipos import tamanho_legivel
+
+        def apagar():
+            if tipo == "caches":
+                return "Liberados " + tamanho_legivel(ar.apagar_caches(caminhos)) + "."
+            tamanho = sum(os.path.getsize(c) for c in caminhos if os.path.isfile(c))
+            ar.operacoes_do_explorador().mover_para_lixeira(caminhos)
+            return (f"{len(caminhos)} {'item foi' if len(caminhos) == 1 else 'itens foram'} para a Lixeira ({tamanho_legivel(tamanho)}). "
+                    "Esvazie a Lixeira para liberar o espaço.")
+        self._em_fundo("armazenamento-feito", apagar)
+
+    @Slot(str)
+    def limparRecomendacao(self, ident):
+        """Botão de uma recomendação de limpeza."""
+        import armazenamento as ar
+        from tipos import tamanho_legivel
+        if DEMONSTRACAO:
+            self.aviso.emit("Demonstração: nada foi apagado.")
+            return
+        if ident == "lixeira":
+            def esvaziar():
+                ar.operacoes_do_explorador().esvaziar_lixeira()
+                return "A Lixeira foi esvaziada."
+            self._em_fundo("armazenamento-feito", esvaziar)
+        elif ident == "flatpak":
+            self._em_fundo("armazenamento-feito", lambda: "Liberados " + tamanho_legivel(ar.remover_flatpak_sem_uso()) + ".")
+        elif ident in ("apt", "registros"):
+            import json as _json
+            self._agente("LimparSistema", _json.dumps({ident: True}),
+                         ao_responder=lambda r: self._ao_armazenamento(
+                             "armazenamento-feito", "Liberados " + tamanho_legivel(_json.loads(r[0]).get("liberado", 0)) + "."))
+        elif ident in ("caches", "antigos", "grandes", "duplicados"):
+            self.listarArmazenamento(ident)
+
+    @Slot(str)
+    def abrirNaLoja(self, id_loja):
+        if not DEMONSTRACAO:
+            comum.abrir_app_duiaos("loja", "--pagina", "app:" + id_loja)
+
+    @Slot(str)
+    def mostrarNoExplorador(self, caminho):
+        if not DEMONSTRACAO:
+            comum.abrir_app_duiaos("explorador-de-arquivos", caminho)
+
+    armazenamento = Property("QVariantMap", _armazenamento, notify=armazenamentoMudou)
 
     # ---------------------------------------------- atualização automática (ADR 058)
     def _modo_automatico(self):
@@ -1174,6 +1398,10 @@ def main():
     interface.preparar(engine)
     contexto = engine.rootContext()
     contexto.setContextProperty("ajustes", ajustes)
+    # Menus na Barra de Recursos (menu_do_app.py, ADR 059)
+    import menu_do_app
+    menu = menu_do_app.criar("configuracoes", [])          # guardado numa variável: sem isso o Python o descarta
+    contexto.setContextProperty("menuDoApp", menu)
     contexto.setContextProperty("controles", estado)
     contexto.setContextProperty("capturaArquivo", captura)
     contexto.setContextProperty("caminhoComum", str(comum.PASTA_SHELL / "comum"))

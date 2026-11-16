@@ -14,6 +14,29 @@ Window {
     color: Tema.fundo
     title: "Configurações"
 
+    // Menus na Barra de Recursos (ADR 059): Configurações e Exibir (todas as seções)
+    readonly property var menusDoApp: {
+        var it = function (id, rotulo, marcado) { return { id: id, rotulo: rotulo, tipo: marcado === undefined ? "item" : "marcavel",
+                                                          ativo: true, marcado: marcado === true, atalho: "", itens: [] } }
+        var sep = { id: -1, rotulo: "", tipo: "separador", ativo: false, marcado: false, atalho: "", itens: [] }
+        var exibir = []
+        for (var i = 0; i < secoes.length; i++) {
+            if (i > 0 && secoes[i].grupo !== secoes[i - 1].grupo) exibir.push(sep)
+            exibir.push(it("secao:" + secoes[i].id, secoes[i].nome, ajustes.secao === secoes[i].id))
+        }
+        return [{ rotulo: "Configurações", itens: [it("secao:sobre", "Sobre este computador"), it("secao:atualizacoes", "Atualizações…"), sep,
+                                                    it("fechar", "Fechar")] },
+                { rotulo: "Exibir", itens: exibir }]
+    }
+    onMenusDoAppChanged: menuDoApp.definirMenus(menusDoApp)
+    Connections {
+        target: menuDoApp
+        function onAcionado(id) {
+            if (id.indexOf("secao:") === 0) ajustes.irPara(id.slice(6))
+            else if (id === "fechar") Qt.quit()
+        }
+    }
+
     readonly property var secoes: [
         { id: "wifi", nome: "Wi-Fi", icone: "wifi-3", cor: "azul", grupo: 0 },
         { id: "bluetooth", nome: "Bluetooth", icone: "bluetooth", cor: "azul", grupo: 0 },
@@ -29,6 +52,7 @@ Window {
         { id: "data", nome: "Data e hora", icone: "relogio", cor: "noite", grupo: 3 },
         { id: "teclado", nome: "Idioma e teclado", icone: "teclado", cor: "azul", grupo: 3 },
         { id: "padroes", nome: "Aplicativos padrão", icone: "aplicativos", cor: "noite", grupo: 3 },
+        { id: "armazenamento", nome: "Armazenamento", icone: "disco", cor: "noite", grupo: 4 },
         { id: "atualizacoes", nome: "Atualizações", icone: "reiniciar", cor: "azul", grupo: 4 },
         { id: "privacidade", nome: "Privacidade", icone: "escudo", cor: "azul", grupo: 4 },
         { id: "ia", nome: "Inteligência artificial", icone: "ia", cor: "noite", grupo: 4 },
@@ -209,7 +233,7 @@ Window {
             sourceComponent: ({ wifi: paginaWifi, bluetooth: paginaBluetooth, notificacoes: paginaNotificacoes, som: paginaSom,
                                 tela: paginaTela, energia: paginaEnergia, aparencia: paginaAparencia, papel: paginaPapel,
                                 descanso: paginaDescanso, barra: paginaBarra, usuario: paginaUsuario, data: paginaData,
-                                teclado: paginaTeclado, padroes: paginaPadroes, atualizacoes: paginaAtualizacoes,
+                                teclado: paginaTeclado, padroes: paginaPadroes, armazenamento: paginaArmazenamento, atualizacoes: paginaAtualizacoes,
                                 privacidade: paginaPrivacidade, ia: paginaIa, sobre: paginaSobre })[ajustes.secao]
         }
     }
@@ -998,6 +1022,229 @@ Window {
         segundos = Math.max(0, Math.round(segundos))
         var m = Math.floor(segundos / 60), s = segundos % 60
         return m + ":" + (s < 10 ? "0" : "") + s
+    }
+
+    // ------------------------------------------------------------------ Armazenamento (ADR 060)
+    function bytes(n) {
+        n = n || 0
+        if (n < 1000) return n + " B"
+        var u = ["KB", "MB", "GB", "TB"], i = -1
+        do { n /= 1000; i++ } while (n >= 1000 && i < u.length - 1)
+        return (n >= 100 || i < 2 ? Math.round(n) : n.toFixed(1).replace(".", ",")) + " " + u[i]
+    }
+    // Cor de cada parte da barra do disco: tons do azul DuiaOS para o que é da pessoa, cinza para o sistema
+    function corDoUso(id) {
+        return ({ aplicativos: "#5B8CFF", videos: "#2447A8", pictures: "#22D3EE", music: "#A78BFA", documents: "#3D5BFF",
+                  download: "#7FB2FF", desktop: "#4A76E8", ia: "#2DD4A7", cache: "#E8A33D", lixeira: "#FF8A65",
+                  pessoal: "#9AA6C7", sistema: Tema.textoApagado })[id] || Tema.bordaForte
+    }
+
+    Component {
+        id: paginaArmazenamento
+        Pagina {
+            id: par
+            readonly property var ar: ajustes.armazenamento
+            readonly property var lista: ar.lista || ({ tipo: "", itens: [] })
+            readonly property var sis: ar.sistema || ({})
+            property var marcados: ({})
+            readonly property int quantosMarcados: Object.keys(marcados).length
+            readonly property real tamanhoMarcado: {
+                var t = 0
+                for (var i = 0; i < lista.itens.length; i++) if (marcados[lista.itens[i].caminho]) t += lista.itens[i].tamanho
+                return t
+            }
+            function marcar(caminho, sim) { var m = Object.assign({}, marcados); if (sim) m[caminho] = true; else delete m[caminho]; marcados = m }
+            function marcarTodos(sim) { var m = {}; if (sim) for (var i = 0; i < lista.itens.length; i++) m[lista.itens[i].caminho] = true; marcados = m }
+            onListaChanged: marcados = ({})
+            Component.onCompleted: ajustes.medirArmazenamento()
+
+            // ================= visão geral (some enquanto uma lista está aberta)
+            Destaque {
+                visible: par.lista.tipo === ""
+                icone: "disco"; estilo: par.ar.dispositivos.length && par.sis.total && par.sis.livre / par.sis.total < 0.1 ? "noite" : "azul"
+                titulo: par.sis.total ? janela.bytes(par.sis.livre) + " livres no disco do sistema" : (par.ar.carregando ? "Medindo o armazenamento…" : "Armazenamento")
+                texto: par.sis.total ? janela.bytes(par.sis.usado) + " usados de " + janela.bytes(par.sis.total)
+                                       + (par.ar.carregando ? ". Medindo o que ocupa cada parte…" : ". Veja abaixo o que ocupa espaço e o que dá para liberar.")
+                                     : "Os discos deste computador, o que ocupa espaço e o que dá para liberar."
+            }
+
+            // Barra do disco do sistema, dividida pelo que ocupa
+            Column {
+                visible: par.lista.tipo === "" && !!par.sis.total
+                width: parent.width
+                spacing: 10
+                Rectangle {
+                    width: parent.width; height: 22; radius: 11; clip: true
+                    color: Tema.controleDesligado
+                    Row {
+                        anchors.fill: parent
+                        Repeater {
+                            model: par.ar.uso
+                            Rectangle {
+                                required property var modelData
+                                height: parent.height
+                                width: par.sis.total ? parent.width * modelData.tamanho / par.sis.total : 0
+                                color: janela.corDoUso(modelData.id)
+                                Rectangle { anchors.right: parent.right; width: 1.5; height: parent.height; color: Tema.cartao; opacity: 0.8 }
+                            }
+                        }
+                    }
+                    // Enquanto mede, só o usado em tom neutro
+                    Rectangle { visible: par.ar.uso.length === 0; height: parent.height; radius: 11
+                                width: par.sis.total ? parent.width * par.sis.usado / par.sis.total : 0; color: Tema.bordaForte }
+                }
+                Flow {
+                    width: parent.width
+                    spacing: 14
+                    Repeater {
+                        model: par.ar.uso
+                        Row {
+                            required property var modelData
+                            spacing: 6
+                            Rectangle { width: 9; height: 9; radius: 4.5; anchors.verticalCenter: parent.verticalCenter; color: janela.corDoUso(modelData.id) }
+                            Text { text: modelData.nome + "  " + janela.bytes(modelData.tamanho); color: Tema.textoSecundario
+                                   font { family: Tema.fonteTexto; pixelSize: 12 } }
+                        }
+                    }
+                }
+            }
+
+            // Recomendações
+            Grupo {
+                visible: par.lista.tipo === "" && par.ar.recomendacoes.length > 0
+                titulo: "Liberar espaço"
+                Repeater {
+                    model: par.ar.recomendacoes
+                    Linha {
+                        required property var modelData
+                        required property int index
+                        icone: ({ lixeira: "lixeira", caches: "reiniciar", antigos: "download", grandes: "arquivo", flatpak: "aplicativos",
+                                  duplicados: "copiar", apt: "sacola", registros: "documento" })[modelData.id] || "disco"
+                        titulo: modelData.titulo + (modelData.tamanho > 0 ? " · " + janela.bytes(modelData.tamanho) : "")
+                        descricao: modelData.texto
+                        ultima: index === par.ar.recomendacoes.length - 1
+                        Botao { texto: modelData.acao; tipo: modelData.acao === "Revisar" || modelData.acao === "Procurar" ? "secundario" : "primario"
+                                onClicado: ajustes.limparRecomendacao(modelData.id) }
+                    }
+                }
+            }
+
+            // Arquivos por tipo
+            Grupo {
+                visible: par.lista.tipo === ""
+                titulo: "Gerenciar por tipo"
+                Repeater {
+                    model: [{ id: "videos", nome: "Vídeos", icone: "video" }, { id: "imagens", nome: "Imagens", icone: "imagem" },
+                            { id: "musica", nome: "Música e áudio", icone: "musica" }, { id: "documentos", nome: "Documentos", icone: "documento" },
+                            { id: "compactados", nome: "Arquivos compactados", icone: "compactado" },
+                            { id: "instaladores", nome: "Instaladores e imagens de disco", icone: "sacola" },
+                            { id: "copias", nome: "Cópias de segurança", icone: "escudo" },
+                            { id: "grandes", nome: "Arquivos grandes (qualquer tipo)", icone: "arquivo" },
+                            { id: "duplicados", nome: "Arquivos repetidos", icone: "copiar" },
+                            { id: "programas", nome: "Aplicativos instalados", icone: "aplicativos" }]
+                    Linha {
+                        required property var modelData
+                        required property int index
+                        icone: modelData.icone; titulo: modelData.nome; clicavel: true
+                        ultima: index === 9
+                        onClicada: ajustes.listarArmazenamento(modelData.id)
+                        Icone { nome: "seta-direita"; tamanho: 14; cor: Tema.textoApagado }
+                    }
+                }
+            }
+
+            // Dispositivos
+            Grupo {
+                visible: par.lista.tipo === "" && par.ar.dispositivos.length > 0
+                titulo: "Discos e dispositivos"
+                Repeater {
+                    model: par.ar.dispositivos
+                    Linha {
+                        required property var modelData
+                        required property int index
+                        icone: modelData.removivel ? "ejetar" : "disco"
+                        titulo: modelData.nome + (modelData.total ? " · " + janela.bytes(modelData.total) : "")
+                        descricao: (modelData.montado ? janela.bytes(modelData.livre) + " livres de " + janela.bytes(modelData.total)
+                                                       + (modelData.nivel === "cheio" ? " · disco cheio" : (modelData.nivel === "pouco" ? " · pouco espaço" : ""))
+                                                     : "Não está aberto neste sistema")
+                                   + (modelData.modelo ? " · " + modelData.modelo : "")
+                        ultima: index === par.ar.dispositivos.length - 1
+                        Rectangle {
+                            visible: !!modelData.montado
+                            width: 140; height: 8; radius: 4; color: Tema.controleDesligado
+                            anchors.verticalCenter: parent ? parent.verticalCenter : undefined
+                            Rectangle { height: parent.height; radius: 4
+                                        width: modelData.total ? parent.width * modelData.usado / modelData.total : 0
+                                        color: modelData.nivel === "cheio" ? Tema.erro : (modelData.nivel === "pouco" ? Tema.aviso : Tema.azulDuia) }
+                        }
+                    }
+                }
+            }
+
+            Row {
+                visible: par.lista.tipo === ""
+                spacing: 8
+                Botao { texto: par.ar.carregando ? "Medindo…" : "Medir de novo"; icone: "reiniciar"; ativo: !par.ar.carregando
+                        onClicado: ajustes.medirArmazenamento() }
+            }
+
+            // ================= lista para escolher o que apagar
+            Row {
+                visible: par.lista.tipo !== ""
+                width: parent.width
+                spacing: 12
+                Botao { texto: "Voltar"; icone: "seta-esquerda"; onClicado: ajustes.listarArmazenamento("") }
+                Column {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: parent.width - 120
+                    Titulo { nivel: 2; text: par.lista.titulo || "" }
+                    Rotulo { secundario: true; width: parent.width
+                             text: par.lista.carregando ? "Procurando na sua pasta pessoal…"
+                                 : (par.lista.itens.length === 0 ? "Nada encontrado."
+                                 : par.lista.itens.length + (par.lista.itens.length === 1 ? " item" : " itens") + ", do maior para o menor"
+                                   + (par.lista.tipo === "programas" ? ". Para remover um aplicativo, abra-o na Duia App Store."
+                                      : (par.lista.tipo === "caches" ? ". Os aplicativos refazem esses arquivos quando precisarem."
+                                         : ". O que você marcar vai para a Lixeira."))) }
+                }
+            }
+            Grupo {
+                visible: par.lista.tipo !== "" && par.lista.itens.length > 0
+                Linha {
+                    visible: par.lista.tipo !== "programas"
+                    titulo: par.quantosMarcados ? par.quantosMarcados + (par.quantosMarcados === 1 ? " marcado" : " marcados") + " · " + janela.bytes(par.tamanhoMarcado)
+                                                : "Marque o que quer apagar"
+                    Botao { texto: par.quantosMarcados === par.lista.itens.length ? "Desmarcar todos" : "Marcar todos"
+                            onClicado: par.marcarTodos(par.quantosMarcados !== par.lista.itens.length) }
+                    Botao { texto: par.lista.tipo === "caches" ? "Apagar" : "Mover para a Lixeira"; tipo: "perigo"; ativo: par.quantosMarcados > 0
+                            onClicado: { ajustes.apagarDoArmazenamento(par.lista.tipo, Object.keys(par.marcados)); ajustes.listarArmazenamento("") } }
+                }
+                Repeater {
+                    model: par.lista.itens
+                    Linha {
+                        id: itemLista
+                        required property var modelData
+                        required property int index
+                        readonly property bool marcado: !!par.marcados[modelData.caminho]
+                        titulo: modelData.nome + " · " + janela.bytes(modelData.tamanho)
+                        descricao: modelData.detalhe || modelData.pasta || ""
+                        clicavel: par.lista.tipo !== "programas"
+                        ultima: index === par.lista.itens.length - 1
+                        onClicada: par.marcar(modelData.caminho, !marcado)
+                        // Caixa de marcar
+                        Rectangle {
+                            visible: par.lista.tipo !== "programas"
+                            width: 20; height: 20; radius: 6
+                            color: itemLista.marcado ? Tema.azulDuia : "transparent"
+                            border { color: itemLista.marcado ? Tema.azulDuia : Tema.bordaForte; width: 1.5 }
+                            Icone { anchors.centerIn: parent; visible: itemLista.marcado; nome: "check"; tamanho: 13; cor: "#FFFFFF" }
+                        }
+                        BotaoIcone { visible: par.lista.tipo !== "programas" && par.lista.tipo !== "caches"; icone: "pasta"
+                                     onClicado: ajustes.mostrarNoExplorador(modelData.pasta || "") }
+                        Botao { visible: par.lista.tipo === "programas"; texto: "Abrir na loja"; onClicado: ajustes.abrirNaLoja(modelData.caminho) }
+                    }
+                }
+            }
+        }
     }
 
     Component {

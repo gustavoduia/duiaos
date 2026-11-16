@@ -358,3 +358,45 @@ class TesteTelasDaLoja(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TesteTamanho(unittest.TestCase):
+    """Tamanho do download e do aplicativo instalado (ADR 059)."""
+
+    APT = ("Reading package lists...\n"
+           "'http://deb.debian.org/debian/pool/main/g/gimp/gimp_3.0_amd64.deb' gimp_3.0_amd64.deb 4680180 MD5Sum:e1\n"
+           "'http://deb.debian.org/debian/pool/main/b/babl/libbabl_0.1_amd64.deb' libbabl_0.1_amd64.deb 319820 MD5Sum:aa\n"
+           "0 upgraded, 2 newly installed, 0 to remove and 0 not upgraded.\nNeed to get 5000 kB of archives.\n"
+           "After this operation, 21.5 MB of additional disk space will be used.\n")
+    FLATPAK = ("        ID: org.gimp.GIMP\n  Download: 102.5 MB\n Installed: 268.6 MB\n   Runtime: org.gnome.Platform/x86_64/51\n")
+    RUNTIME = "  Download: 432.8 MB\n Installed: 1.1 GB\n"
+
+    def test_apt(self):
+        self.assertEqual(catalogo.tamanho_apt(self.APT), {"baixar": 5000000, "instalar": 21500000, "pacotes": 2})
+        self.assertIsNone(catalogo.tamanho_apt("E: Unable to locate package nada\n"))
+
+    def test_flatpak(self):
+        self.assertEqual(catalogo.tamanho_flatpak(self.FLATPAK),
+                         {"baixar": 102500000, "instalar": 268600000, "runtime": "org.gnome.Platform/x86_64/51"})
+        self.assertIsNone(catalogo.tamanho_flatpak("error: No remote refs found"))
+
+    def test_soma_o_ambiente_quando_falta(self):
+        def rodar(comando, falta=True):
+            texto = " ".join(comando)
+            if "remote-info" in texto and "runtime/" in texto:
+                return self.RUNTIME
+            if "remote-info" in texto:
+                return self.FLATPAK
+            return "" if falta else "Ref: runtime/org.gnome.Platform/x86_64/51"
+        app = {"fonte": "flathub", "pacote": "org.gimp.GIMP"}
+        com_ambiente = catalogo.tamanho_do_app(app, rodar)
+        self.assertEqual((com_ambiente["baixar"], com_ambiente["instalar"]), (535300000, 1368600000))
+        self.assertIn("ambiente", com_ambiente["detalhe"])
+        sem = catalogo.tamanho_do_app(app, lambda c: rodar(c, falta=False))
+        self.assertEqual((sem["baixar"], sem["detalhe"]), (102500000, ""))
+        debian = catalogo.tamanho_do_app({"fonte": "debian", "pacote": "gimp"}, lambda c: self.APT)
+        self.assertEqual((debian["baixar"], debian["detalhe"]), (5000000, "Com 1 pacote de que ele precisa"))
+
+    def test_instalado(self):
+        self.assertEqual(catalogo.tamanho_instalado({"fonte": "debian", "pacote": "gimp"}, lambda c: "20480\n"), 20480 * 1024)
+        self.assertEqual(catalogo.tamanho_instalado({"fonte": "flathub", "pacote": "x"}, lambda c: self.FLATPAK), 268600000)

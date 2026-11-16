@@ -59,6 +59,84 @@ Window {
         var lista = selecionados()
         if (lista.length > 0) explorador.abrirItem(lista[0])
     }
+    // ---------------------------------------------- menus na Barra de Recursos (ADR 059)
+    // Montados aqui porque é o QML que sabe o que está selecionado; a Barra mostra e devolve o id.
+    function it(id, rotulo, atalho, ativo, marcado) {
+        return { id: id, rotulo: rotulo, tipo: marcado === undefined ? "item" : "marcavel", ativo: ativo !== false,
+                 marcado: marcado === true, atalho: atalho || "", itens: [] }
+    }
+    function sub(id, rotulo, itens) { return { id: id, rotulo: rotulo, tipo: "submenu", ativo: true, marcado: false, atalho: "", itens: itens } }
+    readonly property var sep: ({ id: -1, rotulo: "", tipo: "separador", ativo: false, marcado: false, atalho: "", itens: [] })
+    readonly property var menusDoApp: {
+        var n = janela.quantosSelecionados()
+        var normal = explorador.especial === ""
+        var lixeira = explorador.especial === "lixeira"
+        return [
+            { rotulo: "Arquivo", itens: [
+                it("nova-janela", "Nova janela"), it("nova-pasta", "Nova pasta", "Ctrl+Shift+N", normal), sep,
+                it("abrir", "Abrir", "Enter", n > 0), it("terminal", "Abrir o terminal aqui", "", normal), sep,
+                it("renomear", "Renomear", "F2", n === 1 && normal), it("informacoes", "Informações", "Ctrl+I", n > 0),
+                it("lixeira", lixeira ? "Excluir para sempre" : "Mover para a Lixeira", "Delete", n > 0) ]
+                .concat(lixeira ? [it("esvaziar", "Esvaziar a Lixeira")] : [])
+                .concat([sep, it("fechar", "Fechar janela", "Ctrl+W")]) },
+            { rotulo: "Editar", itens: [
+                it("recortar", "Recortar", "Ctrl+X", n > 0 && normal), it("copiar", "Copiar", "Ctrl+C", n > 0),
+                it("colar", "Colar", "Ctrl+V", explorador.podeColar && normal), sep,
+                it("selecionar-tudo", "Selecionar tudo", "Ctrl+A"), it("copiar-caminho", "Copiar o caminho", "", n > 0), sep,
+                it("buscar", "Buscar", "Ctrl+F") ] },
+            { rotulo: "Exibir", itens: [
+                it("icones", "Ícones", "Ctrl+1", true, explorador.visualizacao === "icones"),
+                it("lista", "Lista", "Ctrl+2", true, explorador.visualizacao === "lista"), sep,
+                sub("ordenar", "Ordenar por", [it("ordem:nome", "Nome", "", true, explorador.ordem === "nome"),
+                                               it("ordem:data", "Data de modificação", "", true, explorador.ordem === "data"),
+                                               it("ordem:tamanho", "Tamanho", "", true, explorador.ordem === "tamanho"),
+                                               it("ordem:tipo", "Tipo", "", true, explorador.ordem === "tipo")]),
+                it("ocultos", "Mostrar arquivos ocultos", "Ctrl+H", true, explorador.ocultos), sep,
+                it("recarregar", "Recarregar", "F5") ] },
+            { rotulo: "Ir", itens: [
+                it("voltar", "Voltar", "Alt+Esquerda", explorador.podeVoltar), it("avancar", "Avançar", "Alt+Direita", explorador.podeAvancar),
+                it("subir", "Pasta acima", "Alt+Cima", explorador.podeSubir), sep,
+                it("ir:INICIO", "Início"), it("ir:DESKTOP", "Área de Trabalho"), it("ir:DOCUMENTS", "Documentos"),
+                it("ir:DOWNLOAD", "Downloads"), it("ir:PICTURES", "Imagens"), it("ir:MUSIC", "Música"), it("ir:VIDEOS", "Vídeos"), sep,
+                it("ir:aplicativos", "Aplicativos"), it("ir:lixeira", "Lixeira"), sep, it("ir-para", "Ir para…", "Ctrl+L") ] }
+        ]
+    }
+    onMenusDoAppChanged: menuDoApp.definirMenus(menusDoApp)
+    Component.onCompleted: menuDoApp.definirMenus(menusDoApp)
+    Connections {
+        target: menuDoApp
+        function onAcionado(id) {
+            var s = janela.selecionados()
+            if (id.indexOf("ordem:") === 0) explorador.definirOrdem(id.slice(6))
+            else if (id.indexOf("ir:") === 0) explorador.irParaPasta(id.slice(3))
+            else switch (id) {
+            case "nova-janela": explorador.novaJanela(); break
+            case "nova-pasta": explorador.novaPasta(); break
+            case "abrir": janela.abrirSelecionados(); break
+            case "terminal": explorador.abrirTerminalAqui(); break
+            case "renomear": if (s.length === 1) janela.renomeando = s[0]; break
+            case "informacoes": if (s.length > 0) dialogo.abrir("informacoes", s); break
+            case "lixeira": janela.apagar(false); break
+            case "esvaziar": dialogo.abrir("esvaziar", []); break
+            case "fechar": Qt.quit(); break
+            case "recortar": explorador.recortar(s); break
+            case "copiar": explorador.copiar(s); break
+            case "colar": explorador.colar(); break
+            case "selecionar-tudo": janela.selecionarTudo(); break
+            case "copiar-caminho": explorador.copiarCaminho(s); break
+            case "buscar": campoBusca.entrada.forceActiveFocus(); break
+            case "icones": explorador.definirVisualizacao("icones"); break
+            case "lista": explorador.definirVisualizacao("lista"); break
+            case "ocultos": explorador.alternarOcultos(); break
+            case "recarregar": explorador.recarregar(); break
+            case "voltar": explorador.voltar(); break
+            case "avancar": explorador.avancar(); break
+            case "subir": explorador.subir(); break
+            case "ir-para": barraCaminho.editar(); break
+            }
+        }
+    }
+
     function apagar(permanente) {
         var lista = selecionados()
         if (lista.length === 0) return
@@ -102,6 +180,7 @@ Window {
             else if (e.key === Qt.Key_Delete) janela.apagar(e.modifiers & Qt.ShiftModifier)
             else if (e.key === Qt.Key_F2) { var s = janela.selecionados(); if (s.length === 1 && explorador.especial === "") janela.renomeando = s[0] }
             else if (e.key === Qt.Key_F5) explorador.recarregar()
+            else if (ctrl && e.key === Qt.Key_W) Qt.quit()
             else if (ctrl && e.key === Qt.Key_A) janela.selecionarTudo()
             else if (ctrl && e.key === Qt.Key_C) explorador.copiar(janela.selecionados())
             else if (ctrl && e.key === Qt.Key_X) explorador.recortar(janela.selecionados())

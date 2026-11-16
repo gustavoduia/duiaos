@@ -7,6 +7,32 @@ import DuiaOS
 
 Window {
     id: janela
+    // Menus na Barra de Recursos (ADR 059): Loja, Editar e Categorias
+    readonly property var menusDoApp: {
+        var it = function (id, rotulo, atalho, marcado) { return { id: id, rotulo: rotulo, tipo: marcado === undefined ? "item" : "marcavel",
+                                                                  ativo: true, marcado: marcado === true, atalho: atalho || "", itens: [] } }
+        var sep = { id: -1, rotulo: "", tipo: "separador", ativo: false, marcado: false, atalho: "", itens: [] }
+        var categorias = []
+        for (var i = 0; i < loja.categorias.length; i++)
+            categorias.push(it("pagina:categoria:" + loja.categorias[i].id, loja.categorias[i].nome, "",
+                               loja.pagina === "categoria:" + loja.categorias[i].id))
+        return [{ rotulo: "Loja", itens: [it("pagina:descobrir", "Descobrir", "", loja.pagina === "descobrir"),
+                                          it("pagina:instalados", "Instalados", "", loja.pagina === "instalados"),
+                                          it("pagina:atualizacoes", "Atualizações", "", loja.pagina === "atualizacoes"), sep,
+                                          it("recarregar", "Atualizar o catálogo"), sep, it("fechar", "Fechar")] },
+                { rotulo: "Editar", itens: [it("buscar", "Buscar aplicativos")] },
+                { rotulo: "Categorias", itens: categorias }]
+    }
+    onMenusDoAppChanged: menuDoApp.definirMenus(menusDoApp)
+    Connections {
+        target: menuDoApp
+        function onAcionado(id) {
+            if (id.indexOf("pagina:") === 0) loja.irPara(id.slice(7))
+            else if (id === "recarregar") loja.recarregarCatalogo()
+            else if (id === "buscar") busca.entrada.forceActiveFocus()
+            else if (id === "fechar") Qt.quit()
+        }
+    }
     width: 1120; height: 740
     minimumWidth: 800; minimumHeight: 520
     visible: true
@@ -544,12 +570,13 @@ Window {
                             { titulo: "VEM DE", valor: pa.app.fonte === "flathub" ? "Flathub" : "Debian", selo: true },
                             { titulo: "LICENÇA", valor: pa.app.licenca || "", livre: pa.app.livre },
                             { titulo: "VERSÃO", valor: pa.app.versao || "—" },
+                            { titulo: loja.tamanhoApp.baixar ? "DOWNLOAD" : "TAMANHO", valor: loja.tamanhoApp.texto || "—" },
                             { titulo: "CATEGORIA", valor: (pa.app.categorias && pa.app.categorias.length) ? loja.nomeCategoria(pa.app.categorias[0]) : "—" }
                         ]
                         delegate: Item {
                             required property var modelData
                             required property int index
-                            width: parent.width / 4; height: parent.height
+                            width: parent.width / 5; height: parent.height
                             Rectangle { visible: index > 0; width: 1; height: parent.height - 24; anchors.verticalCenter: parent.verticalCenter; color: Tema.borda }
                             Column {
                                 anchors.centerIn: parent
@@ -631,6 +658,10 @@ Window {
                             { titulo: "Origem", valor: pa.app.fonte === "flathub" ? "Flathub — instalado só na sua conta, sem senha, em caixa de areia (sandbox)"
                                                                                 : "Debian — instalado para todas as contas, pelo serviço de instalação do DuiaOS" },
                             { titulo: "Licença", valor: (pa.app.licenca || "") + (pa.app.livre ? " (software livre)" : "") },
+                            { titulo: "Tamanho", valor: loja.tamanhoApp.baixar
+                                  ? "Baixa " + loja.tamanhoApp.baixar + (loja.tamanhoApp.instalar ? " e ocupa " + loja.tamanhoApp.instalar + " depois de instalado" : "")
+                                    + (loja.tamanhoApp.detalhe ? ". " + loja.tamanhoApp.detalhe : "")
+                                  : (loja.tamanhoApp.instalar ? "Ocupa " + loja.tamanhoApp.instalar + " no computador" : (loja.tamanhoApp.detalhe || loja.tamanhoApp.texto || "—")) },
                             { titulo: "Identificador", valor: pa.app.fonte === "flathub" ? pa.app.pacote : "pacote " + pa.app.pacote },
                             { titulo: "Site", valor: pa.app.site || "", link: true }
                         ]

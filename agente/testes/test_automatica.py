@@ -122,5 +122,37 @@ class TesteAgente(unittest.TestCase):
             self.assertEqual(au.ler_modo(Path(pasta) / "atualizacoes.conf"), "instalar")
 
 
+@unittest.skipUnless(TEM_GI, "sem python3-gi")
+class TesteLimpeza(unittest.TestCase):
+    """Limpar pacotes baixados e registros antigos (ADR 060), com autorização."""
+
+    def test_limpa_so_com_autorizacao_e_mede_o_liberado(self):
+        with tempfile.TemporaryDirectory() as pasta:
+            apt_pasta, registros = Path(pasta) / "apt", Path(pasta) / "journal"
+            apt_pasta.mkdir()
+            registros.mkdir()
+            (apt_pasta / "a.deb").write_bytes(b"x" * 300000)
+            (apt_pasta / "lock").write_bytes(b"")
+            comandos = []
+
+            class AptConta(ag.AptDeMentira):
+                def rodar(self, argumentos, tempo=300):
+                    comandos.append(argumentos)
+                    if "clean" in argumentos:
+                        (apt_pasta / "a.deb").unlink()
+                    return 0, "", ""
+            agente = ag.Agente(AptConta(), usar_polkit=False, registro=Path(pasta) / "acoes.jsonl")
+            agente.PASTA_APT, agente.PASTA_REGISTROS = apt_pasta, registros
+            self.assertGreater(agente.espaco_do_sistema()["apt"], 290000)
+            with self.assertRaises(ag.Recusa):
+                agente.limpar_sistema('{"apt": true}', 1000, lambda _a: False)
+            with self.assertRaises(ag.Recusa):
+                agente.limpar_sistema('{}', 1000, lambda _a: True)
+            resultado = agente.limpar_sistema('{"apt": true}', 1000, lambda a: a == "org.duiaos.agente.limpar_sistema")
+            self.assertGreater(resultado["liberado"], 290000)
+            self.assertEqual([c for c in comandos if "clean" in c][0][-1], "clean")
+            self.assertFalse(any("journalctl" in c for c in comandos))       # só o que foi pedido
+
+
 if __name__ == "__main__":
     unittest.main()

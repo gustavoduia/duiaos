@@ -215,28 +215,56 @@ def inicio_da_sessao():
         return time.time()
 
 
-def notificar(titulo, texto):
-    """Balão de notificação das Atualizações; clicar abre Configurações › Atualizações (x-duiaos-abrir)."""
+def notificar(titulo, texto, origem="Atualizações", destino="configuracoes:atualizacoes", botao="Ver atualizações", urgencia=1):
+    """Balão de notificação; clicar abre a tela do destino (x-duiaos-abrir), por padrão Configurações › Atualizações."""
     try:
         import gi
         gi.require_version("Gio", "2.0")
         from gi.repository import Gio, GLib
         conexao = Gio.bus_get_sync(Gio.BusType.SESSION, None)
-        dicas = {"x-duiaos-abrir": GLib.Variant("s", "configuracoes:atualizacoes"),
-                 "desktop-entry": GLib.Variant("s", "duiaos-configuracoes")}
+        dicas = {"x-duiaos-abrir": GLib.Variant("s", destino),
+                 "desktop-entry": GLib.Variant("s", "duiaos-configuracoes"), "urgency": GLib.Variant("y", urgencia)}
         conexao.call_sync("org.freedesktop.Notifications", "/org/freedesktop/Notifications", "org.freedesktop.Notifications",
-                          "Notify", GLib.Variant("(susssasa{sv}i)", ("Atualizações", 0, "", titulo, texto,
-                                                                     ["default", "Ver", "abrir", "Ver atualizações"], dicas, -1)),
+                          "Notify", GLib.Variant("(susssasa{sv}i)", (origem, 0, "", titulo, texto,
+                                                                     ["default", "Ver", "abrir", botao], dicas, -1)),
                           None, Gio.DBusCallFlags.NONE, 5000, None)
     except Exception as erro:                  # noqa: BLE001 — sem o serviço de notificações, fica o ícone
-        print("Barra: aviso de atualização não enviado:", erro, file=sys.stderr, flush=True)
+        print("Barra: aviso não enviado:", erro, file=sys.stderr, flush=True)
 
 
-def registrar(nivel, texto, **dados):
+ARQUIVO_ESPACO_AVISADO = AVISADOS.parent / "espaco-avisado.json"
+
+
+def ver_espaco(arquivo=None, mandar=None, medir=None, agora=None):
+    """Monitor de espaço (ADR 060): mede os discos e manda os avisos de pouco espaço e de disco cheio.
+    Os avisos já mandados ficam num arquivo, para não repetir a cada medição nem a cada sessão."""
+    import json
+    import armazenamento
+    arquivo = Path(arquivo or ARQUIVO_ESPACO_AVISADO)
+    mandar = mandar or (lambda a: notificar(a["titulo"], a["texto"], origem="Armazenamento", destino="configuracoes:armazenamento",
+                                            botao="Liberar espaço", urgencia=2 if a["urgente"] else 1))
+    try:
+        avisados = json.loads(arquivo.read_text())
+    except (OSError, ValueError):
+        avisados = {}
+    avisos, novos = armazenamento.avisos_de_espaco((medir or armazenamento.dispositivos)(), avisados, agora)
+    for aviso in avisos:
+        mandar(aviso)
+        registrar("aviso", "pouco espaço em disco", componente="barra.espaco", disco=aviso["montado"], estado=aviso["nivel"])
+    if novos != avisados:
+        try:
+            arquivo.parent.mkdir(parents=True, exist_ok=True)
+            arquivo.write_text(json.dumps(novos))
+        except OSError:
+            pass
+    return avisos
+
+
+def registrar(nivel, texto, componente="barra.menus", **dados):
     """Evento nos relatórios do DuiaOS (duiaos_registro), sem nada se ele não estiver instalado."""
     try:
         import duiaos_registro
-        getattr(duiaos_registro, nivel)("barra.menus", texto, **dados)
+        getattr(duiaos_registro, nivel)(componente, texto, **dados)
     except (ImportError, AttributeError, TypeError):
         pass
 
@@ -273,6 +301,7 @@ class Sistema(QObject):
     atualizacaoMudou = Signal()
     _foco = Signal(str, str, str)
     _menus = Signal(str, "QVariantList")
+    _menus_duiaos = Signal(str, str, "QVariantList")
     _itens = Signal(int, "QVariantList")
 
     def __init__(self):
@@ -289,6 +318,8 @@ class Sistema(QObject):
         self._janela = ("", "")                # (app_id, título) da janela dona dos menus
         self._titulos_menu, self._itens_menu, self._menu_aberto = [], [], -2
         self._menus.connect(self._ao_menus)
+        self._menus_duiaos.connect(self._ao_menus_duiaos)
+        self._fonte_duiaos = ("", [])         # aplicativo do DuiaOS em foco: (nome no D-Bus, menus) — menu_do_app.py
         self._itens.connect(self._ao_itens)
         self._leitor = None
         self._atualizacao = {"icone": DEMONSTRACAO, "dica": "3 atualizações disponíveis" if DEMONSTRACAO else ""}
@@ -317,6 +348,11 @@ class Sistema(QObject):
             self._timer_atualizacao = QTimer(self, interval=30000, timeout=self._ver_atualizacao)
             self._timer_atualizacao.start()
             QTimer.singleShot(5000, self._ver_atualizacao)
+            # Monitor de espaço em disco (ADR 060): a cada 5 minutos, numa linha à parte (lsblk pode demorar)
+            self._timer_espaco = QTimer(self, interval=300000,
+                                        timeout=lambda: threading.Thread(target=ver_espaco, daemon=True).start())
+            self._timer_espaco.start()
+            QTimer.singleShot(20000, lambda: threading.Thread(target=ver_espaco, daemon=True).start())
 
     def _ver_historico(self):
         try:
@@ -368,8 +404,18 @@ class Sistema(QObject):
         if nome != self._app:
             self._app = nome
             self.mudou.emit()
-        if self._leitor:
-            self._leitor.foco(app_id, titulo)
+        if app_id.startswith("duiaos-"):
+            # Aplicativos do DuiaOS publicam os menus pelo D-Bus da sessão (menu_do_app.py, ADR 059)
+            def ler():
+                import menu_do_app
+                nome, menus = menu_do_app.ler_da_sessao(app_id)
+                self._menus_duiaos.emit(app_id, nome, menus)
+            threading.Thread(target=ler, daemon=True).start()
+        else:
+            if self._fonte_duiaos[0]:
+                self._fonte_duiaos = ("", [])
+            if self._leitor:
+                self._leitor.foco(app_id, titulo)
 
     # ---------------------------------------------------- atualização automática
     def _ver_atualizacao(self):
@@ -391,14 +437,24 @@ class Sistema(QObject):
     atualizacaoDica = Property(str, lambda self: self._atualizacao["dica"], notify=atualizacaoMudou)
 
     # ---------------------------------------------------- menu do aplicativo
+    def _ao_menus_duiaos(self, app_id, nome, menus):
+        if self._painel.startswith("appmenu") or self._janela[0] != app_id:
+            return
+        self._fonte_duiaos = (nome, list(menus))
+        titulos = [m["rotulo"] for m in menus]
+        if titulos != self._titulos_menu:
+            self._titulos_menu = titulos
+            self.menusMudaram.emit()
+
     def _ao_menus(self, app_id, nomes):
-        if self._painel.startswith("appmenu"):
+        if self._painel.startswith("appmenu") or self._fonte_duiaos[0]:
             return
         nomes = list(nomes) if app_id else []
         # Para os relatórios: cada aplicativo sem barra de menus aparece uma vez por sessão
         if app_id and not nomes and app_id not in getattr(self, "_apps_sem_menu", {app_id}):
             self._apps_sem_menu.add(app_id)
-            registrar("info", "Menus dos aplicativos: sem barra de menus pela acessibilidade", aplicativo=app_id)
+            registrar("info", "Menus dos aplicativos: sem barra de menus pela acessibilidade", aplicativo=app_id,
+                      motivo=self._leitor.motivos.get(app_id, "") if self._leitor else "")
         if nomes != self._titulos_menu:
             self._titulos_menu = nomes
             self.menusMudaram.emit()
@@ -423,6 +479,9 @@ class Sistema(QObject):
             self._itens_menu = menus.menu_da_janela(self._app)
         elif DEMONSTRACAO:
             self._itens_menu = MENUS_DE_EXEMPLO[indice][1] if indice < len(MENUS_DE_EXEMPLO) else []
+        elif self._fonte_duiaos[0]:
+            menus = self._fonte_duiaos[1]
+            self._itens_menu = list(menus[indice]["itens"]) if indice < len(menus) else []
         else:
             self._itens_menu = []                      # carregando: a linha do AT-SPI responde em seguida
             self._leitor.itens(indice)
@@ -451,6 +510,15 @@ class Sistema(QObject):
                 aplicativos.iniciar(["wlrctl", "toplevel", "close", *filtro])
             elif acao == "encerrar":
                 aplicativos.iniciar(["wlrctl", "toplevel", "close", "app_id:" + app_id])
+            return
+        if isinstance(identificador, str) and self._fonte_duiaos[0]:
+            nome = self._fonte_duiaos[0]
+
+            def devolver_foco_e_pedir():
+                subprocess.run(["wlrctl", "toplevel", "focus", *filtro], timeout=2, check=False, capture_output=True)
+                import menu_do_app
+                menu_do_app.acionar_na_sessao(nome, identificador)
+            threading.Thread(target=devolver_foco_e_pedir, daemon=True).start()
             return
         if self._leitor and isinstance(identificador, (int, float)) and identificador > 0:
             leitor, numero = self._leitor, int(identificador)

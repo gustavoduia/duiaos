@@ -54,6 +54,11 @@ fundos com GIF/vídeo, Atualizações nas Configurações, foto da conta, menu d
    Entrada/Bloqueio, Central de IA e "Ajude a melhorar"; janelas presas aos cantos.
 
 ## 5. Decisões recentes (detalhe nos ADRs)
+- 16/11: **Armazenamento nas Configurações e avisos de disco cheio** (ADR 060) e **menus dos aplicativos do
+  DuiaOS + tamanho na loja** (ADR 059), ficha DUIA-2026-0018. Causa dos menus vazios: o VLC não publica a
+  acessibilidade e nada do DuiaOS tinha barra de menus; agora Explorador, Configurações e loja publicam menus
+  pelo D-Bus (`org.duiaos.Menu1`). **Sem teste no Dell.** Limites dos avisos (10 GB / 1 GB) a confirmar com
+  o Gustavo.
 - 16/11: **Atualização automática (5 modos), notificações próprias, botões em todos os apps, pulo da Ilha**
   (ADR 058, ficha DUIA-2026-0017). Menus da Barra: no último relatório o Dell ainda estava na 0015 (sem os
   menus); leitor mais robusto e com registro nos relatórios. **Sem teste no Dell.** A confirmar com o Gustavo:

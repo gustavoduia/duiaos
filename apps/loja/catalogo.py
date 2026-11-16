@@ -474,6 +474,80 @@ def preparar_flathub(forcar=False):
 
 # ------------------------------------------------------------ busca e vitrine
 
+# ------------------------------------------------------------------ tamanho (ADR 059)
+
+_UNIDADES = {"B": 1, "KB": 1000, "kB": 1000, "MB": 1000 ** 2, "GB": 1000 ** 3, "TB": 1000 ** 4}
+
+
+def _bytes(numero, unidade):
+    return int(float(numero.replace(",", ".")) * _UNIDADES.get(unidade, 1))
+
+
+def tamanho_apt(saida):
+    """Saída de "apt-get --print-uris install PACOTE" (LC_ALL=C) → {baixar, instalar, pacotes} em bytes:
+    o download soma o pacote e as dependências que faltam. None se não deu para ler."""
+    baixar = sum(int(m.group(1)) for m in re.finditer(r"^'[^']+' \S+ (\d+) ", saida, re.M))
+    pacotes = len(re.findall(r"^'[^']+' ", saida, re.M))
+    instalar = re.search(r"After this operation, ([\d.,]+) ([kMG]?B) of additional disk space", saida)
+    precisa = re.search(r"Need to get ([\d.,]+) ([kMG]?B)", saida)
+    if not pacotes and not precisa:
+        return None
+    return {"baixar": baixar or (_bytes(*precisa.groups()) if precisa else 0),
+            "instalar": _bytes(*instalar.groups()) if instalar else 0, "pacotes": pacotes}
+
+
+def tamanho_flatpak(saida):
+    """Saída de "flatpak remote-info" (LC_ALL=C) → {baixar, instalar, runtime} (runtime: o ambiente que o
+    aplicativo usa, ex.: org.gnome.Platform/x86_64/51). None se não deu para ler."""
+    baixar = re.search(r"Download:\s*([\d.,]+)\W*([kMGT]?B)", saida)
+    instalar = re.search(r"Installed:\s*([\d.,]+)\W*([kMGT]?B)", saida)
+    runtime = re.search(r"Runtime:\s*(\S+)", saida)
+    if not baixar:
+        return None
+    return {"baixar": _bytes(*baixar.groups()), "instalar": _bytes(*instalar.groups()) if instalar else 0,
+            "runtime": runtime.group(1) if runtime else ""}
+
+
+def tamanho_instalado(app, rodar=None):
+    """Quanto um aplicativo instalado ocupa, em bytes (0 se não der para saber)."""
+    rodar = rodar or (lambda comando: _rodar(comando, tempo=20))
+    if app.get("fonte") == FLATHUB:
+        saida = rodar(["env", "LC_ALL=C", "flatpak", "info", "--user", app["pacote"]]) or \
+            rodar(["env", "LC_ALL=C", "flatpak", "info", "--system", app["pacote"]])
+        info = re.search(r"Installed:\s*([\d.,]+)\W*([kMGT]?B)", saida)
+        return _bytes(*info.groups()) if info else 0
+    saida = rodar(["dpkg-query", "-W", "-f=${Installed-Size}", app["pacote"]]).strip()
+    return int(saida) * 1024 if saida.isdigit() else 0
+
+
+def tamanho_do_app(app, rodar=None):
+    """Quanto um aplicativo baixa e ocupa ao ser instalado, com o que ele precisa e ainda não está no
+    computador. {baixar, instalar, detalhe} ou None (sem rede, por exemplo)."""
+    rodar = rodar or (lambda comando: _rodar(comando, tempo=60))
+    ambiente = ["env", "LC_ALL=C"]
+    if app.get("fonte") == FLATHUB:
+        info = tamanho_flatpak(rodar(ambiente + ["flatpak", "remote-info", "--user", FLATHUB, app["pacote"]]))
+        if not info:
+            return None
+        resultado = {"baixar": info["baixar"], "instalar": info["instalar"], "detalhe": ""}
+        if info["runtime"]:
+            instalado = rodar(ambiente + ["flatpak", "info", "--user", info["runtime"]]).strip() or \
+                rodar(ambiente + ["flatpak", "info", "--system", info["runtime"]]).strip()
+            if not instalado:
+                ambiente_flathub = tamanho_flatpak(rodar(ambiente + ["flatpak", "remote-info", "--user", FLATHUB,
+                                                                     "runtime/" + info["runtime"]]))
+                if ambiente_flathub:
+                    resultado["baixar"] += ambiente_flathub["baixar"]
+                    resultado["instalar"] += ambiente_flathub["instalar"]
+                    resultado["detalhe"] = "Inclui o ambiente de execução do Flathub, usado só na primeira vez"
+        return resultado
+    info = tamanho_apt(rodar(ambiente + ["apt-get", "--print-uris", "-y", "install", app["pacote"]]))
+    if not info:
+        return None
+    detalhe = f"Com {info['pacotes'] - 1} {'pacote' if info['pacotes'] == 2 else 'pacotes'} de que ele precisa" if info["pacotes"] > 1 else ""
+    return {"baixar": info["baixar"], "instalar": info["instalar"], "detalhe": detalhe}
+
+
 def buscar(apps, termo, limite=200):
     """Aplicativos que contêm todas as palavras do termo; o nome conta mais que o resto."""
     palavras = normalizar(termo).split()

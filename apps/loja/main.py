@@ -105,6 +105,11 @@ def demonstracao_catalogo():
     ]
 
 
+def sistema_tamanho(bytes_):
+    import tipos
+    return tipos.tamanho_legivel(bytes_)
+
+
 class Loja(QObject):
     mudou = Signal()
     catalogoMudou = Signal()
@@ -169,7 +174,51 @@ class Loja(QObject):
         return {"debian": debian, "flathub": flathub, "erro": erro,
                 "instalados_debian": catalogo.instalados_debian(), "instalados_flathub": catalogo.instalados_flathub()}
 
+    # ------------------------------------------------------------ tamanho (ADR 059)
+    def _pedir_tamanho(self, app):
+        """O tamanho vem do apt ou do Flathub (pode levar alguns segundos): a página mostra "Calculando…"."""
+        instalado = self._situacao_de(app) in ("instalado", "atualizavel")
+        chave = (app["id"], instalado)
+        if chave in getattr(self, "_tamanhos", {}):
+            return
+        self._tamanhos = getattr(self, "_tamanhos", {})
+        if DEMONSTRACAO:
+            self._tamanhos[chave] = ({"instalado": True, "instalar": 268_600_000} if instalado else
+                                     {"baixar": 102_500_000, "instalar": 268_600_000, "detalhe": "Com 12 pacotes de que ele precisa"})
+            self.mudou.emit()
+            return
+        self._tamanhos[chave] = None                    # calculando
+
+        def calcular():
+            if instalado:
+                return {"chave": chave, "valor": {"instalado": True, "instalar": catalogo.tamanho_instalado(app)}}
+            return {"chave": chave, "valor": catalogo.tamanho_do_app(app) or {}}
+        self._em_fundo("tamanho", calcular)
+
+    def _tamanho_atual(self):
+        app = self._app
+        if not app.get("id"):
+            return {}
+        instalado = self._situacao_de(app) in ("instalado", "atualizavel")
+        valor = getattr(self, "_tamanhos", {}).get((app["id"], instalado), None)
+        if valor is None:
+            return {"texto": "Calculando…", "detalhe": "", "baixar": "", "instalar": ""}
+        if not valor or (not valor.get("baixar") and not valor.get("instalar")):
+            return {"texto": "—", "detalhe": "Não deu para saber agora (sem internet?)", "baixar": "", "instalar": ""}
+        baixar = sistema_tamanho(valor.get("baixar", 0)) if valor.get("baixar") else ""
+        instalar = sistema_tamanho(valor.get("instalar", 0)) if valor.get("instalar") else ""
+        if valor.get("instalado"):
+            return {"texto": instalar or "—", "detalhe": "Espaço que ocupa no computador", "baixar": "", "instalar": instalar}
+        return {"texto": baixar or instalar, "detalhe": valor.get("detalhe", ""), "baixar": baixar, "instalar": instalar}
+
+    tamanhoApp = Property("QVariantMap", _tamanho_atual, notify=mudou)
+
     def _ao_pronto(self, nome, resultado):
+        if nome == "tamanho":
+            if isinstance(resultado, dict) and "chave" in resultado:
+                self._tamanhos[resultado["chave"]] = resultado["valor"]
+                self.mudou.emit()
+            return
         if nome == "catalogo":
             if "debian" not in resultado:
                 self._erro_flathub = resultado.get("erro", "")
@@ -267,6 +316,7 @@ class Loja(QObject):
         self._historico.append((self._pagina, self._app, self._busca))
         self._pagina, self._app = "app", app
         self.mudou.emit()
+        self._pedir_tamanho(app)
 
     @Slot()
     def voltar(self):
@@ -684,6 +734,10 @@ def main():
     interface.preparar(engine)
     contexto = engine.rootContext()
     contexto.setContextProperty("loja", loja)
+    # Menus na Barra de Recursos (menu_do_app.py, ADR 059)
+    import menu_do_app
+    menu = menu_do_app.criar("loja", [])          # guardado numa variável: sem isso o Python o descarta
+    contexto.setContextProperty("menuDoApp", menu)
     contexto.setContextProperty("capturaArquivo", captura)
     engine.load(PASTA / "LojaDeAplicativos.qml")
     if not engine.rootObjects():
