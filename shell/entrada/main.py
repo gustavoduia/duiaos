@@ -228,6 +228,8 @@ class Entrada(QObject):
     papelDeParede = Property(str, lambda self: _url(self._papel()["arquivo"]) or sistema.papel_de_parede(), constant=True)
     ajusteFundo = Property(str, lambda self: self._papel()["ajuste"], constant=True)
     corFundo = Property(str, lambda self: self._papel()["cor"], constant=True)
+    futurista = Property(bool, lambda self: (sys.argv[sys.argv.index("--estilo") + 1] if "--estilo" in sys.argv[:-1]
+                                             else papel.estilo_da_entrada()) == "futurista", constant=True)
     desfocarFundo = Property(bool, lambda self: self._papel()["desfocar"], constant=True)
 
     def _papel(self):
@@ -262,7 +264,9 @@ def main():
     engine.load(PASTA / "TelaDeEntrada.qml")
     if not engine.rootObjects():
         sys.exit(1)
-    sys.exit(app.exec())
+    codigo = app.exec()
+    del engine          # o QML sai antes do objeto "entrada" (senão acusa propriedades de null ao fechar)
+    sys.exit(codigo)
 
 
 if __name__ == "__main__":

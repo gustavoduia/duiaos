@@ -46,6 +46,7 @@ Item {
                 ajusteFundo: bloqueio.ajusteFundo
                 corFundo: bloqueio.corFundo
                 desfocar: bloqueio.desfocarFundo
+                futurista: bloqueio.futurista
                 onEntrar: (usuario, senha) => bloqueio.desbloquear(senha)
                 onAcaoEnergia: (id) => bloqueio.energia(id)
             }

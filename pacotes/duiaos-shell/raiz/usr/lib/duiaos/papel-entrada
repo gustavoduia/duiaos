@@ -8,6 +8,7 @@ ativa). A Tela de Entrada roda como _greetd e não lê as pastas pessoais: a ima
   papel-entrada padrao DESFOCAR                     volta ao papel do DuiaOS
   papel-entrada imagem AJUSTE COR DESFOCAR          lê a imagem (JPEG, PNG ou WebP, até 40 MB) na entrada padrão
   papel-entrada opcoes AJUSTE COR DESFOCAR          muda só as opções, mantendo a imagem
+  papel-entrada estilo padrao|futurista             estilo da Tela de Entrada (ADR 052), mantendo o resto
 AJUSTE: preencher | ajustar | esticar | centralizar | lado-a-lado · COR: #RRGGBB · DESFOCAR: sim | nao
 Saída: 0 ok · 2 uso errado · 1 outra falha.
 """
@@ -49,7 +50,7 @@ def gravar(valores):
     temporario = CONF + ".tmp"
     with open(temporario, "w", encoding="utf-8") as arquivo:
         arquivo.write("# DuiaOS — papel de parede da Tela de Entrada (Configurações › Papel de parede)\n[papel]\n")
-        for chave in ("modo", "arquivo", "cor", "ajuste", "desfocar"):
+        for chave in ("modo", "arquivo", "cor", "ajuste", "desfocar", "estilo"):
             if chave in valores:
                 arquivo.write(f"{chave} = {valores[chave]}\n")
     os.chmod(temporario, 0o644)
@@ -60,8 +61,11 @@ def main():
     if os.geteuid() != 0 or "PKEXEC_UID" not in os.environ or len(sys.argv) < 3:
         return 2
     acao, argumentos = sys.argv[1], sys.argv[2:]
+    if acao == "estilo" and len(argumentos) == 1 and argumentos[0] in ("padrao", "futurista"):
+        gravar({"modo": "padrao", **ler_conf(), "estilo": argumentos[0]})
+        return 0
     if acao == "padrao" and len(argumentos) == 1 and argumentos[0] in ("sim", "nao"):
-        gravar({"modo": "padrao", "desfocar": argumentos[0]})
+        gravar({"modo": "padrao", "desfocar": argumentos[0], "estilo": ler_conf().get("estilo", "padrao")})
         return 0
     if acao not in ("imagem", "opcoes") or len(argumentos) != 3:
         return 2

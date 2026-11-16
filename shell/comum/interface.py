@@ -49,7 +49,7 @@ def provedor_icones_do_tema():
 
 
 def aparencia():
-    """Objeto "aparencia" do QML (modo escuro), igual em todas as janelas e atualizado na hora."""
+    """Objeto "aparencia" do QML (modo escuro e estilo), igual em todas as janelas e atualizado na hora."""
     global _APARENCIA
     if _APARENCIA is None:
         _APARENCIA = _criar_aparencia()
@@ -69,16 +69,34 @@ def _criar_aparencia():
         def __init__(self):
             super().__init__()
             self._escuro = pastas.ler_preferencia("aparencia", "modo", "claro") == "escuro"
+            self._estilo = self._ler_estilo()
             pastas.PREFERENCIAS.parent.mkdir(parents=True, exist_ok=True)
             self._vigia = QFileSystemWatcher([str(pastas.PREFERENCIAS.parent)], self)
             self._vigia.directoryChanged.connect(lambda _c: self._atraso.start())
             self._atraso = QTimer(self, singleShot=True, interval=150, timeout=self.recarregar)
 
+        @staticmethod
+        def _ler_estilo():
+            estilo = pastas.ler_preferencia("aparencia", "estilo", "padrao")
+            return estilo if estilo in ("padrao", "futurista") else "padrao"
+
         def recarregar(self):
             escuro = pastas.ler_preferencia("aparencia", "modo", "claro") == "escuro"
-            if escuro != self._escuro:
-                self._escuro = escuro
+            estilo = self._ler_estilo()
+            if escuro != self._escuro or estilo != self._estilo:
+                self._escuro, self._estilo = escuro, estilo
                 self.mudou.emit()
+
+        @Slot(str)
+        def definirEstilo(self, estilo):
+            """Estilo da interface (ADR 052): "padrao" ou "futurista" (Aurora). Vale na hora."""
+            if estilo not in ("padrao", "futurista"):
+                return
+            pastas.gravar_preferencia("aparencia", "estilo", estilo)
+            self.recarregar()
+            import sessao
+            import threading
+            threading.Thread(target=sessao.aplicar_aparencia, daemon=True).start()
 
         @Slot(bool)
         def definirEscuro(self, escuro):
@@ -89,6 +107,7 @@ def _criar_aparencia():
             threading.Thread(target=sessao.aplicar_aparencia, daemon=True).start()
 
         escuro = Property(bool, lambda self: self._escuro, notify=mudou)
+        estilo = Property(str, lambda self: self._estilo, notify=mudou)
 
     return Aparencia()
 

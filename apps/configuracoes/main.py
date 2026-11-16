@@ -314,6 +314,22 @@ class Ajustes(QObject):
     luzInicio = Property(str, lambda self: pastas.ler_preferencia("luz-noturna", "inicio", "19:00"), notify=mudou)
     luzFim = Property(str, lambda self: pastas.ler_preferencia("luz-noturna", "fim", "06:30"), notify=mudou)
 
+    # ------------------------------------------------------------ estilo
+    @Slot(str)
+    def definirEstilo(self, estilo):
+        """Estilo da interface (ADR 052). Na sessão vale na hora; na Tela de Entrada (de todas as
+        contas), pelo ajudante de administrador — sem ser administrador, ela fica como está."""
+        if estilo not in ("padrao", "futurista"):
+            return
+        interface.aparencia().definirEstilo(estilo)
+        if DEMONSTRACAO:
+            return
+
+        def mudar():
+            subprocess.run(["pkexec", AJUDANTE_PAPEL_ENTRADA, "estilo", estilo], capture_output=True, timeout=60, check=False)
+            return ""
+        self._em_fundo("aviso-papel", mudar)
+
     # ---------------------------------------------------- papel de parede
     # Alvo (ADR 051): "area" (área de trabalho: todas as telas, uma tela escolhida ou estendida),
     # "bloqueio" (Tela de Bloqueio) ou "entrada" (Tela de Entrada, de todas as contas).

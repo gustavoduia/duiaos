@@ -25,7 +25,7 @@ Item {
         anchors.fill: parent
         radius: raio
         color: Tema.vidro
-        border { color: Tema.borda; width: 1 }
+        border { color: Tema.futurista ? Tema.brilho : Tema.borda; width: 1 }
         clip: false
     }
 }

@@ -48,6 +48,7 @@ Window {
             ajusteFundo: entrada.ajusteFundo
             corFundo: entrada.corFundo
             desfocar: entrada.desfocarFundo
+            futurista: entrada.futurista
             onEntrar: (usuario, senha) => entrada.entrar(usuario, senha)
             onAcaoEnergia: (id) => entrada.energia(id)
 

@@ -163,17 +163,62 @@ osd.label.text.color: #E6EAF0
 """
 
 
+# Estilo futurista (Aurora, ADR 052): janelas em azul-noite profundo ou pérola, com borda luminosa
+_CABECALHO_FUTURISTA = "# DuiaOS — estilo futurista das janelas (Configurações › Aparência). Gerado.\n"
+_FUTURISTA = {
+    True: {"borda": "#3D4F8F", "borda_inativa": "#232C4D", "titulo": "#121933", "titulo_inativo": "#0E1428",
+           "texto": "#EEF2FF", "texto_inativo": "#6C7AA6", "botao": "#9AA6C7", "menu": "#141A2E", "menu_texto": "#EEF2FF",
+           "ativo": "#5B8CFF", "sombra": "#05081680"},
+    False: {"borda": "#B9C4EE", "borda_inativa": "#D9DFF0", "titulo": "#F7F8FF", "titulo_inativo": "#EEF0FA",
+            "texto": "#0E1430", "texto_inativo": "#8089A8", "botao": "#5A6690", "menu": "#FFFFFF", "menu_texto": "#0E1430",
+            "ativo": "#3D5BFF", "sombra": "#1B2A6B40"},
+}
+
+
+def tema_das_janelas(escuro, futurista):
+    """Texto do themerc-override do labwc para o modo e o estilo ("" = o tema DuiaOS sem mudanças)."""
+    if not futurista:
+        return TEMA_ESCURO if escuro else ""
+    c = _FUTURISTA[bool(escuro)]
+    return _CABECALHO_FUTURISTA + f"""window.active.border.color: {c['borda']}
+window.inactive.border.color: {c['borda_inativa']}
+window.active.title.bg.color: {c['titulo']}
+window.inactive.title.bg.color: {c['titulo_inativo']}
+window.active.title.separator.color: {c['titulo']}
+window.inactive.title.separator.color: {c['titulo_inativo']}
+window.active.label.text.color: {c['texto']}
+window.inactive.label.text.color: {c['texto_inativo']}
+window.active.button.unpressed.image.color: {c['botao']}
+window.inactive.button.unpressed.image.color: {c['texto_inativo']}
+window.active.shadow.color: {c['sombra']}
+window.inactive.shadow.color: {c['sombra'][:7]}30
+menu.border.color: {c['borda']}
+menu.items.bg.color: {c['menu']}
+menu.items.text.color: {c['menu_texto']}
+menu.items.active.bg.color: {c['ativo']}
+menu.items.active.text.color: #FFFFFF
+menu.separator.color: {c['borda_inativa']}
+menu.title.bg.color: {c['titulo']}
+menu.title.text.color: {c['texto_inativo']}
+osd.bg.color: {c['menu']}
+osd.border.color: {c['borda']}
+osd.label.text.color: {c['menu_texto']}
+"""
+
+
 def aplicar_aparencia(escuro=None):
-    """Modo escuro nas janelas (labwc) e nos aplicativos GTK; os do DuiaOS mudam sozinhos."""
+    """Modo escuro e estilo nas janelas (labwc) e nos aplicativos GTK; os do DuiaOS mudam sozinhos."""
     if escuro is None:
         escuro = pastas.ler_preferencia("aparencia", "modo", "claro") == "escuro"
+    futurista = pastas.ler_preferencia("aparencia", "estilo", "padrao") == "futurista"
     override = pastas.CONFIG / "labwc" / "themerc-override"
     try:
-        if escuro:
+        texto = tema_das_janelas(escuro, futurista)
+        if texto:
             override.parent.mkdir(parents=True, exist_ok=True)
-            override.write_text(TEMA_ESCURO, encoding="utf-8")
-        elif override.is_file() and override.read_text(encoding="utf-8").startswith("# DuiaOS — modo escuro"):
-            override.unlink()
+            override.write_text(texto, encoding="utf-8")
+        elif override.is_file() and override.read_text(encoding="utf-8").startswith("# DuiaOS — "):
+            override.unlink()                    # só apaga o que o DuiaOS gerou
     except OSError:
         pass
     for versao in ("gtk-3.0", "gtk-4.0"):

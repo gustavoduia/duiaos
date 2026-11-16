@@ -21,7 +21,7 @@ Window {
         { id: "som", nome: "Som", icone: "som-2", cor: "noite", grupo: 1 },
         { id: "tela", nome: "Tela", icone: "brilho", cor: "azul", grupo: 1 },
         { id: "energia", nome: "Bateria e energia", icone: "bateria", cor: "noite", grupo: 1 },
-        { id: "aparencia", nome: "Aparência", icone: "paleta", cor: "noite", grupo: 2 },
+        { id: "aparencia", nome: "Aparência e estilos", icone: "paleta", cor: "noite", grupo: 2 },
         { id: "papel", nome: "Papel de parede", icone: "imagem", cor: "azul", grupo: 2 },
         { id: "descanso", nome: "Tela de Descanso", icone: "monitor", cor: "noite", grupo: 2 },
         { id: "barra", nome: "Barra e Ilha", icone: "barra", cor: "noite", grupo: 2 },
@@ -89,6 +89,7 @@ Window {
                     anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
                     height: 34; radius: 8
                     color: ajustes.secao === modelData.id ? Tema.azulDuia : (areaSecao.containsMouse ? Tema.realce : "transparent")
+                    Aurora { anchors.fill: parent; radius: parent.radius; visible: Tema.futurista && ajustes.secao === modelData.id }
                     Ladrilho { id: ladrilho; anchors { left: parent.left; leftMargin: 6; verticalCenter: parent.verticalCenter }
                                tamanho: 24; radius: 6; icone: modelData.icone; estilo: modelData.cor }
                     Text {
@@ -114,7 +115,7 @@ Window {
         Rectangle {
             anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
             height: colunaGrupo.implicitHeight
-            radius: 12
+            radius: Tema.raio
             color: Tema.cartao
             border { color: Tema.borda; width: 1 }
             Column { id: colunaGrupo; width: parent.width }
@@ -150,7 +151,7 @@ Window {
         property string valor: ""
         property string vazio: "Escolher"
         signal escolhido(string valor)
-        width: 230; height: 30; radius: 8
+        width: 230; height: 30; radius: Tema.futurista ? 15 : 8
         color: areaSeletor.containsMouse ? Tema.realce : Tema.cartao
         border { color: Tema.bordaForte; width: 1 }
         readonly property string rotulo: {
@@ -763,6 +764,62 @@ Window {
     Component {
         id: paginaAparencia
         Pagina {
+            // Estilos (ADR 052): o visual padrão ou o futurista "Aurora"
+            Titulo { nivel: 3; text: "Estilos" }
+            Row {
+                spacing: 18
+                Repeater {
+                    model: [{ id: "padrao", nome: "Padrão", texto: "O visual de sempre" },
+                            { id: "futurista", nome: "Futurista", texto: "Vidro, brilho e o degradê aurora" }]
+                    Column {
+                        id: opcaoEstilo
+                        required property var modelData
+                        readonly property bool atual: aparencia.estilo === modelData.id
+                        readonly property bool fut: modelData.id === "futurista"
+                        spacing: 8
+                        Rectangle {
+                            width: 230; height: 146; radius: 18
+                            clip: true
+                            color: opcaoEstilo.fut ? "#0A0F1F" : "#F7F9FC"
+                            border { color: opcaoEstilo.atual ? Tema.azulDuia : Tema.borda; width: opcaoEstilo.atual ? 3 : 1 }
+                            // Uma janelinha de exemplo em cada estilo
+                            Rectangle {
+                                x: 16; y: 16; width: 132; height: 96; radius: opcaoEstilo.fut ? 14 : 8
+                                color: opcaoEstilo.fut ? "#131A30" : "#FFFFFF"
+                                border { color: opcaoEstilo.fut ? "#35427A" : "#DDE3EC"; width: 1 }
+                                Row { x: 10; y: 10; spacing: 4
+                                      Repeater { model: ["#FF5F57", "#FEBC2E", "#28C840"]; Rectangle { required property string modelData; width: 7; height: 7; radius: 3.5; color: modelData } } }
+                                Rectangle { x: 10; y: 30; width: 84; height: 7; radius: 3.5; color: opcaoEstilo.fut ? "#35427A" : "#C9D2DE" }
+                                Rectangle { x: 10; y: 44; width: 56; height: 7; radius: 3.5; color: opcaoEstilo.fut ? "#232C4D" : "#DDE3EC" }
+                                Rectangle {
+                                    x: 10; y: 64; width: 72; height: 20; radius: opcaoEstilo.fut ? 10 : 5
+                                    color: "#2E6BE6"
+                                    gradient: opcaoEstilo.fut ? degradeAmostra : null
+                                    Gradient { id: degradeAmostra; orientation: Gradient.Horizontal
+                                               GradientStop { position: 0; color: "#22D3EE" } GradientStop { position: 0.5; color: "#5B8CFF" } GradientStop { position: 1; color: "#A78BFA" } }
+                                }
+                            }
+                            // E a Ilha
+                            Rectangle {
+                                anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: 8 }
+                                width: 104; height: 20; radius: opcaoEstilo.fut ? 10 : 7
+                                color: opcaoEstilo.fut ? Qt.rgba(1, 1, 1, 0.10) : "#FFFFFF"
+                                border { color: opcaoEstilo.fut ? Qt.rgba(0.55, 0.68, 1, 0.4) : "#DDE3EC"; width: 1 }
+                                Row { anchors.centerIn: parent; spacing: 5
+                                      Repeater { model: opcaoEstilo.fut ? ["#22D3EE", "#5B8CFF", "#A78BFA", "#7C83FF"] : ["#2E6BE6", "#6FA0F7", "#1A3A73", "#2E6BE6"]
+                                                 Rectangle { required property string modelData; width: 12; height: 12; radius: opcaoEstilo.fut ? 4 : 3; color: modelData } } }
+                            }
+                            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: ajustes.definirEstilo(opcaoEstilo.modelData.id) }
+                        }
+                        Text { anchors.horizontalCenter: parent.horizontalCenter; text: opcaoEstilo.modelData.nome; color: Tema.texto
+                               font { family: Tema.fonteTexto; pixelSize: 13; weight: opcaoEstilo.atual ? Font.Bold : Font.Normal } }
+                        Text { anchors.horizontalCenter: parent.horizontalCenter; text: opcaoEstilo.modelData.texto; color: Tema.textoSecundario
+                               font { family: Tema.fonteTexto; pixelSize: 11 } }
+                    }
+                }
+            }
+            Rotulo { width: parent.width; secundario: true
+                     text: "O estilo vale para a Barra, a Ilha, as janelas, os aplicativos do DuiaOS e as Telas de Bloqueio e de Entrada. A Tela de Entrada muda na próxima vez que o computador ligar (só um administrador muda a dela)." }
             Titulo { nivel: 3; text: "Modo" }
             Row {
                 spacing: 18

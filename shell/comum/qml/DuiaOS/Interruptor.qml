@@ -10,6 +10,8 @@ Rectangle {
     opacity: ativo ? 1 : 0.45
     color: ligado ? Tema.azulDuia : Tema.controleDesligado
     Behavior on color { ColorAnimation { duration: Tema.animacao } }
+    Aurora { anchors.fill: parent; radius: parent.radius; visible: Tema.futurista; opacity: raiz.ligado ? 1 : 0
+             Behavior on opacity { NumberAnimation { duration: Tema.animacao } } }
     Rectangle {
         width: 20; height: 20; radius: 10
         y: 2

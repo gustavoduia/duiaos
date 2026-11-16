@@ -5,6 +5,7 @@ import QtQuick.Window
 import "../comum"
 
 Window {
+    id: janela
     visible: true
     width: 1280; height: 800
     color: "#F7F9FC"
@@ -22,6 +23,7 @@ Window {
         ajusteFundo: bloqueio.ajusteFundo
         corFundo: bloqueio.corFundo
         desfocar: bloqueio.desfocarFundo
+        futurista: bloqueio.futurista
         onEntrar: (usuario, senha) => bloqueio.desbloquear(senha)
         onAcaoEnergia: (id) => bloqueio.energia(id)
     }
@@ -32,4 +34,6 @@ Window {
             tela.avisarErro()
         }
     }
+    // main.py --demonstracao [--estilo futurista] --captura ARQUIVO: salva a imagem e sai
+    Timer { interval: 900; running: capturaArquivo !== ""; onTriggered: janela.contentItem.grabToImage(function (r) { r.saveToFile(capturaArquivo); Qt.quit() }) }
 }

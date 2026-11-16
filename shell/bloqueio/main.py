@@ -107,6 +107,8 @@ class Bloqueio(QObject):
     papelDeParede = Property(str, lambda self: _url(self._papel()["arquivo"]) or sistema.papel_de_parede(), constant=True)
     ajusteFundo = Property(str, lambda self: self._papel()["ajuste"], constant=True)
     corFundo = Property(str, lambda self: self._papel()["cor"], constant=True)
+    futurista = Property(bool, lambda self: (sys.argv[sys.argv.index("--estilo") + 1] if "--estilo" in sys.argv[:-1]
+                                             else pastas.ler_preferencia("aparencia", "estilo", "padrao")) == "futurista", constant=True)
     desfocarFundo = Property(bool, lambda self: self._papel()["desfocar"], constant=True)
 
     def _papel(self):
@@ -147,6 +149,8 @@ def main():
     bloqueio = Bloqueio(app)
     engine = QQmlApplicationEngine()
     engine.rootContext().setContextProperty("bloqueio", bloqueio)
+    engine.rootContext().setContextProperty(
+        "capturaArquivo", sys.argv[sys.argv.index("--captura") + 1] if "--captura" in sys.argv[:-1] else "")
     if DEMONSTRACAO:
         engine.load(PASTA / "Demonstracao.qml")
     else:
@@ -154,6 +158,7 @@ def main():
     if not engine.rootObjects():
         sys.exit(1)
     codigo = app.exec()
+    del engine          # o QML sai antes do objeto "bloqueio" (senão acusa propriedades de null ao fechar)
     try:
         ARQUIVO_PRONTA.unlink()
     except OSError:

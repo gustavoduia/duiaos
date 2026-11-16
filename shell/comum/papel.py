@@ -12,7 +12,7 @@ Preferências da pessoa (~/.config/duiaos/preferencias.conf):
 
 Tela de Entrada (vale para todas as contas; a Tela de Entrada roda como _greetd e não lê a pasta
 pessoal): /var/lib/duiaos/entrada/papel.conf, seção [papel] com modo = padrao | proprio, arquivo
-(a cópia em /var/lib/duiaos/entrada/), cor, ajuste e desfocar. Quem grava é /usr/lib/duiaos/papel-entrada,
+(a cópia em /var/lib/duiaos/entrada/), cor, ajuste, desfocar e estilo = padrao | futurista (ADR 052). Quem grava é /usr/lib/duiaos/papel-entrada,
 pelo pkexec.
 
 Ajustes (como a imagem ocupa a tela):
@@ -115,6 +115,13 @@ def ler_entrada(conf=ENTRADA_CONF, papel_padrao=PAPEL_PADRAO):
         return {**papel, "modo": "proprio", "desfocar": desfocar}
     return {"arquivo": str(papel_padrao) if Path(papel_padrao).is_file() else "", "cor": COR_PADRAO,
             "ajuste": "preencher", "modo": "padrao", "desfocar": desfocar}
+
+
+def estilo_da_entrada(conf=ENTRADA_CONF):
+    """Estilo da Tela de Entrada ("padrao" ou "futurista"; ADR 052), do arquivo do sistema."""
+    config = _ler(conf)
+    estilo = config.get("papel", "estilo", fallback="padrao") if config.has_section("papel") else "padrao"
+    return estilo if estilo in ("padrao", "futurista") else "padrao"
 
 
 def proximo_da_lista(lista, atual):

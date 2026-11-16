@@ -74,9 +74,9 @@ Item {
         height: ilhaFundo.vertical ? comprimentoFundo : ilhaFundo.espessuraFundo
         x: ilhaFundo.posicao === "esquerda" ? 0 : (ilhaFundo.posicao === "direita" ? ilhaFundo.width - width : (ilhaFundo.width - width) / 2)
         y: ilhaFundo.vertical ? (ilhaFundo.height - height) / 2 : ilhaFundo.height - height
-        radius: 22
+        radius: Tema.futurista ? 26 : 22
         color: Tema.ilha
-        border { color: Qt.rgba(1, 1, 1, 0.9); width: 1 }
+        border { color: Tema.brilho; width: 1 }
         Rectangle { anchors { fill: parent; margins: -1 } radius: parent.radius + 1; color: "transparent"; border { color: Tema.borda; width: 1 } }
         // Botão direito no fundo: opções da Ilha (como no macOS)
         MouseArea {
@@ -88,8 +88,8 @@ Item {
 
     // Ponto de aplicativo aberto
     component PontoAberto: Rectangle {
-        width: 4; height: 4; radius: 2
-        color: Tema.azulNoite
+        width: Tema.futurista ? 10 : 4; height: 4; radius: 2      // futurista: um traço de luz
+        color: Tema.futurista ? Tema.aurora1 : Tema.azulNoite
     }
 
     // Espaço de um ícone: ampliação, salto ao abrir, clique, arrastar (fixados) e botão direito

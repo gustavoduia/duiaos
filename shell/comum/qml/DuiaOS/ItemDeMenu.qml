@@ -11,8 +11,9 @@ Rectangle {
     signal clicado()
     width: parent ? parent.width : 220
     height: 30
-    radius: 7
+    radius: Tema.futurista ? 9 : 7
     color: area.containsMouse && ativo ? Tema.azulDuia : "transparent"
+    Aurora { anchors.fill: parent; radius: parent.radius; visible: Tema.futurista && area.containsMouse && raiz.ativo }
     readonly property color corTexto: area.containsMouse && ativo ? "white" : (ativo ? (perigo ? Tema.erro : Tema.texto) : Tema.textoApagado)
     Icone {
         id: ic

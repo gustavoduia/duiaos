@@ -10,9 +10,17 @@ Rectangle {
     property bool senha: false
     signal confirmado()
     implicitHeight: 34
-    radius: 10
-    color: Tema.cartao
+    radius: Math.min(height / 2, Tema.raioControle)
+    color: Tema.futurista ? (Tema.escuro ? Qt.rgba(1, 1, 1, 0.05) : Qt.rgba(1, 1, 1, 0.9)) : Tema.cartao
     border { color: entrada.activeFocus ? Tema.azulDuia : Tema.bordaForte; width: entrada.activeFocus ? 2 : 1 }
+    // Anel de foco (futurista): um halo aurora em volta do campo
+    Aurora {
+        visible: Tema.futurista && entrada.activeFocus
+        z: -1
+        anchors { fill: parent; margins: -3 }
+        radius: parent.radius + 3
+        opacity: 0.35
+    }
     Icone {
         id: iconeCampo
         visible: raiz.icone !== ""

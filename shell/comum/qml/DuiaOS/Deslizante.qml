@@ -24,7 +24,8 @@ Item {
             width: Math.max(parent.height, parent.width * Math.max(0, Math.min(100, raiz.valor)) / 100)
             radius: height / 2
             color: Tema.trilhaCheia
-            border { color: Tema.bordaForte; width: 1 }
+            border { color: Tema.bordaForte; width: Tema.futurista ? 0 : 1 }
+            Aurora { anchors.fill: parent; radius: parent.radius; visible: Tema.futurista }
             Behavior on width { enabled: !area.pressed; NumberAnimation { duration: 90 } }
         }
     }
@@ -32,7 +33,7 @@ Item {
         anchors { left: parent.left; leftMargin: 7; verticalCenter: parent.verticalCenter }
         nome: raiz.valor < 35 ? raiz.iconeBaixo : raiz.icone
         tamanho: 16
-        cor: Tema.textoSecundario
+        cor: Tema.futurista ? "white" : Tema.textoSecundario
         visible: raiz.icone !== ""
         MouseArea { anchors { fill: parent; margins: -6 } onClicked: raiz.iconeClicado(); z: 2 }
     }
