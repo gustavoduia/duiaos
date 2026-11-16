@@ -21,18 +21,19 @@ export XKB_DEFAULT_OPTIONS="${XKBOPTIONS:-}"
 export LANG="${LANG:-pt_BR.UTF-8}"
 export QT_QPA_PLATFORM=wayland
 
-# Nada de texto de terminal na tela (ADR 054): limpa o terminal virtual, esconde
-# o cursor e manda as mensagens dos programas para o registro do sistema
-# (journalctl -t duiaos-entrada-sessao). Sem isso, ao sair ou desligar aparecia por um
-# instante o texto que os programas escreveram por baixo da interface.
+# Nada de texto de terminal na tela (ADR 054 e 055): limpa o terminal virtual, esconde o
+# cursor e manda as mensagens dos programas para um arquivo (ou para lugar nenhum), em vez
+# de deixá-las no terminal por baixo da interface.
+# IMPORTANTE: só redirecionamento do próprio shell, que não tem como falhar. Nunca ponha um
+# programa na frente do compositor aqui (como o systemd-cat): se ele falhar, a tela gráfica
+# não abre e a pessoa cai no login em modo texto (aconteceu em 16/11).
 { printf '\033[H\033[2J\033[3J\033[?25l' > /dev/tty; } 2>/dev/null || true
-if command -v systemd-cat >/dev/null 2>&1; then
-  REGISTRAR="systemd-cat --identifier=duiaos-entrada-sessao"
+REGISTRO="${XDG_RUNTIME_DIR:-}/duiaos-entrada-sessao.log"
+# O teste roda num subshell: num shell POSIX, um redirecionamento que falha em ":" ou "exec" encerra o script
+if [ -n "${XDG_RUNTIME_DIR:-}" ] && ( : > "${REGISTRO}" ) 2>/dev/null; then
+  exec >> "${REGISTRO}" 2>&1
 else
-  REGISTRAR=""
-  exec >/dev/null 2>&1
+  exec > /dev/null 2>&1
 fi
 
-# -s: permite trocar de terminal (Ctrl+Alt+F1...); -d: sem bordas de janela
-# shellcheck disable=SC2086  # REGISTRAR vazio ou "comando opção"
-exec ${REGISTRAR} cage -s -d -- python3 "${PASTA}/main.py"
+exec cage -s -d -- python3 "${PASTA}/main.py"

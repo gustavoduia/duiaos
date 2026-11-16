@@ -54,6 +54,9 @@ fundos com GIF/vídeo, Atualizações nas Configurações, foto da conta, menu d
    Entrada/Bloqueio, Central de IA e "Ajude a melhorar"; janelas presas aos cantos.
 
 ## 5. Decisões recentes (detalhe nos ADRs)
+- 16/11: **Dell caiu no login em modo texto depois da 0013** (ADR 055, ficha DUIA-2026-0014, crítica): o compositor
+  era chamado por `systemd-cat`; agora só redirecionamento do shell, e `test_inicio_da_tela.py` cobre o caso. Causa
+  exata no Dell não confirmada (sem relatório daquele boot). **Aguardando o Gustavo aplicar pelo terminal e confirmar.**
 - 16/11: **Inicialização limpa, janelas com identidade própria e Futurista como estilo inicial** (ADR 054, ficha
   DUIA-2026-0013): GRUB escondido com F12 para escolher o sistema; logomarca em fundo preto (GRUB e Plymouth, sem
   o nome); núcleo, systemd, sessão e Tela de Entrada sem texto no terminal; Ilha amplia sem piscar (causa: imagem
