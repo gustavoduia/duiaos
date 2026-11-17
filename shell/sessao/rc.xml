@@ -70,8 +70,11 @@
   </keyboard>
   <!-- Instalador do DuiaOS (ADR 065): em tela cheia e sem a barra da janela, como o do macOS -->
   <windowRules>
-    <windowRule identifier="calamares" serverDecoration="no">
-      <action name="ToggleFullscreen" />
+    <!-- Sem bordas para todas as janelas do instalador; tela cheia só para a principal (type normal), nunca
+         para os diálogos de confirmação (pelo Xwayland eles chegam como type dialog) -->
+    <windowRule identifier="calamares" serverDecoration="no"/>
+    <windowRule identifier="calamares" type="normal">
+      <action name="ToggleFullscreen"/>
     </windowRule>
   </windowRules>
 </labwc_config>

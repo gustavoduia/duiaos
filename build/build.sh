@@ -75,7 +75,7 @@ lb config \
   --iso-publisher "DuiaOS; https://github.com/gustavoduia/duiaos-fontes-abertas" \
   --iso-volume "${VOLUME}" \
   --memtest none \
-  --bootappend-live "boot=live components quiet splash hostname=duiaos username=duia locales=pt_BR.UTF-8 keyboard-layouts=br timezone=America/Sao_Paulo"
+  --bootappend-live "boot=live components quiet splash hostname=duiaos username=duia user-fullname=DuiaOS locales=pt_BR.UTF-8 keyboard-layouts=br timezone=America/Sao_Paulo"
 
 log "Copiando a configuração do DuiaOS"
 cp -a "${ROOT}/build/config/." config/

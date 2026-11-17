@@ -65,5 +65,8 @@ qml6-module-qtquick
 qml6-module-qtqml
 qml6-module-qtquick-effects
 qt6-svg-plugins
+# O instalador (Calamares) roda pelo Xwayland: no Wayland nativo os campos não recebem o teclado
+xwayland
+x11-xserver-utils
 rsync
 squashfs-tools

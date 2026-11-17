@@ -8,6 +8,7 @@ import os
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[2]
@@ -204,6 +205,16 @@ class TesteSessao(unittest.TestCase):
         self.assertEqual(comando, ["swayidle", "-w", "timeout", "600", "/b", "before-sleep", "/b", "lock", "/b"])
         self.assertIn("systemctl suspend", sessao.comando_swayidle(0, 30, "/b"))
         self.assertNotIn("600", sessao.comando_swayidle(0, 30, "/b"))
+
+    def test_sem_bloqueio_no_pendrive(self):
+        self.assertTrue(sessao.sessao_do_pendrive("BOOT_IMAGE=/live/vmlinuz boot=live components quiet"))
+        self.assertFalse(sessao.sessao_do_pendrive("BOOT_IMAGE=/boot/vmlinuz root=UUID=1 ro quiet"))
+        self.assertFalse(sessao.sessao_do_pendrive("boot=liveish"))
+        iniciados = []
+        with mock.patch.object(sessao, "sessao_do_pendrive", return_value=True), \
+                mock.patch.object(sessao, "_parar"), mock.patch.object(sessao, "_iniciar", iniciados.append):
+            sessao.aplicar_bloqueio()
+        self.assertEqual(iniciados, [])
 
 
 class TesteOperacoesDeArquivo(unittest.TestCase):

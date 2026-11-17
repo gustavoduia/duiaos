@@ -325,8 +325,22 @@ def _minutos(chave, padrao):
     return int(valor) if valor.isdigit() else padrao
 
 
+def sessao_do_pendrive(linha_do_nucleo=None):
+    """Sessão do pendrive (modo live, ADR 065): ninguém sabe a senha do usuário dela."""
+    if linha_do_nucleo is None:
+        try:
+            linha_do_nucleo = Path("/proc/cmdline").read_text(encoding="utf-8")
+        except OSError:
+            return False
+    return "boot=live" in linha_do_nucleo.split()
+
+
 def aplicar_bloqueio():
     _parar("swayidle")
+    # No pendrive, a tela nunca bloqueia sozinha: a senha do usuário do modo live não é de ninguém, e o
+    # bloqueio no meio da instalação (que leva vários minutos sem mexer no mouse) prendia a pessoa fora.
+    if sessao_do_pendrive():
+        return
     bloquear = str(PASTA_SHELL / "bloqueio" / "bloquear")
     descanso = f"python3 {PASTA_SHELL / 'descanso' / 'main.py'}"
     minutos_descanso = pastas.ler_preferencia("descanso", "minutos", "0")
