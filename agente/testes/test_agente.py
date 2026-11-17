@@ -106,6 +106,17 @@ class TestAgenteNoDBus(unittest.TestCase):
         r = self.chamar("Preparar", "rodar_comando", "{}", check=False)
         self.assertIn("Invalido", r.stderr)
 
+    def test_mover_para_lixeira_recusa_pelo_dbus(self):
+        """O método existe no D-Bus e recusa pedidos ruins com mensagem para a pessoa (ADR 068)."""
+        for pedido, trecho in (("[]", "Escolha o que mover"), ("não é json", "JSON")):
+            resultado = self.chamar("MoverParaLixeira", pedido, check=False)
+            self.assertNotEqual(resultado.returncode, 0)
+            self.assertIn(trecho, resultado.stderr)
+        resultado = json.loads(valor(self.chamar("MoverParaLixeira", '["/etc/passwd", "relativo.txt"]').stdout))
+        self.assertEqual(resultado["movidos"], [])
+        self.assertEqual(len(resultado["recusados"]), 2)
+        self.assertTrue(Path("/etc/passwd").exists())
+
     def test_remover_com_sucesso(self):
         plano = json.loads(valor(self.chamar("Preparar", "remover_aplicativo", '{"pacote": "instalado-x"}').stdout))
         self.assertIsNone(plano["recusa"])
@@ -116,8 +127,10 @@ class TestArquivosDoPacote(unittest.TestCase):
     def test_polkit_tem_uma_acao_por_acao_do_agente(self):
         politica = ET.parse(RAIZ_PACOTE / "usr/share/polkit-1/actions/org.duiaos.agente.policy")
         ids = {a.get("id") for a in politica.findall("action")}
-        # Uma por ação do apt, mais a da atualização automática (ADR 058)
-        self.assertEqual(ids, {f"org.duiaos.agente.{acao}" for acao in pl.ACOES} | {"org.duiaos.agente.configurar_atualizacoes", "org.duiaos.agente.limpar_sistema"})
+        # Uma por ação do apt, mais a da atualização automática (ADR 058), a da limpeza do sistema (ADR 060)
+        # e a da Lixeira de pastas do sistema (ADR 068)
+        self.assertEqual(ids, {f"org.duiaos.agente.{acao}" for acao in pl.ACOES} | {
+            "org.duiaos.agente.configurar_atualizacoes", "org.duiaos.agente.limpar_sistema", "org.duiaos.agente.mover_para_lixeira"})
         for acao in politica.findall("action"):
             self.assertNotEqual(acao.find("defaults/allow_any").text, "yes")
 

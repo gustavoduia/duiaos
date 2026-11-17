@@ -1,13 +1,18 @@
 """DuiaOS — ícones próprios da interface (traço fino, 24 × 24).
 
-O traço é fino e não engrossa junto com o ícone: num ícone pequeno ele tem cerca de 1,2 ponto
-da tela, e num grande cresce bem menos que o desenho (um ícone de 60 pontos com o traço de
-um de 18 ficaria com o contorno grosso). Veja TRACO e traco().
+Nitidez (ADR 068): o traço é calculado pelo tamanho em que o ícone APARECE na tela, em pixels, e não
+pelo tamanho da imagem gerada. Nos tamanhos pequenos ele fica em pelo menos 1,4 pixel (abaixo disso o
+antisserrilhado deixa a linha cinza, falhada); nos grandes cresce bem menos que o desenho (um ícone de
+60 pontos com o traço proporcional a um de 18 ficaria com o contorno grosso). Veja traco_px().
 
-Os desenhos ficam aqui, em SVG, e o QML os pede ao provedor de imagens com a cor
-que quiser:
+A imagem é desenhada no tamanho exato dos pixels da tela (Icone.qml: tamanho × devicePixelRatio), sem
+reduzir pela placa de vídeo — reduzir uma imagem do dobro do tamanho é o que deixava as linhas finas
+borradas e com falhas.
 
-    Image { source: "image://duia/wifi-3/1F2933" }      // nome / cor (hex, sem #)
+Os desenhos ficam aqui, em SVG, e o QML os pede ao provedor de imagens com a cor que quiser e o
+tamanho em que o ícone aparece:
+
+    Image { source: "image://duia/wifi-3/1F2933/18" }      // nome / cor (hex, sem #) / tamanho visto
 
 Assim o mesmo ícone serve à Barra de Recursos, à Ilha de Aplicativos, ao
 Explorador de Arquivos e às Configurações, em qualquer cor. Todos os desenhos
@@ -18,14 +23,21 @@ import re
 
 # Elementos SVG de cada ícone, com "C" no lugar da cor. O contêiner aplica
 # traço arredondado (TRACO, afinado nos tamanhos grandes); "fill='C'" pinta por dentro.
-TRACO = 1.6                     # em unidades do desenho (24), para ícones de até 18 pontos
+TRACO_PX = 1.5                  # espessura, em pixels da tela, de um ícone visto com 18 pontos
+TRACO_MINIMO_PX = 1.4           # abaixo disso a linha antisserrilhada fica cinza e falhada
 _TRACO_ANTIGO = 1.8             # os traços escritos nos desenhos foram pensados para este
 
 
-def traco(lado):
-    """Espessura do traço para uma imagem de `lado` pixels (o QML pede o dobro do tamanho do ícone)."""
-    tamanho = lado / 2 if lado else 18
-    return round(max(0.7, TRACO * min(1.0, (18 / tamanho) ** 0.65)), 3)
+def traco_px(visto):
+    """Espessura do traço, em pixels, para um ícone que aparece com `visto` pontos na tela."""
+    visto = visto or 18
+    return max(TRACO_MINIMO_PX, TRACO_PX * (visto / 18) ** 0.45)
+
+
+def traco(visto):
+    """Espessura do traço em unidades do desenho (24 × 24) para um ícone visto com `visto` pontos."""
+    visto = visto or 18
+    return round(traco_px(visto) * 24 / visto, 3)
 
 _A = 'stroke-opacity="0.28"'
 
@@ -103,8 +115,10 @@ DESENHOS = {
     "musica": '<path d="M9 17.5V6l11-2v11.5"/><circle cx="6.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="15.5" r="2.5"/>',
     "video": '<rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10.5l5-3v9l-5-3"/>',
     "lixeira": '<path d="M4 7h16M9.5 7V4.5h5V7M6 7l1 13h10l1-13M10 11v5.5M14 11v5.5"/>',
-    "lixeira-cheia": ('<path d="M4 7h16M9.5 7V4.5h5V7M6 7l1 13h10l1-13"/>'
-                      '<path d="M8.5 12h7M9 15.5h6" stroke-opacity="0.7"/>'),
+    # Cheia: sem a tampa, com papéis amassados saindo pela boca (como a Lixeira cheia do macOS) — dá para
+    # ver de longe que há algo dentro; a diferença antiga (dois tracinhos no lugar de outros dois) não se via
+    "lixeira-cheia": ('<path d="M4.5 9.5h15M6.2 9.5l1 10.5h9.6l1-10.5M10 13v4M14 13v4"/>'
+                      '<path d="M7.4 9.5l1-3.9 3.2 1.4 2.4-3 2.5 3.6 1 1.9" fill="C" fill-opacity="0.22" stroke-linejoin="round"/>'),
     "casa": '<path d="M3 11l9-7 9 7M5.5 9.5V20h4.5v-6h4v6h4.5V9.5"/>',
     "monitor": '<rect x="2.5" y="4" width="19" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>',
     "aplicativos": ('<rect x="4" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"/>'
@@ -171,15 +185,16 @@ DESENHOS = {
 }
 
 
-def svg(nome, cor="1F2933", lado=0):
-    """SVG completo do ícone na cor pedida (hex sem '#'), com o traço certo para `lado` pixels. None se o nome não existe."""
+def svg(nome, cor="1F2933", visto=0):
+    """SVG completo do ícone na cor pedida (hex sem '#'), com o traço certo para um ícone visto com `visto`
+    pontos (o tamanho da imagem não importa: o SVG é vetorial). None se o nome não existe."""
     desenho = DESENHOS.get(nome)
     if desenho is None:
         return None
     cor = "#" + "".join(c for c in cor if c in "0123456789abcdefABCDEF")[:8]
     if len(cor) not in (4, 7, 9):
         cor = "#1F2933"
-    espessura = traco(lado)
+    espessura = traco(visto)
     fator = espessura / _TRACO_ANTIGO
     corpo = re.sub(r'stroke-width="([0-9.]+)"', lambda m: f'stroke-width="{round(float(m.group(1)) * fator, 3)}"', desenho)
     corpo = corpo.replace('"C"', f'"{cor}"')
@@ -189,7 +204,7 @@ def svg(nome, cor="1F2933", lado=0):
 
 
 def registrar(engine):
-    """Registra o provedor "image://duia/NOME/COR" na engine QML."""
+    """Registra o provedor "image://duia/NOME/COR/VISTO" na engine QML."""
     from PySide6.QtCore import QByteArray, QRectF, Qt
     from PySide6.QtGui import QImage, QPainter
     from PySide6.QtQuick import QQuickImageProvider
@@ -200,10 +215,15 @@ def registrar(engine):
             super().__init__(QQuickImageProvider.ImageType.Image)
 
         def requestImage(self, pedido, tamanho, tamanho_pedido):
-            nome, _, cor = pedido.partition("/")
+            nome, _, resto = pedido.partition("/")
+            cor, _, visto = resto.partition("/")
             lado_l = tamanho_pedido.width() if tamanho_pedido.width() > 0 else 48
             lado_a = tamanho_pedido.height() if tamanho_pedido.height() > 0 else lado_l
-            texto = svg(nome, cor or "1F2933", lado_l) or svg("arquivo", cor or "1F2933", lado_l)
+            try:
+                visto = float(visto)
+            except ValueError:
+                visto = lado_l / 2                       # pedidos antigos (sem o tamanho visto): o dobro
+            texto = svg(nome, cor or "1F2933", visto) or svg("arquivo", cor or "1F2933", visto)
             imagem = QImage(lado_l, lado_a, QImage.Format.Format_ARGB32_Premultiplied)
             imagem.fill(Qt.GlobalColor.transparent)
             pintor = QPainter(imagem)

@@ -80,19 +80,40 @@ Item {
         property point inicio: Qt.point(0, 0)
         property var base: ({})
         property int modo: 0                       // 0 substitui, 1 soma (Shift), 2 inverte (Ctrl)
-        function atualizar(x, y) {
-            var x1 = Math.min(inicio.x, x), y1 = Math.min(inicio.y, y)
-            var x2 = Math.max(inicio.x, x), y2 = Math.max(inicio.y, y)
-            faixa.x = x1; faixa.y = y1; faixa.width = x2 - x1; faixa.height = y2 - y1
-            var nova = modo === 0 ? ({}) : Object.assign({}, base)
+        property var retangulos: []                // [{l, t, r, b, caminho}] guardados ao apertar (os ícones não se mexem)
+        property string assinatura: ""
+        property point ponteiro: Qt.point(0, 0)
+        property bool pendente: false
+        function guardarRetangulos() {
+            var lista = []
             for (var i = 0; i < icones.count; i++) {
                 var icone = icones.itemAt(i)
                 if (!icone || !grade.visible) continue
                 var p = icone.mapToItem(raiz, 0, 0)
                 // só o desenho do ícone e do nome, não a célula inteira
-                var l = p.x + 12, r = p.x + icone.width - 12, t = p.y + 2, b = p.y + icone.height - 4
-                if (l > x2 || r < x1 || t > y2 || b < y1) continue
-                var c = icone.modelData.caminho
+                lista.push({ l: p.x + 12, r: p.x + icone.width - 12, t: p.y + 2, b: p.y + icone.height - 4,
+                             caminho: icone.modelData.caminho })
+            }
+            retangulos = lista
+        }
+        function atualizar() {
+            pendente = false
+            var x = ponteiro.x, y = ponteiro.y
+            var x1 = Math.min(inicio.x, x), y1 = Math.min(inicio.y, y)
+            var x2 = Math.max(inicio.x, x), y2 = Math.max(inicio.y, y)
+            faixa.x = x1; faixa.y = y1; faixa.width = x2 - x1; faixa.height = y2 - y1
+            var tocados = []
+            for (var i = 0; i < retangulos.length; i++) {
+                var r = retangulos[i]
+                if (r.l > x2 || r.r < x1 || r.t > y2 || r.b < y1) continue
+                tocados.push(i)
+            }
+            var chave = tocados.join(",")
+            if (chave === assinatura) return            // a seleção só muda quando o retângulo toca outros ícones
+            assinatura = chave
+            var nova = modo === 0 ? ({}) : Object.assign({}, base)
+            for (var k = 0; k < tocados.length; k++) {
+                var c = retangulos[tocados[k]].caminho
                 if (modo === 2 && base[c]) delete nova[c]; else nova[c] = true
             }
             raiz.selecao = nova
@@ -104,19 +125,27 @@ Item {
             inicio = Qt.point(m.x, m.y)
             modo = (m.modifiers & Qt.ControlModifier) ? 2 : ((m.modifiers & Qt.ShiftModifier) ? 1 : 0)
             base = Object.assign({}, raiz.selecao)
+            assinatura = ""
             if (m.button === Qt.LeftButton && modo === 0) raiz.selecao = ({})
         }
         onPositionChanged: (m) => {
             if (!(m.buttons & Qt.LeftButton) || !raiz.mostrarIcones) return
-            if (!arrastando && Math.abs(m.x - inicio.x) < 5 && Math.abs(m.y - inicio.y) < 5) return
-            arrastando = true
-            atualizar(m.x, m.y)
+            ponteiro = Qt.point(m.x, m.y)
+            if (!arrastando) {
+                if (Math.abs(m.x - inicio.x) < 5 && Math.abs(m.y - inicio.y) < 5) return
+                arrastando = true
+                guardarRetangulos()
+                atualizar()
+                return
+            }
+            pendente = true                          // aplicado no próximo quadro (Timer abaixo)
         }
         onReleased: (m) => {
-            if (arrastando) { arrastando = false; return }
+            if (arrastando) { if (pendente) atualizar(); arrastando = false; return }
             if (m.button === Qt.RightButton) { raiz.selecao = ({}); menu.abrir("fundo", m.x, m.y) }
         }
         onCanceled: arrastando = false
+        Timer { interval: 16; repeat: true; running: fundoArea.arrastando; onTriggered: if (fundoArea.pendente) fundoArea.atualizar() }
     }
     Rectangle {
         id: faixa

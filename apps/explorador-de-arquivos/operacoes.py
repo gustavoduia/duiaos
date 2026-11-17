@@ -29,6 +29,43 @@ class ErroDeArquivo(Exception):
     """Erro com mensagem pronta para a pessoa ler."""
 
 
+class SemPermissao(ErroDeArquivo):
+    """Alguns itens não foram para a Lixeira porque a PASTA onde estão não deixa (no Linux, mover ou apagar
+    depende da permissão da pasta, não do arquivo: ser dono do arquivo não basta). Quase sempre a pasta é
+    de outro usuário — por exemplo do root, quando foi criada por um programa rodando como administrador
+    (o Docker de um build, um "sudo"). `caminhos` são os que ficaram; `movidos`, os nomes na Lixeira dos
+    que foram. Quem chama pode pedir ao duiaos-agente, com a senha de administrador, para mover os que
+    ficaram (MoverParaLixeira, ADR 068), como o Finder do macOS faz."""
+
+    def __init__(self, mensagem, caminhos, movidos=()):
+        super().__init__(mensagem)
+        self.caminhos = list(caminhos)
+        self.movidos = list(movidos)
+
+
+def _dono(caminho):
+    import pwd
+    try:
+        return pwd.getpwuid(os.stat(caminho).st_uid).pw_name
+    except (OSError, KeyError):
+        return ""
+
+
+def explicar_sem_permissao(caminho):
+    """Por que não dá para mover/apagar: diz de quem é a pasta (é ela que manda)."""
+    caminho = Path(caminho)
+    pasta = caminho.parent
+    dono_pasta, dono_arquivo = _dono(pasta), _dono(caminho)
+    eu = _dono(Path.home()) or os.environ.get("USER", "")
+    if dono_pasta and dono_pasta != eu:
+        quem = "do administrador do sistema (root)" if dono_pasta == "root" else f"do usuário “{dono_pasta}”"
+        return (f"“{caminho.name}” está numa pasta {quem} ({pasta}). No Linux, quem decide se um arquivo pode sair "
+                "de uma pasta é o dono da pasta, mesmo que o arquivo seja seu.")
+    if dono_arquivo and dono_arquivo != eu:
+        return f"“{caminho.name}” pertence {'ao administrador do sistema (root)' if dono_arquivo == 'root' else 'ao usuário “' + dono_arquivo + '”'}."
+    return f"Sem permissão para mover “{caminho.name}” para a Lixeira."
+
+
 def descrever_data(momento, agora=None):
     """'Hoje, 14:05', 'Ontem, 09:12' ou '12/10/2026, 18:30'."""
     data = datetime.datetime.fromtimestamp(momento)
@@ -334,12 +371,15 @@ def _pastas_lixeira(lixeira=None):
 
 
 def mover_para_lixeira(caminhos, lixeira=None, agora=None):
-    """Move para a Lixeira e grava o .trashinfo (caminho original e data). Devolve os nomes na Lixeira."""
+    """Move para a Lixeira e grava o .trashinfo (caminho original e data). Devolve os nomes na Lixeira.
+
+    Os que não puderem sair da pasta por falta de permissão não interrompem os outros: no fim, levanta
+    SemPermissao com eles (e os nomes dos que foram)."""
     arquivos, infos = _pastas_lixeira(lixeira)
     arquivos.mkdir(parents=True, exist_ok=True)
     infos.mkdir(parents=True, exist_ok=True)
     agora = agora or datetime.datetime.now()
-    nomes = []
+    nomes, sem_permissao = [], []
     for caminho in caminhos:
         caminho = Path(caminho).absolute()
         if not caminho.exists() and not caminho.is_symlink():
@@ -365,11 +405,18 @@ def mover_para_lixeira(caminhos, lixeira=None, agora=None):
                     caminho.unlink()
         except PermissionError:
             info.unlink(missing_ok=True)
-            raise ErroDeArquivo(f"Sem permissão para mover “{caminho.name}” para a Lixeira.")
+            sem_permissao.append(str(caminho))
+            continue
         except OSError as erro:
             info.unlink(missing_ok=True)
             raise ErroDeArquivo(f"Não foi possível mover “{caminho.name}” para a Lixeira ({erro.strerror}).")
         nomes.append(nome)
+    if sem_permissao:
+        if len(sem_permissao) == 1:
+            mensagem = explicar_sem_permissao(sem_permissao[0])
+        else:
+            mensagem = (f"{len(sem_permissao)} itens estão em pastas de outro usuário (ex.: {explicar_sem_permissao(sem_permissao[0])})")
+        raise SemPermissao(mensagem, sem_permissao, nomes)
     return nomes
 
 

@@ -66,6 +66,10 @@ fundos com GIF/vídeo, Atualizações nas Configurações, foto da conta, menu d
    Entrada/Bloqueio, Central de IA e "Ajude a melhorar"; janelas presas aos cantos.
 
 ## 5. Decisões recentes (detalhe nos ADRs)
+- 17/11 (noite): **Lixeira de pastas do sistema, listas de limpeza só com arquivos da pessoa, retângulo fluido, Lixeira
+  cheia e nitidez** (ADR 068, ficha DUIA-2026-0025): agente `MoverParaLixeira` (polkit), `arquivos_da_pessoa`, retângulo de
+  14,6 → 1,2 ms por quadro, ícones no tamanho dos pixels e texto nativo. **Sem teste no Dell**; falta saber a resolução e a
+  escala da tela do Dell (`wlr-randr`) para avaliar o que ainda parecer serrilhado.
 - 17/11: **Seleção por arraste e Descompactar** (ADR 067, ficha DUIA-2026-0024): retângulo de seleção no Explorador
   e na Área de Trabalho (as vistas do Explorador eram `interactive`: o arraste virava rolagem); Descompactar no botão
   direito e com dois cliques (.zip, .tar.*, .gz/.bz2/.xz, .7z; pacote `7zip`); correção da seleção que se perdia a

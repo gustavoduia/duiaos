@@ -144,10 +144,21 @@ def _criar_aparencia():
 
 def preparar(engine):
     configurar_tema_de_icones()
+    configurar_texto()
     engine.addImportPath(str(PASTA / "qml"))
     icones.registrar(engine)
     engine.addImageProvider("icone", provedor_icones_do_tema())
     engine.rootContext().setContextProperty("aparencia", aparencia())
+
+
+def configurar_texto():
+    """Texto desenhado pelo FreeType, com os ajustes de pixel da fonte (ADR 068).
+
+    O padrão do Qt Quick (campos de distância) foi feito para texto que gira e muda de escala; numa tela
+    comum (densidade 1) ele deixa as letras pequenas borradas. O desenho nativo encaixa os traços nos
+    pixels, como o GTK e o macOS fazem. Vale para todas as janelas criadas depois desta chamada."""
+    from PySide6.QtQuick import QQuickWindow
+    QQuickWindow.setTextRenderType(QQuickWindow.TextRenderType.NativeTextRendering)
 
 
 def registrar_uso(evento, **dados):
@@ -165,3 +176,30 @@ def ligar_registro(nome):
         duiaos_registro.ligar(nome, qt=True)
     except ImportError:
         pass
+
+
+def chamar_agente(dono, metodo, argumentos, ao_responder=None, ao_falhar=None, tempo=300000):
+    """Chama o duiaos-agente (D-Bus do sistema, org.duiaos.Agente1) sem travar a janela.
+
+    ao_responder(lista de argumentos da resposta) ou ao_falhar(mensagem para a pessoa) rodam na linha
+    da interface. `dono` é um QObject que vive enquanto a chamada estiver pendente."""
+    from PySide6.QtDBus import QDBusConnection, QDBusMessage, QDBusPendingCallWatcher
+    mensagem = QDBusMessage.createMethodCall("org.duiaos.Agente1", "/org/duiaos/Agente1", "org.duiaos.Agente1", metodo)
+    mensagem.setArguments(list(argumentos))
+    vigia = QDBusPendingCallWatcher(QDBusConnection.systemBus().asyncCall(mensagem, tempo), dono)
+    if not hasattr(dono, "_chamadas_ao_agente"):
+        dono._chamadas_ao_agente = []              # guarda a referência até a resposta chegar
+    dono._chamadas_ao_agente.append(vigia)
+
+    def terminou(v):
+        if v in dono._chamadas_ao_agente:
+            dono._chamadas_ao_agente.remove(v)
+        if v.isError():
+            nome = v.error().name()
+            if ao_falhar:
+                ao_falhar(v.error().message() if "ServiceUnknown" not in nome and "NoReply" not in nome
+                          else "O agente do sistema não respondeu.")
+        elif ao_responder:
+            ao_responder(v.reply().arguments())
+        v.deleteLater()
+    vigia.finished.connect(terminou)

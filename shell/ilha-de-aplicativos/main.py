@@ -308,9 +308,18 @@ class Ilha(QObject):
         self._timer_sinal = QTimer(self, interval=150, timeout=self._verificar_sinal)
         self._timer_sinal.start()
 
-        # Lixeira cheia ou vazia (ícone da Ilha)
+        # Lixeira cheia ou vazia (ícone da Ilha): na hora, pelo vigia da pasta (o Explorador, as Configurações
+        # e outros programas usam a mesma Lixeira); o relógio de 4 s fica de reserva (pasta recriada etc.)
         self._timer_lixeira = QTimer(self, interval=4000, timeout=self.atualizar_lixeira)
         self._timer_lixeira.start()
+        if not DEMONSTRACAO:
+            arquivos_da_lixeira = pastas.LIXEIRA / "files"
+            try:
+                arquivos_da_lixeira.mkdir(parents=True, exist_ok=True)
+            except OSError:
+                pass
+            self._vigia_lixeira = QFileSystemWatcher([str(arquivos_da_lixeira)], self)
+            self._vigia_lixeira.directoryChanged.connect(lambda _c: self.atualizar_lixeira())
         self.atualizar_lixeira()
 
     def _preparar_demonstracao(self):

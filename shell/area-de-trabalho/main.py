@@ -226,6 +226,17 @@ class Area(QObject):
             return
         try:
             operacoes.mover_para_lixeira(caminhos)
+        except operacoes.SemPermissao as erro:
+            # Pasta de outro usuário: o agente move, com autorização de administrador (ADR 068)
+            import json
+
+            def respondeu(resposta):
+                recusados = json.loads(resposta[0]).get("recusados", [])
+                if recusados:
+                    self.aviso.emit(recusados[0]["motivo"])
+                self.recarregar()
+            interface.chamar_agente(self, "MoverParaLixeira", [json.dumps(erro.caminhos)], respondeu,
+                                    lambda mensagem: self.aviso.emit(f"{erro} {mensagem}"))
         except operacoes.ErroDeArquivo as erro:
             self.aviso.emit(str(erro))
         self.recarregar()

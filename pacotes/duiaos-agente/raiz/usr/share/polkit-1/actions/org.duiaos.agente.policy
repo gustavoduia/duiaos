@@ -54,4 +54,13 @@
       <allow_active>auth_admin_keep</allow_active>
     </defaults>
   </action>
+  <action id="org.duiaos.agente.mover_para_lixeira">
+    <description>Mover para a Lixeira arquivos de pastas do sistema</description>
+    <message>É preciso autorização para mover para a Lixeira arquivos de uma pasta do sistema ou de outro usuário</message>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+  </action>
 </policyconfig>

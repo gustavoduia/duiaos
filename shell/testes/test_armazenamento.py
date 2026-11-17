@@ -199,6 +199,34 @@ class TesteArquivos(unittest.TestCase):
         self.assertEqual([v["nome"] for v in videos], ["grande.mp4", "pequeno.mp4"])
         self.assertEqual(ar.maiores_por_categoria(self.inicio, "grandes")[0]["nome"], "livro.pdf")
 
+    def test_so_arquivos_da_pessoa_nas_listas_de_apagar(self):
+        """Nada de programas, bibliotecas, configurações nem código: só o que vai e vem (ADR 068)."""
+        import subprocess
+        mb = 1024 * 1024
+        self.criar("Vídeos/filme.mp4", 3 * mb)
+        self.criar("Projetos/site/node_modules/esbuild/bin/esbuild", 9 * mb)          # programa do Node
+        self.criar("Projetos/site/node_modules/pacote/imagem.png", 2 * mb)            # imagem de biblioteca
+        self.criar("Projetos/ia/venv/pyvenv.cfg", 10)
+        self.criar("Projetos/ia/venv/lib/modelo.bin", 8 * mb)
+        self.criar("Projetos/ia/venv/share/manual.pdf", 2 * mb)
+        self.criar("Projetos/runner/.runner", 10)
+        self.criar("Projetos/runner/externals/node20/bin/node", 9 * mb)
+        self.criar("Projetos/runner/externals/node20/LICENSE.pdf", 2 * mb)
+        self.criar("Projetos/runner/_work/saida/teste.iso", 7 * mb)                     # gerado: pode apagar
+        self.criar("Documentos/banco.sqlite", 6 * mb)                                   # dados de programa
+        self.criar("Documentos/config.json", 2 * mb)
+        repositorio = self.inicio / "Projetos" / "duiaos"
+        self.criar("Projetos/duiaos/branding/fundo.png", 2 * mb)                        # código (rastreado)
+        self.criar("Projetos/duiaos/out/duiaos-dev.iso", 5 * mb)                        # saída (não rastreada)
+        subprocess.run(["git", "init", "-q", str(repositorio)], check=True)
+        subprocess.run(["git", "-C", str(repositorio), "add", "branding/fundo.png"], check=True)
+        nomes = sorted(a["nome"] for a in ar.maiores_por_categoria(self.inicio, "grandes"))
+        self.assertEqual(nomes, ["duiaos-dev.iso", "filme.mp4", "teste.iso"])
+        self.assertEqual([a["nome"] for a in ar.maiores_por_categoria(self.inicio, "imagens")], [])
+        # Sem o git (ou repositório estragado), a pasta do repositório inteira fica de fora
+        nomes = sorted(Path(c).name for c, _t, _m in ar.arquivos_da_pessoa(self.inicio, rodar=lambda *a, **k: (_ for _ in ()).throw(OSError())))
+        self.assertEqual(nomes, ["filme.mp4", "teste.iso"])
+
     def test_antigos(self):
         agora = time.time()
         self.criar("Downloads/velho.zip", 100, mudou=agora - 200 * 86400)

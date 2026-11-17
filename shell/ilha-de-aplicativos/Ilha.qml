@@ -334,7 +334,7 @@ Item {
             nome: "Central de Aplicativos"
             onClicado: ilha.alternarCentral()
             onMenu: (a) => ilha.abrirMenu("central", -1, a)
-            Ladrilho { anchors.fill: parent; icone: "aplicativos"; estilo: "noite"; tamanho: parent.width; resolucao: ilhaFundo.maximo }
+            Ladrilho { anchors.fill: parent; icone: "aplicativos"; estilo: "noite"; tamanho: parent.width; resolucao: ilhaFundo.maximo; base: ilhaFundo.base }
         }
 
         Repeater {
@@ -379,12 +379,12 @@ Item {
                         anchors.fill: parent
                         icone: delegado.modelData.iconeDuia || "pasta"
                         estilo: delegado.modelData.iconeDuia === "engrenagem" ? "cinza" : "azul"
-                        tamanho: parent.width; resolucao: ilhaFundo.maximo
+                        tamanho: parent.width; resolucao: ilhaFundo.maximo; base: ilhaFundo.base
                     }
                     IconeApp {
                         visible: (delegado.modelData.iconeDuia || "") === ""
                         anchors.fill: parent
-                        icone: delegado.modelData.icone; nome: delegado.modelData.nome; tamanho: parent.width; resolucao: ilhaFundo.maximo
+                        icone: delegado.modelData.icone; nome: delegado.modelData.nome; tamanho: parent.width; resolucao: ilhaFundo.maximo; base: ilhaFundo.base
                     }
                 }
             }
@@ -399,7 +399,7 @@ Item {
             nome: "Aplicativos"
             onClicado: ilha.abrirPasta("aplicativos")
             onMenu: (a) => ilha.abrirMenu("aplicativos", -1, a)
-            Ladrilho { anchors.fill: parent; icone: "pasta-aplicativos"; estilo: "azul"; tamanho: parent.width; resolucao: ilhaFundo.maximo }
+            Ladrilho { anchors.fill: parent; icone: "pasta-aplicativos"; estilo: "azul"; tamanho: parent.width; resolucao: ilhaFundo.maximo; base: ilhaFundo.base }
         }
         Vaga {
             id: vagaDownloads
@@ -407,14 +407,14 @@ Item {
             nome: "Downloads"
             onClicado: ilha.alternarDownloads(ilhaFundo.ancora(vagaDownloads))
             onMenu: (a) => ilha.abrirMenu("downloads", -1, a)
-            Ladrilho { anchors.fill: parent; icone: "pasta-downloads"; estilo: "azul"; tamanho: parent.width; resolucao: ilhaFundo.maximo }
+            Ladrilho { anchors.fill: parent; icone: "pasta-downloads"; estilo: "azul"; tamanho: parent.width; resolucao: ilhaFundo.maximo; base: ilhaFundo.base }
         }
         Vaga {
             ordem: ilha.itens.length + 3
             nome: "Lixeira"
             onClicado: ilha.abrirPasta("lixeira")
             onMenu: (a) => ilha.abrirMenu("lixeira", -1, a)
-            Ladrilho { anchors.fill: parent; icone: ilha.lixeiraCheia ? "lixeira-cheia" : "lixeira"; estilo: "claro"; tamanho: parent.width; resolucao: ilhaFundo.maximo }
+            Ladrilho { anchors.fill: parent; icone: ilha.lixeiraCheia ? "lixeira-cheia" : "lixeira"; estilo: "claro"; tamanho: parent.width; resolucao: ilhaFundo.maximo; base: ilhaFundo.base }
         }
     }
 }

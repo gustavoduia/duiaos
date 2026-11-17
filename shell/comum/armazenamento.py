@@ -26,7 +26,8 @@ CATEGORIAS = {
     "documentos": ("Documentos", ("pdf", "doc", "docx", "odt", "xls", "xlsx", "ods", "ppt", "pptx", "odp", "txt", "md", "rtf",
                                   "csv", "epub")),
     "compactados": ("Compactados", ("zip", "rar", "7z", "tar", "gz", "tgz", "bz2", "xz", "zst")),
-    "instaladores": ("Instaladores e imagens de disco", ("deb", "rpm", "appimage", "iso", "img", "exe", "msi", "dmg", "flatpakref")),
+    "instaladores": ("Instaladores e imagens de disco", ("deb", "rpm", "appimage", "iso", "img", "exe", "msi", "dmg", "flatpakref",
+                                                        "qcow2", "vdi", "vmdk", "vhd", "vhdx")),
     "copias": ("Cópias de segurança", ("bak", "old", "orig", "backup", "bkp", "swp")),
 }
 _POR_EXTENSAO = {ext: chave for chave, (_nome, extensoes) in CATEGORIAS.items() for ext in extensoes}
@@ -264,13 +265,95 @@ def uso_por_categoria(inicio=None, pastas_usuario=None, lixeira=None, cache=None
 
 
 # ------------------------------------------------------------------ o que dá para apagar
+#
+# Só entram nas listas de "apagar" os arquivos da pessoa que vão e vêm (ADR 068): vídeos, fotos, música,
+# documentos, compactados, instaladores e cópias de segurança. Ficam de fora, mesmo dentro da pasta pessoal:
+# - pastas escondidas (configurações dos programas: ~/.config, ~/.local, ~/.mozilla…);
+# - qualquer arquivo de outro tipo (programas, bibliotecas, bancos de dados, configurações);
+# - pastas de programas: node_modules, ambientes do Python (pyvenv.cfg, site-packages), __pycache__ e o
+#   runner do GitHub (só a pasta de trabalho dele, _work, é olhada);
+# - nos repositórios do git, os arquivos que fazem parte do código (rastreados): só sobram os gerados,
+#   como uma ISO de teste que ficou na pasta de saída.
+TIPOS_DA_PESSOA = frozenset(CATEGORIAS)                    # tudo menos "outros"
+PASTAS_DE_PROGRAMA = frozenset({"node_modules", "bower_components", "__pycache__", "site-packages", "dist-packages"})
+
+
+def _rastreados_pelo_git(repositorio, rodar=None):
+    """Caminhos absolutos dos arquivos que o git do repositório acompanha. None se não deu para saber
+    (sem git, repositório estragado): aí a pasta inteira é tratada como código."""
+    rodar = rodar or subprocess.run
+    try:
+        saida = rodar(["git", "-C", str(repositorio), "ls-files", "-z"], capture_output=True, timeout=20, check=False)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if saida.returncode != 0:
+        return None
+    base = str(repositorio)
+    return {os.path.join(base, c) for c in saida.stdout.decode("utf-8", "surrogateescape").split("\0") if c}
+
+
+def arquivos_da_pessoa(inicio, limite_s=25.0, limite_arquivos=400_000, pular=(), rodar=None):
+    """Como andar(), mas só com os arquivos que a pessoa pode apagar (veja acima): (caminho, tamanho, mudou)."""
+    inicio = Path(inicio)
+    try:
+        dispositivo = inicio.stat().st_dev
+    except OSError:
+        return
+    pular = {Path(p) for p in pular}
+    fim = time.monotonic() + limite_s
+    pilha = [(inicio, None)]                 # (pasta, arquivos rastreados do repositório em que ela está)
+    contados = 0
+    vistos = set()
+    while pilha:
+        pasta, rastreados = pilha.pop()
+        if pasta in pular or pasta.name in PASTAS_DE_PROGRAMA:
+            continue
+        try:
+            entradas = list(os.scandir(pasta))
+        except OSError:
+            continue
+        nomes = {e.name for e in entradas}
+        if "pyvenv.cfg" in nomes:
+            continue                         # ambiente do Python (venv)
+        if ".runner" in nomes or {"run.sh", "config.sh", "bin"} <= nomes:
+            if "_work" in nomes:             # runner do GitHub: só a pasta de trabalho (repositórios e saídas)
+                pilha.append((pasta / "_work", rastreados))
+            continue
+        if ".git" in nomes and pasta != inicio:
+            rastreados = _rastreados_pelo_git(pasta, rodar)
+            if rastreados is None:
+                continue
+        for entrada in entradas:
+            if entrada.name.startswith("."):
+                continue                     # escondidos: configurações
+            try:
+                info = entrada.stat(follow_symlinks=False)
+            except OSError:
+                continue
+            if stat.S_ISDIR(info.st_mode):
+                if info.st_dev == dispositivo:
+                    pilha.append((Path(entrada.path), rastreados))
+            elif stat.S_ISREG(info.st_mode):
+                contados += 1
+                if classificar(entrada.name) not in TIPOS_DA_PESSOA:
+                    continue
+                if rastreados is not None and entrada.path in rastreados:
+                    continue                 # faz parte do código de um repositório
+                if info.st_nlink > 1:
+                    if (info.st_dev, info.st_ino) in vistos:
+                        continue
+                    vistos.add((info.st_dev, info.st_ino))
+                yield entrada.path, info.st_blocks * 512, info.st_mtime
+        if contados >= limite_arquivos or time.monotonic() > fim:
+            return
+
 
 def maiores_por_categoria(inicio, categoria, limite=60, minimo=1024 * 1024, pular=()):
-    """Os maiores arquivos de um tipo (ou de qualquer tipo, com categoria "grandes") na pasta pessoal."""
+    """Os maiores arquivos de um tipo (ou de todos os tipos da pessoa, com categoria "grandes") na pasta pessoal."""
     achados = []
-    for caminho, tamanho, mudou in andar(inicio, limite_s=25, pular=pular):
-        if tamanho < minimo or "/." in caminho[len(str(inicio)):]:
-            continue                                         # pastas escondidas (configurações) ficam de fora
+    for caminho, tamanho, mudou in arquivos_da_pessoa(inicio, limite_s=25, pular=pular):
+        if tamanho < minimo:
+            continue
         if categoria in ("grandes", classificar(os.path.basename(caminho))):
             achados.append({"caminho": caminho, "nome": os.path.basename(caminho), "tamanho": tamanho, "mudou": int(mudou),
                             "pasta": os.path.dirname(caminho), "categoria": classificar(os.path.basename(caminho))})
@@ -283,7 +366,7 @@ def antigos(pasta, dias=90, agora=None, limite=200):
     corte = agora - dias * 86400
     achados = [{"caminho": c, "nome": os.path.basename(c), "tamanho": t, "mudou": int(m), "pasta": os.path.dirname(c),
                 "categoria": classificar(os.path.basename(c))}
-               for c, t, m in andar(pasta, limite_s=15) if m < corte]
+               for c, t, m in arquivos_da_pessoa(pasta, limite_s=15) if m < corte]
     return sorted(achados, key=lambda a: -a["tamanho"])[:limite]
 
 
@@ -292,9 +375,7 @@ def duplicados(inicio, minimo=1024 * 1024, limite_s=40, pular=()):
     Compara o tamanho, depois o começo e o fim, e só então o conteúdo inteiro. [{tamanho, arquivos: [...]}]"""
     fim = time.monotonic() + limite_s
     por_tamanho = {}
-    for caminho, _disco, _m in andar(inicio, limite_s=limite_s / 2, pular=pular):
-        if "/." in caminho[len(str(inicio)):]:
-            continue
+    for caminho, _disco, _m in arquivos_da_pessoa(inicio, limite_s=limite_s / 2, pular=pular):
         try:
             tamanho = os.path.getsize(caminho)
         except OSError:

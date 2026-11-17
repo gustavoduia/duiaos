@@ -30,7 +30,9 @@ Window {
         for (var i = 0; i < visiveis.length; i++) if (selecao[visiveis[i].caminho]) lista.push(visiveis[i].caminho)
         return lista
     }
-    function quantosSelecionados() { return selecionados().length }
+    // Quantos estão selecionados, sem percorrer a pasta inteira (a seleção só guarda os marcados)
+    readonly property int numSelecionados: { var n = 0; for (var c in selecao) if (selecao[c]) n++; return n }
+    function quantosSelecionados() { return numSelecionados }
     // Descompactar: todos os selecionados são arquivos compactados (.zip, .tar.gz, .7z, .rar…)
     function selecionadosCompactados() {
         var n = 0
@@ -77,8 +79,8 @@ Window {
     }
     function sub(id, rotulo, itens) { return { id: id, rotulo: rotulo, tipo: "submenu", ativo: true, marcado: false, atalho: "", itens: itens } }
     readonly property var sep: ({ id: -1, rotulo: "", tipo: "separador", ativo: false, marcado: false, atalho: "", itens: [] })
-    readonly property var menusDoApp: {
-        var n = janela.quantosSelecionados()
+    function menusDoApp() {
+        var n = janela.numSelecionados
         var normal = explorador.especial === ""
         var lixeira = explorador.especial === "lixeira"
         return [
@@ -113,8 +115,12 @@ Window {
                 it("ir:aplicativos", "Aplicativos"), it("ir:lixeira", "Lixeira"), sep, it("ir-para", "Ir para…", "Ctrl+L") ] }
         ]
     }
-    onMenusDoAppChanged: menuDoApp.definirMenus(menusDoApp)
-    Component.onCompleted: menuDoApp.definirMenus(menusDoApp)
+    // Os menus da Barra são remontados um instante depois da última mudança (seleção, pasta, opções),
+    // e não a cada uma: durante o retângulo de seleção a seleção muda a cada movimento do mouse.
+    Timer { id: atualizarMenus; interval: 120; onTriggered: menuDoApp.definirMenus(janela.menusDoApp()) }
+    onSelecaoChanged: atualizarMenus.restart()
+    Connections { target: explorador; function onMudou() { atualizarMenus.restart() } }
+    Component.onCompleted: menuDoApp.definirMenus(menusDoApp())
     Connections {
         target: menuDoApp
         function onAcionado(id) {
@@ -471,36 +477,55 @@ Window {
             readonly property real bordaRolagem: 28
 
             function vista() { return explorador.visualizacao === "icones" ? grade : lista }
-            // Retângulo de cada item nas coordenadas do conteúdo (também os que estão fora da tela)
-            function retanguloDoItem(i) {
+            property string assinatura: ""             // faixa de linhas/colunas já aplicada à seleção
+            property bool pendente: false
+
+            // Linhas e colunas que o retângulo toca, por conta (sem percorrer os itens: numa pasta com
+            // milhares de arquivos o custo é o mesmo). Na grade, o desenho de cada item ocupa 92 px no meio
+            // da célula; na lista, a linha inteira (30 px).
+            function faixaDeItens(x1, y1, x2, y2) {
+                var n = janela.visiveis.length
                 if (explorador.visualizacao === "icones") {
-                    var col = i % grade.colunas, lin = Math.floor(i / grade.colunas)
-                    return Qt.rect(col * grade.cellWidth + (grade.cellWidth - 92) / 2, lin * grade.cellHeight + 2, 92, grade.cellHeight - 8)
+                    var cw = grade.cellWidth, ch = grade.cellHeight, cols = grade.colunas
+                    var c1 = Math.max(0, Math.ceil((x1 - (cw + 92) / 2) / cw))
+                    var c2 = Math.min(cols - 1, Math.floor((x2 - (cw - 92) / 2) / cw))
+                    var l1 = Math.max(0, Math.ceil((y1 - ch + 6) / ch))
+                    var l2 = Math.min(Math.ceil(n / cols) - 1, Math.floor((y2 - 2) / ch))
+                    return { c1: c1, c2: c2, l1: l1, l2: l2, cols: cols }
                 }
-                return Qt.rect(0, i * 30, lista.width, 30)
+                return { c1: 0, c2: 0, l1: Math.max(0, Math.ceil((y1 - 30) / 30)), l2: Math.min(n - 1, Math.floor(y2 / 30)), cols: 1 }
             }
             function atualizar() {
+                pendente = false
                 var v = vista()
                 var agora = mapToItem(v.contentItem, ponteiro.x, ponteiro.y)
                 var x1 = Math.min(inicio.x, agora.x), y1 = Math.min(inicio.y, agora.y)
                 var x2 = Math.max(inicio.x, agora.x), y2 = Math.max(inicio.y, agora.y)
-                var nova = modo === 0 ? ({}) : Object.assign({}, base)
-                var ultimo = -1
-                for (var i = 0; i < janela.visiveis.length; i++) {
-                    var r = retanguloDoItem(i)
-                    if (r.x > x2 || r.x + r.width < x1 || r.y > y2 || r.y + r.height < y1) continue
-                    var c = janela.visiveis[i].caminho
-                    if (modo === 2 && base[c]) delete nova[c]; else nova[c] = true
-                    ultimo = i
-                }
-                janela.selecao = nova
-                if (ultimo >= 0) janela.atual = ultimo
+                // O retângulo desenhado acompanha o mouse sempre (é barato)
                 var a = v.contentItem.mapToItem(fundoArea, x1, y1)
                 var b = v.contentItem.mapToItem(fundoArea, x2, y2)
                 var topo = v.mapToItem(fundoArea, 0, 0).y
                 var ya = Math.max(a.y, topo), yb = Math.min(b.y, topo + v.height)
                 faixa.x = a.x; faixa.width = b.x - a.x
                 faixa.y = ya; faixa.height = Math.max(0, yb - ya)
+                // A seleção só muda quando o retângulo passa a tocar outros itens
+                var f = faixaDeItens(x1, y1, x2, y2)
+                var chave = f.c1 + "," + f.c2 + "," + f.l1 + "," + f.l2 + "," + f.cols
+                if (chave === assinatura) return
+                assinatura = chave
+                var nova = modo === 0 ? ({}) : Object.assign({}, base)
+                var ultimo = -1
+                for (var l = f.l1; l <= f.l2; l++) {
+                    for (var c = f.c1; c <= f.c2; c++) {
+                        var i = l * f.cols + c
+                        if (i >= janela.visiveis.length) break
+                        var caminho = janela.visiveis[i].caminho
+                        if (modo === 2 && base[caminho]) delete nova[caminho]; else nova[caminho] = true
+                        ultimo = i
+                    }
+                }
+                janela.selecao = nova
+                if (ultimo >= 0) janela.atual = ultimo
             }
             function rolar(dy) {
                 var v = vista()
@@ -517,6 +542,7 @@ Window {
                 inicio = mapToItem(vista().contentItem, m.x, m.y)
                 modo = (m.modifiers & Qt.ControlModifier) ? 2 : ((m.modifiers & Qt.ShiftModifier) ? 1 : 0)
                 base = Object.assign({}, janela.selecao)
+                assinatura = ""
                 if (m.button === Qt.LeftButton && modo === 0) janela.limpar()
             }
             onPositionChanged: (m) => {
@@ -526,11 +552,15 @@ Window {
                     var c = mapToItem(vista().contentItem, m.x, m.y)
                     if (Math.abs(c.x - inicio.x) < 5 && Math.abs(c.y - inicio.y) < 5) return
                     arrastando = true
+                    atualizar()
+                    return
                 }
-                atualizar()
+                // Mouses rápidos mandam centenas de movimentos por segundo: o retângulo é refeito no máximo
+                // uma vez por quadro da tela (o Timer abaixo), com a última posição
+                pendente = true
             }
             onReleased: (m) => {
-                if (arrastando) { arrastando = false; return }
+                if (arrastando) { if (pendente) atualizar(); arrastando = false; return }
                 if (m.button === Qt.RightButton) {
                     janela.limpar()
                     var p = mapToItem(null, m.x, m.y)
@@ -544,18 +574,20 @@ Window {
                 if (arrastando) atualizar()
             }
             Timer {
-                // Rolagem automática enquanto o retângulo encosta na borda de cima ou de baixo
-                interval: 30
+                // Um quadro da tela (~60 por segundo): aplica o último movimento do mouse e, se o retângulo
+                // encosta na borda de cima ou de baixo, rola a vista
+                interval: 16
                 repeat: true
                 running: fundoArea.arrastando
                 onTriggered: {
+                    if (fundoArea.pendente) fundoArea.atualizar()
                     var v = fundoArea.vista()
                     var topo = v.mapToItem(fundoArea, 0, 0).y
                     var y = fundoArea.ponteiro.y
                     var passo = 0
                     if (y < topo + fundoArea.bordaRolagem) passo = -Math.min(40, (topo + fundoArea.bordaRolagem - y) / 2 + 4)
                     else if (y > topo + v.height - fundoArea.bordaRolagem) passo = Math.min(40, (y - topo - v.height + fundoArea.bordaRolagem) / 2 + 4)
-                    if (passo !== 0 && fundoArea.rolar(passo)) fundoArea.atualizar()
+                    if (passo !== 0 && fundoArea.rolar(passo * 0.55)) fundoArea.atualizar()
                 }
             }
         }
@@ -592,7 +624,9 @@ Window {
                 Drag.active: toque.drag.active
                 Drag.dragType: Drag.Automatic
                 Drag.supportedActions: Qt.CopyAction | Qt.MoveAction
-                Drag.mimeData: ({ "text/uri-list": janela.selecionados().map(function (c) { return "file://" + encodeURI(c) }).join("\r\n") })
+                // Só monta a lista quando o arraste começa: antes, cada item visível percorria a pasta inteira a
+                // cada mudança da seleção (o retângulo de seleção travava em pastas grandes)
+                Drag.mimeData: toque.drag.active ? ({ "text/uri-list": janela.selecionados().map(function (c) { return "file://" + encodeURI(c) }).join("\r\n") }) : ({})
                 Drag.hotSpot: Qt.point(0, 0)
             }
         }
@@ -895,7 +929,7 @@ Window {
                 readonly property bool emItem: menu.tipoMenu === "item"
                 readonly property bool emFundo: menu.tipoMenu === "fundo"
                 readonly property bool opcoes: menu.tipoMenu === "opcoes"
-                readonly property string primeiro: janela.selecionados().length > 0 ? janela.selecionados()[0] : ""
+                readonly property string primeiro: menu.tipoMenu !== "" && janela.numSelecionados > 0 ? janela.selecionados()[0] : ""
 
                 // Sobre os arquivos selecionados
                 ItemDeMenu { visible: colunaMenu.emItem && !colunaMenu.lixeira; texto: "Abrir"; icone: "abrir"; onClicado: menu.feito(janela.abrirSelecionados) }

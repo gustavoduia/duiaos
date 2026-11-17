@@ -301,6 +301,25 @@ class TesteOperacoesDeArquivo(unittest.TestCase):
         operacoes.esvaziar_lixeira(self.lixeira)
         self.assertEqual(operacoes.listar_lixeira(self.lixeira), [])
 
+    def test_lixeira_sem_permissao_na_pasta_diz_de_quem_e_e_segue_com_os_outros(self):
+        """Pasta de outro usuário (ex.: criada como root por um build): os outros itens vão, e o erro traz os
+        que ficaram, para o agente movê-los com autorização (ADR 068)."""
+        bloqueado = str((self.raiz / "docs" / "Sub").absolute())
+        renomear = os.rename
+
+        def rename(origem, destino):
+            if str(origem) == bloqueado:
+                raise PermissionError(13, "Permission denied")
+            return renomear(origem, destino)
+        with mock.patch("os.rename", rename), mock.patch.object(operacoes, "_dono", lambda c: "root" if Path(c).name == "docs" else "eu"):
+            with self.assertRaises(operacoes.SemPermissao) as contexto:
+                operacoes.mover_para_lixeira([self.raiz / "docs" / "a.txt", self.raiz / "docs" / "Sub"], self.lixeira)
+        self.assertEqual(contexto.exception.caminhos, [bloqueado])
+        self.assertEqual(contexto.exception.movidos, ["a.txt"])
+        self.assertIn("administrador do sistema (root)", str(contexto.exception))
+        self.assertEqual(len(operacoes.listar_lixeira(self.lixeira)), 1)        # o a.txt foi; o Sub ficou
+        self.assertTrue((self.raiz / "docs" / "Sub").is_dir())
+
     def test_restaurar_recria_a_pasta(self):
         nomes = operacoes.mover_para_lixeira([self.raiz / "docs" / "Sub"], self.lixeira)
         operacoes.transferir([self.raiz / "docs"], self.raiz, mover=True)  # nada muda (mesma pasta)

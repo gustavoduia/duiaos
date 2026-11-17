@@ -962,7 +962,7 @@ class Ajustes(QObject):
     fotoConta = Property(str, lambda self: comum.foto(comum.usuario_atual()["usuario"]), notify=mudou)
 
     # --------------------------------------------------------- atualizações
-    def _agente(self, metodo, *argumentos, ao_responder=None, tempo=300000):
+    def _agente(self, metodo, *argumentos, ao_responder=None, ao_falhar=None, tempo=300000):
         from PySide6.QtDBus import QDBusConnection, QDBusMessage, QDBusPendingCallWatcher
         mensagem = QDBusMessage.createMethodCall(AGENTE[0], AGENTE[1], AGENTE[0], metodo)
         mensagem.setArguments(list(argumentos))
@@ -971,7 +971,10 @@ class Ajustes(QObject):
 
         def terminou(v):
             self._vigias.remove(v)
-            if v.isError():
+            if v.isError() and ao_falhar:
+                ao_falhar(v.error().message() if "ServiceUnknown" not in v.error().name()
+                          else "O agente do sistema não respondeu.")
+            elif v.isError():
                 if v.error().name().endswith(".Ocupado"):
                     # Já há uma atualização rodando (de outra janela ou do Wise): acompanha ela, sem começar outra
                     self.acompanharAgente()
@@ -1168,6 +1171,9 @@ class Ajustes(QObject):
         elif nome == "armazenamento-lista":
             self._mudar_armaz(lista={**self._armazenamento()["lista"], **resultado, "carregando": False})
         elif nome == "armazenamento-feito":
+            if isinstance(resultado, dict) and resultado.get("protegidos"):
+                self._mover_protegidos(resultado.get("texto", ""), resultado["protegidos"], resultado.get("explicacao", ""))
+                return
             self._mudar_armaz(trabalho={})
             if resultado:
                 self.aviso.emit(resultado)
@@ -1228,14 +1234,45 @@ class Ajustes(QObject):
                     liberado += ar.apagar_caches([caminho])
                     self._progresso(n, total)
                 return "Liberados " + tamanho_legivel(liberado) + "."
+            op = ar.operacoes_do_explorador()
             tamanho = sum(os.path.getsize(c) for c in caminhos if os.path.isfile(c))
-            mover = ar.operacoes_do_explorador().mover_para_lixeira
+            protegidos, explicacao = [], ""
             for n, caminho in enumerate(caminhos, 1):
-                mover([caminho])
+                try:
+                    op.mover_para_lixeira([caminho])
+                except op.SemPermissao as erro:
+                    # A pasta é de outro usuário (ex.: root): o agente move, com autorização (ADR 068)
+                    protegidos += erro.caminhos
+                    explicacao = explicacao or str(erro)
                 self._progresso(n, total)
-            return (f"{len(caminhos)} {'item foi' if len(caminhos) == 1 else 'itens foram'} para a Lixeira ({tamanho_legivel(tamanho)}). "
-                    "Esvazie a Lixeira para liberar o espaço.")
+            movidos = len(caminhos) - len(protegidos)
+            texto = (f"{movidos} {'item foi' if movidos == 1 else 'itens foram'} para a Lixeira ({tamanho_legivel(tamanho)}). "
+                     "Esvazie a Lixeira para liberar o espaço.") if movidos else ""
+            if protegidos:
+                return {"texto": texto, "protegidos": protegidos, "explicacao": explicacao}
+            return texto
         self._em_fundo("armazenamento-feito", apagar)
+
+    def _mover_protegidos(self, texto, protegidos, explicacao):
+        """Itens em pastas de outro usuário: o duiaos-agente os move para a Lixeira desta pessoa, com a
+        autorização de administrador (polkit), como o Finder do macOS faz (ADR 068)."""
+        import json as _json
+        self._trabalhar("Movendo para a Lixeira os arquivos de pastas do sistema…")
+
+        def respondeu(resposta):
+            resultado = _json.loads(resposta[0])
+            movidos, recusados = resultado.get("movidos", []), resultado.get("recusados", [])
+            partes = [t for t in (texto,) if t]
+            if movidos:
+                partes.append(f"{len(movidos)} {'item' if len(movidos) == 1 else 'itens'} de pastas do sistema "
+                              f"{'foi' if len(movidos) == 1 else 'foram'} para a Lixeira.")
+            if recusados:
+                partes.append(recusados[0]["motivo"])
+            self._ao_armazenamento("armazenamento-feito", " ".join(partes))
+
+        def falhou(mensagem):
+            self._ao_armazenamento("armazenamento-feito", " ".join(t for t in (texto, explicacao, mensagem) if t))
+        self._agente("MoverParaLixeira", _json.dumps(protegidos), ao_responder=respondeu, ao_falhar=falhou)
 
     @Slot(str)
     def limparRecomendacao(self, ident):

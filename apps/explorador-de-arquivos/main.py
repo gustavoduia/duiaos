@@ -395,11 +395,33 @@ class Explorador(QObject):
             return
         try:
             operacoes.mover_para_lixeira(caminhos)
+        except operacoes.SemPermissao as erro:
+            self._lixeira_com_autorizacao(erro)
         except operacoes.ErroDeArquivo as erro:
             self.aviso.emit(str(erro))
         else:
             self.aviso.emit("Movido para a Lixeira." if len(caminhos) == 1 else f"{len(caminhos)} itens movidos para a Lixeira.")
         self.recarregar()
+
+    def _lixeira_com_autorizacao(self, erro):
+        """Itens numa pasta de outro usuário (ex.: criada como root): o duiaos-agente os move para a
+        Lixeira desta pessoa, com a autorização de administrador, como o Finder do macOS (ADR 068)."""
+        import json
+        self.aviso.emit("Esta pasta é do sistema: pedindo autorização para mover para a Lixeira…")
+
+        def respondeu(resposta):
+            resultado = json.loads(resposta[0])
+            movidos = len(resultado.get("movidos", [])) + len(erro.movidos)
+            recusados = resultado.get("recusados", [])
+            if recusados:
+                self.aviso.emit(recusados[0]["motivo"])
+            elif movidos:
+                self.aviso.emit("Movido para a Lixeira." if movidos == 1 else f"{movidos} itens movidos para a Lixeira.")
+            self.recarregar()
+
+        def falhou(mensagem):
+            self.aviso.emit(f"{erro} {mensagem}")
+        interface.chamar_agente(self, "MoverParaLixeira", [json.dumps(erro.caminhos)], respondeu, falhou)
 
     @Slot("QVariantList")
     def excluirPermanentemente(self, caminhos):

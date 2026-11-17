@@ -7,6 +7,7 @@ Rectangle {
     property string estilo: "azul"          // azul, cinza, claro, noite
     property int tamanho: 44
     property int resolucao: 0               // veja Icone.qml: fixo no maior tamanho quando o ladrilho é animado
+    property int base: 0                    // tamanho em repouso, quando animado (escolhe o traço do desenho)
     width: tamanho; height: tamanho
     radius: tamanho * (Tema.futurista ? 0.3 : 0.25)
     readonly property var cores: Tema.futurista ? ({
@@ -25,7 +26,19 @@ Rectangle {
         GradientStop { position: 0; color: raiz.c[0] }
         GradientStop { position: 1; color: raiz.c[1] }
     }
-    border { color: Tema.futurista ? Qt.rgba(1, 1, 1, Tema.escuro ? 0.16 : 0.5) : Qt.rgba(0.06, 0.09, 0.14, 0.10); width: 1 }
-    Icone { anchors.centerIn: parent; nome: raiz.icone; tamanho: Math.round(raiz.tamanho * 0.55); cor: raiz.c[2]
-            resolucao: raiz.resolucao ? Math.round(raiz.resolucao * 0.55) : 0 }
+    // Contorno de 1 pixel: no estilo claro do Futurista (ladrilho branco sobre a Ilha clara) ele precisa ser
+    // escuro, senão o ladrilho some e sobra só o desenho (a Lixeira e as Configurações pareciam sem fundo)
+    border {
+        width: 1
+        color: Tema.futurista ? ((estilo === "claro" || estilo === "cinza") && !Tema.escuro ? Qt.rgba(0.05, 0.08, 0.2, 0.16)
+                                                                                         : Qt.rgba(1, 1, 1, Tema.escuro ? 0.16 : 0.5))
+                              : Qt.rgba(0.06, 0.09, 0.14, 0.10)
+    }
+    // Desenho centralizado em pixel inteiro: no meio pixel a imagem fica borrada
+    Icone {
+        x: Math.round((raiz.width - width) / 2); y: Math.round((raiz.height - height) / 2)
+        nome: raiz.icone; tamanho: Math.round(raiz.tamanho * 0.55); cor: raiz.c[2]
+        resolucao: raiz.resolucao ? Math.round(raiz.resolucao * 0.55) : 0
+        base: raiz.base ? Math.round(raiz.base * 0.55) : 0
+    }
 }

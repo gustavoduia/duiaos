@@ -19,6 +19,9 @@ sistema, instalar e remover aplicativos pelo apt. Fala pelo D-Bus do sistema
   LerRegistro(nome) -> texto   a saída inteira do apt/dpkg de uma execução
   EspacoDoSistema() -> {"apt", "registros"}   o que dá para limpar no sistema, em bytes (ADR 060)
   LimparSistema(json {"apt": bool, "registros": bool}) -> {"liberado"}   polkit: org.duiaos.agente.limpar_sistema
+  MoverParaLixeira(json [caminhos]) -> {"movidos", "recusados"}   o que está numa pasta que a pessoa não pode
+      mudar (ex.: criada como root) vai para a Lixeira DELA, que passa a ser dona (lixeira.py, ADR 068);
+      polkit: org.duiaos.agente.mover_para_lixeira
   Configuracao() -> {"modo"}   a atualização automática (automatica.py, ADR 058)
   Configurar(json)   muda o modo da atualização automática (polkit: org.duiaos.agente.configurar_atualizacoes)
   sinal Mudou(json)   o mesmo de Estado, no máximo 2 vezes por segundo
@@ -52,6 +55,7 @@ from gi.repository import Gio, GLib  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import automatica  # noqa: E402
+import lixeira  # noqa: E402
 import plano as pl  # noqa: E402
 from plano import Recusa  # noqa: E402
 
@@ -83,6 +87,10 @@ XML = """
     <method name="EspacoDoSistema"><arg name="json" type="s" direction="out"/></method>
     <method name="LimparSistema">
       <arg name="opcoes" type="s" direction="in"/>
+      <arg name="json" type="s" direction="out"/>
+    </method>
+    <method name="MoverParaLixeira">
+      <arg name="caminhos" type="s" direction="in"/>
       <arg name="json" type="s" direction="out"/>
     </method>
     <method name="Configuracao"><arg name="json" type="s" direction="out"/></method>
@@ -630,6 +638,21 @@ class Agente:
         self.registrar("limpeza", uid=uid, opcoes=opcoes, liberado=liberado)
         return {"liberado": max(0, liberado)}
 
+    def mover_para_lixeira(self, texto, uid, autorizado):
+        """Move para a Lixeira de quem pediu o que está numa pasta que ela não pode mudar (lixeira.py)."""
+        try:
+            caminhos = json.loads(texto or "[]")
+        except ValueError as erro:
+            raise Recusa("Invalido", "A lista de arquivos não é JSON válido.") from erro
+        if not autorizado("org.duiaos.agente.mover_para_lixeira"):
+            raise Recusa("NaoAutorizado", "Só um administrador deste computador move arquivos de pastas do sistema.")
+        try:
+            resultado = lixeira.mover(caminhos, uid)
+        except lixeira.Recusado as motivo:
+            raise Recusa("Invalido", str(motivo)) from motivo
+        self.registrar("lixeira", uid=uid, movidos=len(resultado["movidos"]), recusados=len(resultado["recusados"]))
+        return resultado
+
     def configurar(self, texto, uid, autorizado):
         """Muda o modo da atualização automática (vale para o computador todo)."""
         try:
@@ -699,6 +722,10 @@ class Agente:
                 elif metodo == "LimparSistema":
                     valor = GLib.Variant("(s)", (json.dumps(self.limpar_sistema(parametros.unpack()[0], uid,
                                                                                 self._autorizador(remetente, uid))),))
+                elif metodo == "MoverParaLixeira":
+                    valor = GLib.Variant("(s)", (json.dumps(self.mover_para_lixeira(parametros.unpack()[0], uid,
+                                                                                     self._autorizador(remetente, uid)),
+                                                            ensure_ascii=False),))
                 elif metodo == "Configuracao":
                     valor = GLib.Variant("(s)", (json.dumps({"modo": automatica.ler_modo(self.conf_atualizacoes)}),))
                 elif metodo == "Configurar":
