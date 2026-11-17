@@ -5,6 +5,9 @@
 > site não têm mais arquivos de estado próprios.
 
 Atualizado em: 17/11/2026 · por: Claude (conta do Gustavo) · sessão session_017QRdLiNuMN3h9iSaFMGT25
+**17/11 (tarde): ADR 066, ficha DUIA-2026-0023, notas da 0.3.1** — instalador pelo Xwayland (teclado nos campos QML),
+revisão que relê as escolhas, sem bloqueio de tela no pendrive; **uma instalação completa numa VM UEFI (QEMU) funcionou**
+e o sistema instalado ligou. Balão do ícone de atualizações (um clique: balão; dois: Atualizações já com o resumo).
 **17/11: 0.3.0 lançada pelo Gustavo; ADR 065, ficha DUIA-2026-0022** — voz do Wise refeita (Parakeet v3, `duiaos-voz servir`,
 ganho automático, teste do microfone, `firmware-sof-signed`), menu do pendrive com duas opções (o d-i saiu), instalador com uma
 página QML por assunto, Chrome em ARM e Telegram pelo Flathub, downloads do site sempre no último lançamento. **Sem teste no Dell
@@ -57,7 +60,7 @@ fundos com GIF/vídeo, Atualizações nas Configurações, foto da conta, menu d
 1. Claude: relatório de realinhamento a partir das 5 memórias (adiado pelo Gustavo em 14/11).
 2. Gustavo: segredos `DUIAOS_TOKEN_WISE` (duiaos) e `GITHUB_DIAGNOSTICOS` (duiaos-websites, não confirmado).
 3. Teste no Dell (W20, janela "Ajude a melhorar", Wi-Fi pelo Wise) e leitura dos relatórios.
-4. Lançar a 0.3.0; depois retirar os avisos "Na próxima versão" da documentação.
+4. ~~Lançar a 0.3.0~~ (17/11); lançar a 0.3.1 (tag `v0.3.1`) com o instalador corrigido.
 5. ~~Explorador de arquivos, Configurações e painel de controle~~ feitos em 14/11 (ADR 044); depois: ícones na
    ~~Área de Trabalho, notificações, atualizações, modo escuro~~ feitos (ADR 045); depois: modo escuro nas Telas de
    Entrada/Bloqueio, Central de IA e "Ajude a melhorar"; janelas presas aos cantos.

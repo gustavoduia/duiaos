@@ -25,12 +25,32 @@ QML_IMPORT_NAME = "org.kde.layershell"
 QML_IMPORT_MAJOR_VERSION = 1
 
 
+@QmlElement
+@QmlUncreatable("só pelas margens da janela")
+class Margens(QObject):
+    """Como o ExtQMargins do plugin real: margins.left, .top, .right e .bottom (registrado no QML: sem isso,
+    só algumas das margens eram aceitas)."""
+    mudou = Signal()
+
+    def __init__(self, pai=None):
+        super().__init__(pai)
+        self._valores = {}
+
+    def _lado(nome, mudou=mudou):
+        return Property(int, lambda s: s._valores.get(nome, 0), lambda s, v: s._valores.__setitem__(nome, v), notify=mudou)
+    left = _lado("left")
+    top = _lado("top")
+    right = _lado("right")
+    bottom = _lado("bottom")
+
+
 class Anexo(QObject):
     mudou = Signal()
 
     def __init__(self, pai=None):
         super().__init__(pai)
         self._valores = {}
+        self._margens = Margens(self)
 
     def _propriedade(nome, tipo, padrao, mudou=mudou):
         return Property(tipo, lambda s: s._valores.get(nome, padrao),
@@ -40,7 +60,7 @@ class Anexo(QObject):
     exclusionZone = _propriedade("exclusionZone", int, 0)
     keyboardInteractivity = _propriedade("keyboardInteractivity", int, 0)
     scope = _propriedade("scope", str, "")
-    margins = _propriedade("margins", int, 0)
+    margins = Property(Margens, lambda s: s._margens, constant=True)
 
 
 @QmlElement

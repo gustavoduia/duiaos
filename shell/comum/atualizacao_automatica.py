@@ -63,10 +63,11 @@ def _quantas(n):
 
 def avisos(estado, modo, avisados, inicio_do_computador, inicio_da_sessao):
     """O que a sessão mostra agora:
-    {"icone": bool, "dica": texto do ícone, "notificacoes": [{"chave", "titulo", "texto"}]}.
+    {"icone": bool, "dica": texto do ícone, "balao": {"titulo", "texto"} do balão do ícone,
+     "notificacoes": [{"chave", "titulo", "texto", "balao"?}]}.
     avisados: {"disponiveis": assinatura já avisada, "instalacao": quando da instalação já avisada}.
     A chave de cada notificação vai para `avisados` depois de enviada (cada coisa é avisada uma vez)."""
-    resultado = {"icone": False, "dica": "", "notificacoes": []}
+    resultado = {"icone": False, "dica": "", "balao": {"titulo": "", "texto": ""}, "notificacoes": []}
     instalacao = estado.get("instalacao") or {}
     quando = instalacao.get("quando", 0)
     reiniciar = instalacao.get("reiniciar", "nao") if instalacao.get("resultado") == "ok" else "nao"
@@ -80,10 +81,20 @@ def avisos(estado, modo, avisados, inicio_do_computador, inicio_da_sessao):
         resultado["icone"] = True
         resultado["dica"] = ("Reinicie o computador para concluir a atualização" if reiniciar == "computador"
                              else "Saia e entre de novo na sessão para concluir a atualização")
+        resultado["balao"] = {"titulo": "Falta reiniciar", "texto": resultado["dica"] + "."}
     elif disponiveis and avisa_disponiveis:
         resultado["icone"] = True
         resultado["dica"] = (f"{_quantas(disponiveis)} baixada{'s' if disponiveis > 1 else ''}, pronta{'s' if disponiveis > 1 else ''} para instalar"
                              if estado.get("baixadas") else f"{_quantas(disponiveis)} disponíve{'is' if disponiveis > 1 else 'l'}")
+
+    if disponiveis and avisa_disponiveis and not falta_reiniciar:
+        # Balão do ícone ao lado do relógio (aparece sozinho quando chega um conjunto novo e a cada clique no ícone)
+        frase = f"{_quantas(disponiveis)} para o seu computador" + (", inclui novidades do DuiaOS" if estado.get("duiaos") else "") + "."
+        if modo == "instalar-avisando":
+            frase += " O DuiaOS vai instalar sozinho."
+        elif estado.get("baixadas"):
+            frase += " Já estão baixadas."
+        resultado["balao"] = {"titulo": "Atualizações disponíveis", "texto": frase}
 
     if disponiveis and avisa_disponiveis and estado.get("assinatura") and estado["assinatura"] != avisados.get("disponiveis"):
         partes = [f"{_quantas(disponiveis)} para o seu computador"]
@@ -95,9 +106,10 @@ def avisos(estado, modo, avisados, inicio_do_computador, inicio_da_sessao):
             fim = "Já baixadas: clique para ver e instalar."
         else:
             fim = "Clique para ver e instalar."
+        # "balao": a sessão mostra no balão do ícone (a notificação é só a reserva, quando a barra não tem o ícone)
         resultado["notificacoes"].append({"chave": ("disponiveis", estado["assinatura"]),
                                           "titulo": "Atualizações disponíveis",
-                                          "texto": ", ".join(partes) + ". " + fim})
+                                          "texto": ", ".join(partes) + ". " + fim, "balao": True})
 
     if quando and quando != avisados.get("instalacao") and instalacao.get("automatica") and instalacao.get("resultado") == "ok":
         texto_reinicio = {"computador": "Reinicie o computador quando puder para concluir.",

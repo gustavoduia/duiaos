@@ -47,6 +47,26 @@ Rectangle {
         var p = item.mapToItem(null, item.width / 2, item.height / 2)
         return horizontal ? p.x : p.y
     }
+    // Balão do ícone de atualizações (BalaoAtualizacao.qml, desenhado numa camada própria em BarraDeRecursos.qml)
+    property bool balaoAtualizacao: false
+    property real ancoraAtualizacao: 0
+    function mostrarBalaoAtualizacao() {
+        if (!horizontal || !botaoAtualizacao.visible || sistema.balaoTitulo === "") { sistema.notificarAtualizacao(); return }
+        sistema.fecharPainel()
+        ancoraAtualizacao = ancoraDe(botaoAtualizacao)
+        balaoAtualizacao = true
+    }
+    function verResumoDasAtualizacoes() {
+        balaoAtualizacao = false
+        sistema.abrir("configuracoes:atualizacoes")
+    }
+    Connections {
+        target: sistema
+        function onPedirBalaoAtualizacao() { barra.mostrarBalaoAtualizacao() }
+        function onAtualizacaoMudou() { if (!sistema.atualizacaoIcone) barra.balaoAtualizacao = false }
+        function onPainelMudou() { if (sistema.painel !== "") barra.balaoAtualizacao = false }
+    }
+
     function abrir(nome, item) {
         if (nome === "wise") { sistema.abrirWise(); return }
         sistema.abrirPainel(nome, ancoraDe(item))
@@ -69,6 +89,7 @@ Rectangle {
         default property alias conteudo: dentro.data
         signal clicado()
         signal clicadoDireito()
+        signal duploClicado()
         width: barra.horizontal ? Math.max(28, dentro.childrenRect.width + 14) : 52
         height: barra.horizontal ? 24 : Math.max(26, dentro.childrenRect.height + 10)
         radius: 6
@@ -84,6 +105,7 @@ Rectangle {
             hoverEnabled: true
             acceptedButtons: Qt.LeftButton | Qt.RightButton
             onClicked: (m) => m.button === Qt.RightButton ? botao.clicadoDireito() : botao.clicado()
+            onDoubleClicked: (m) => { if (m.button === Qt.LeftButton) botao.duploClicado() }
         }
     }
 
@@ -247,15 +269,16 @@ Rectangle {
                 visible: sistema.atualizacaoIcone
                 Accessible.role: Accessible.Button
                 Accessible.name: sistema.atualizacaoDica || "Atualizações"
-                onClicado: sistema.abrir("configuracoes:atualizacoes")
+                Accessible.description: "Um clique mostra o aviso; dois cliques abrem o resumo das atualizações"
+                // Um clique: o balão de novo. Dois cliques: Configurações › Atualizações já com o resumo.
+                onClicado: barra.mostrarBalaoAtualizacao()
+                onDuploClicado: barra.verResumoDasAtualizacoes()
                 Item {
                     width: 18; height: 18
                     Icone { anchors.centerIn: parent; nome: "atualizacao"; tamanho: 17; cor: Tema.texto }
                     Rectangle { x: 12; y: -1; width: 7; height: 7; radius: 3.5; color: Tema.azulDuia
                                 border { color: Tema.barra; width: 1 } }
                 }
-                // A dica aparece ao passar o mouse, no centro da barra (onde ficam os avisos)
-                HoverHandler { onHoveredChanged: if (hovered && sistema.atualizacaoDica !== "") aviso.mostrar(sistema.atualizacaoDica) }
             }
             BotaoDaBarra {
                 id: botaoRelogio

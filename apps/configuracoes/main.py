@@ -76,6 +76,12 @@ def executar(*comando, entrada=None, tempo=10):
 
 # ------------------------------------------------------- leitura do sistema
 
+def procurar_ao_abrir(etapa):
+    """Atualizações abertas pelo ícone da barra ou pela notificação: procura e mostra o resumo, a não ser que já
+    esteja procurando, mostrando um resumo, instalando ou mostrando o resultado de uma instalação."""
+    return etapa in ("inicio", "em-dia", "erro")
+
+
 def ler_sobre():
     info = {"sistema": comum.versao(), "computador": platform.node(), "processador": "", "memoria": "",
             "graficos": "", "disco": "", "nucleo": platform.release(), "arquitetura": platform.machine()}
@@ -268,6 +274,8 @@ class Ajustes(QObject):
             elif self._secao == "atualizacoes":
                 QTimer.singleShot(100, self.procurarAtualizacoes)
         else:
+            if self._secao == "atualizacoes":
+                QTimer.singleShot(300, self._mostrar_resumo_de_atualizacoes)
             self._em_fundo("sobre", ler_sobre)
             self._em_fundo("telas", ler_telas)
             self._em_fundo("data", ler_data)
@@ -349,9 +357,16 @@ class Ajustes(QObject):
             return
         if secao in SECOES:
             self.irPara(secao)
+        if secao == "atualizacoes":
+            self._mostrar_resumo_de_atualizacoes()
         janela = QGuiApplication.topLevelWindows()
         if janela:
             janela[0].requestActivate()
+
+    def _mostrar_resumo_de_atualizacoes(self):
+        """Aberta por fora (dois cliques no ícone da barra, a notificação): já mostra o resumo do que há."""
+        if procurar_ao_abrir(self._atualizacao.get("etapa")):
+            self.procurarAtualizacoes()
 
     # -------------------------------------------------------------- seções
     @Slot(str)

@@ -36,6 +36,38 @@ Window {
 
     Barra { id: barra; anchors.fill: parent }
 
+    // Balão do ícone de atualizações: camada pequena, só do tamanho do balão (o resto da tela continua
+    // clicável), com a ponta embaixo do ícone. Só com a barra na horizontal (na vertical não há o ícone).
+    Window {
+        id: camadaBalao
+        screen: janela.screen
+        readonly property real margem: Math.max(6, Math.min(Screen.width - width - 6, barra.ancoraAtualizacao - width + 30))
+        width: balaoDoIcone.width
+        height: balaoDoIcone.height
+        visible: barra.balaoAtualizacao && janela.horizontal
+        color: "transparent"
+        title: "Aviso de atualizações"
+        LayerShell.Window.anchors: (janela.posicao === "base" ? LayerShell.Window.AnchorBottom : LayerShell.Window.AnchorTop)
+                                   | LayerShell.Window.AnchorLeft
+        LayerShell.Window.margins.left: margem
+        LayerShell.Window.margins.top: 2
+        LayerShell.Window.margins.bottom: 2
+        LayerShell.Window.layer: LayerShell.Window.LayerOverlay
+        LayerShell.Window.exclusionZone: 0
+        LayerShell.Window.keyboardInteractivity: LayerShell.Window.KeyboardInteractivityNone
+        LayerShell.Window.scope: "duiaos-aviso-de-atualizacoes"
+
+        BalaoAtualizacao {
+            id: balaoDoIcone
+            titulo: sistema.balaoTitulo
+            texto: sistema.balaoTexto
+            pontaEmCima: janela.posicao !== "base"
+            ponta: barra.ancoraAtualizacao - camadaBalao.margem
+            onFechar: barra.balaoAtualizacao = false
+            onVerResumo: barra.verResumoDasAtualizacoes()
+        }
+    }
+
     // Camada do Painel: respeita a área da barra (exclusionZone 0), então a barra
     // continua clicável e outro ícone troca o balão aberto.
     Window {

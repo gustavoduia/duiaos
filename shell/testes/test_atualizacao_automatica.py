@@ -59,6 +59,32 @@ class TesteAvisos(unittest.TestCase):
         self.assertIn("Saia e entre", aa.avisos(sessao, "avisar", {}, LIGOU, SESSAO)["dica"])
         self.assertFalse(aa.avisos(sessao, "avisar", {}, LIGOU, 3000)["icone"])
 
+    def test_balao_do_icone(self):
+        r = aa.avisos(estado(), "avisar", {}, LIGOU, SESSAO)
+        self.assertEqual(r["balao"]["titulo"], "Atualizações disponíveis")
+        self.assertIn("3 atualizações", r["balao"]["texto"])
+        self.assertTrue(r["notificacoes"][0]["balao"])            # a sessão mostra no balão, não numa notificação
+        # já avisado: o balão continua disponível para o clique no ícone, sem aviso novo
+        r = aa.avisos(estado(), "avisar", {"disponiveis": "abc"}, LIGOU, SESSAO)
+        self.assertEqual((r["balao"]["titulo"], r["notificacoes"]), ("Atualizações disponíveis", []))
+        self.assertIn("Já estão baixadas", aa.avisos(estado(baixadas=True), "baixar", {}, LIGOU, SESSAO)["balao"]["texto"])
+        self.assertEqual(aa.avisos(estado(), "desativado", {}, LIGOU, SESSAO)["balao"]["titulo"], "")
+        reiniciar = estado(instalacao={"quando": 1500, "resultado": "ok", "reiniciar": "computador"})
+        self.assertEqual(aa.avisos(reiniciar, "avisar", {}, LIGOU, SESSAO)["balao"]["titulo"], "Falta reiniciar")
+
+    def test_resumo_ao_abrir_pelo_icone(self):
+        import importlib.util
+        sys.path.insert(0, str(RAIZ / "apps" / "configuracoes"))
+        spec = importlib.util.spec_from_file_location("configuracoes_main", RAIZ / "apps" / "configuracoes" / "main.py")
+        configuracoes = importlib.util.module_from_spec(spec)
+        try:
+            spec.loader.exec_module(configuracoes)
+        except ImportError:
+            self.skipTest("sem PySide6")
+        for etapa, procura in (("inicio", True), ("em-dia", True), ("erro", True), ("procurando", False),
+                               ("pronta", False), ("atualizando", False), ("concluida", False)):
+            self.assertEqual(configuracoes.procurar_ao_abrir(etapa), procura, etapa)
+
     def test_falha_na_instalacao_automatica(self):
         falhou = {"instalacao": {"quando": 1500, "resultado": "erro", "automatica": True}}
         self.assertEqual(aa.avisos(falhou, "instalar", {}, LIGOU, SESSAO)["notificacoes"][0]["titulo"],

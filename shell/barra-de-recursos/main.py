@@ -300,6 +300,7 @@ class Sistema(QObject):
     notificacoesMudaram = Signal()
     menusMudaram = Signal()
     atualizacaoMudou = Signal()
+    pedirBalaoAtualizacao = Signal()       # chegou um conjunto novo de atualizações: a barra mostra o balão do ícone
     _foco = Signal(str, str, str)
     _menus = Signal(str, "QVariantList")
     _menus_duiaos = Signal(str, str, "QVariantList")
@@ -323,7 +324,9 @@ class Sistema(QObject):
         self._fonte_duiaos = ("", [])         # aplicativo do DuiaOS em foco: (nome no D-Bus, menus) — menu_do_app.py
         self._itens.connect(self._ao_itens)
         self._leitor = None
-        self._atualizacao = {"icone": DEMONSTRACAO, "dica": "3 atualizações disponíveis" if DEMONSTRACAO else ""}
+        self._atualizacao = {"icone": DEMONSTRACAO, "dica": "3 atualizações disponíveis" if DEMONSTRACAO else "",
+                             "balao": {"titulo": "Atualizações disponíveis" if DEMONSTRACAO else "",
+                                       "texto": "3 atualizações para o seu computador, inclui novidades do DuiaOS." if DEMONSTRACAO else ""}}
         self._inicio_da_sessao = inicio_da_sessao()
         if DEMONSTRACAO:
             self._titulos_menu = [nome for nome, _itens in MENUS_DE_EXEMPLO]
@@ -423,19 +426,32 @@ class Sistema(QObject):
         import atualizacao_automatica as aa
         avisados = ler_avisados()
         agora = aa.avisos(aa.ler_estado(), aa.ler_modo(), avisados, aa.momento_do_inicio(), self._inicio_da_sessao)
-        estado = {"icone": agora["icone"], "dica": agora["dica"]}
+        estado = {"icone": agora["icone"], "dica": agora["dica"], "balao": agora["balao"]}
         if estado != self._atualizacao:
             self._atualizacao = estado
             self.atualizacaoMudou.emit()
         for aviso in agora["notificacoes"]:
             tipo, valor = aviso["chave"]
             avisados[tipo] = valor
+            if aviso.get("balao") and estado["icone"]:
+                self.pedirBalaoAtualizacao.emit()      # a barra decide: balão no ícone ou, sem o ícone, a notificação
+                continue
             threading.Thread(target=notificar, args=(aviso["titulo"], aviso["texto"]), daemon=True).start()
         if agora["notificacoes"]:
             gravar_avisados(avisados)
 
     atualizacaoIcone = Property(bool, lambda self: self._atualizacao["icone"], notify=atualizacaoMudou)
     atualizacaoDica = Property(str, lambda self: self._atualizacao["dica"], notify=atualizacaoMudou)
+    balaoTitulo = Property(str, lambda self: self._atualizacao["balao"]["titulo"], notify=atualizacaoMudou)
+    balaoTexto = Property(str, lambda self: self._atualizacao["balao"]["texto"], notify=atualizacaoMudou)
+
+    @Slot()
+    def notificarAtualizacao(self):
+        """Reserva do balão quando a barra não mostra o ícone (barra na vertical): a notificação de sempre."""
+        balao = self._atualizacao["balao"]
+        if balao["titulo"] and not DEMONSTRACAO:
+            threading.Thread(target=notificar, args=(balao["titulo"], balao["texto"] + " Clique para ver o resumo."),
+                             daemon=True).start()
 
     # ---------------------------------------------------- menu do aplicativo
     def _ao_menus_duiaos(self, app_id, nome, menus):

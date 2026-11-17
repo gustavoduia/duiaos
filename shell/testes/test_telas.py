@@ -52,7 +52,7 @@ class TesteTelas(unittest.TestCase):
 
     def test_barra_de_recursos(self):
         for painel in ("", "menu", "central", "wifi", "som", "bateria", "brilho", "bluetooth", "luz", "calendario",
-                       "balao", "confirmar:desligar"):
+                       "balao", "atualizacoes", "confirmar:desligar"):
             with self.subTest(painel=painel):
                 self.abrir("barra-" + (painel.replace(":", "-") or "sozinha"),
                            ["shell/barra-de-recursos/main.py", "--demonstracao", "--painel", painel])
