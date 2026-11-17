@@ -1,0 +1,27 @@
+#!/bin/sh
+# DuiaOS — modo live (pendrive): a conta do pendrive já começa com um chaveiro aberto e sem senha (ADR 065).
+# Sem ele, o primeiro programa que usa o cofre de senhas faz o sistema pedir uma senha para um "chaveiro novo",
+# e essa janela fica com o teclado (no instalador em tela cheia, a pessoa não conseguia digitar).
+# Roda na inicialização do modo live (live-config); o sistema instalado não recebe este chaveiro.
+set -e
+USUARIO="duia"
+for PARTE in $(cat /proc/cmdline); do
+  case "${PARTE}" in username=*) USUARIO="${PARTE#username=}" ;; esac
+done
+CASA="$(getent passwd "${USUARIO}" | cut -d: -f6)"
+[ -n "${CASA}" ] && [ -d "${CASA}" ] || exit 0
+PASTA="${CASA}/.local/share/keyrings"
+[ -e "${PASTA}/default" ] && exit 0
+mkdir -p "${PASTA}"
+cat > "${PASTA}/Padrao.keyring" <<FIM
+[keyring]
+display-name=Padrão
+ctime=0
+mtime=0
+lock-on-idle=false
+lock-after=false
+FIM
+echo "Padrao" > "${PASTA}/default"
+chown -R "${USUARIO}:" "${CASA}/.local"
+chmod 700 "${PASTA}"
+chmod 600 "${PASTA}/Padrao.keyring" "${PASTA}/default"

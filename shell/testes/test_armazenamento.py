@@ -46,6 +46,18 @@ class TesteDispositivos(unittest.TestCase):
         self.assertEqual(partes[2]["modelo"], "DISCO EXEMPLO 256")
         self.assertEqual(ar.ler_lsblk("não é json"), [])
 
+    def test_ignora_a_midia_do_pendrive(self):
+        """No modo live, a ISO e o squashfs (loop) estão sempre cheios: não são discos da pessoa."""
+        import json
+        texto = json.dumps({"blockdevices": [
+            {"name": "loop0", "path": "/dev/loop0", "type": "loop", "fstype": "squashfs", "mountpoint": "/run/live/rootfs/filesystem.squashfs", "size": 1},
+            {"name": "sr0", "path": "/dev/sr0", "type": "rom", "fstype": "iso9660", "mountpoint": "/run/live/medium", "size": 1},
+            {"name": "sdb", "path": "/dev/sdb", "type": "disk", "rm": True, "children": [
+                {"name": "sdb1", "path": "/dev/sdb1", "type": "part", "fstype": "iso9660", "mountpoint": "/run/live/medium", "size": 1}]},
+            {"name": "vda", "path": "/dev/vda", "type": "disk", "children": [
+                {"name": "vda1", "path": "/dev/vda1", "type": "part", "fstype": "ext4", "mountpoint": "/", "size": 9}]}]})
+        self.assertEqual([d["caminho"] for d in ar.ler_lsblk(texto)], ["/dev/vda1"])
+
     def test_nomes_e_medidas(self):
         usos = {"/": Uso(130 * GB, 120 * GB, 10 * GB), "/media/demo/FOTOS": Uso(32 * GB, 2 * GB, 30 * GB)}
         discos = ar.dispositivos(rodar=lambda _c: LSBLK, uso=lambda m: usos[m])

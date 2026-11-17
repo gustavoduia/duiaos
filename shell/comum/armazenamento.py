@@ -98,6 +98,10 @@ def ler_lsblk(texto):
         filhos = no.get("children") or []
         if no.get("type") == "disk":
             disco = no
+        # A mídia do pendrive (ISO, squashfs do modo live) e os volumes de loop são só leitura e sempre "cheios":
+        # não são da pessoa e não devem gerar avisos de espaço
+        if no.get("type") in ("loop", "rom") or no.get("fstype") in ("squashfs", "iso9660", "udf", "erofs"):
+            return
         if no.get("fstype") and no.get("fstype") not in ("swap", "LVM2_member", "crypto_LUKS") and not filhos:
             achados.append({"caminho": no.get("path", ""), "rotulo": no.get("label") or "", "sistema": no.get("fstype") or "",
                             "tamanho": int(no.get("size") or 0), "montado": no.get("mountpoint") or "",
