@@ -10,6 +10,10 @@ Artificial (IA local + Gemini/OpenAI) e Configurações › Wise; Wise com texto
 motor e modelo na janela, menu do ícone na barra e Desligar o Wise; instalador próprio (Calamares) com escolha de
 programas; papéis de parede paisagem e Lua; site (órbita, celular, maquetes) e documentação da 0.3.0. **Sem teste no
 Dell**: a voz nunca foi ouvida e o instalador nunca fez uma instalação de verdade (o d-i fica de reserva).
+**Lançamento da 0.3.0 pendente**: tudo está na `main` (duiaos `a1fc008`, Wise `13f71ea`) e a ISO de teste amd64 foi gerada
+com o Wise, o `duiaos-voz` e o Calamares; o ambiente do Claude não pode enviar tags (403). Falta o Gustavo rodar
+🍎 MAC: `bash ferramentas/lancar-versao.sh 0.3.0`. Depois do release, trocar o bloco `proxima` de
+`duiaos-websites/site/src/dados/versoes.json` pela entrada da 0.3.0.
 **14/11: interface completa (ADR 044) enviada à `main`** — Barra de Recursos nova (Menu do DuiaOS, ícones + balão,
 Central de Controle), Ilha com Aplicativos/Downloads/Lixeira, Central de Aplicativos em tela cheia, Explorador de
 Arquivos e Configurações, com as páginas da documentação para usuários. **14/11 (tarde): 2ª rodada (ADR 045)** — Área de
