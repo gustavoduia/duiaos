@@ -27,6 +27,8 @@ Regras:
 
 | Wise instalado com o sistema (ISO e apt), do repositório privado | `pacotes/trazer-wise.sh`, `build/build.sh`, `.github/workflows/` | `pacotes/trazer-wise.sh::DUIAOS_TOKEN_WISE`, `build/build.sh::pacotes/externos/duiaos-wise_`, `pacotes/duiaos-desktop/DEBIAN/control::Recommends: duiaos-wise` | ADR 042 | main |
 | Lançamento com notas de versão e a mesma tag no Wise | `ferramentas/lancar-versao.sh`, `notas-de-versao/` | `ferramentas/lancar-versao.sh::WISE_TEM_TAG`, `.github/workflows/gerar-iso.yml::notas-de-versao/` | ADR 042 | main |
+| Instalador próprio na ISO (Calamares com a identidade do DuiaOS, escolha de programas e do modo; d-i de reserva) | `build/, ../duiaos-fontes-abertas/instalador/` | `build/config/package-lists/base.list.chroot::calamares`, `build/config/hooks/normal/0520-duiaos-instalador.hook.chroot::calamares`, `build/build.sh::instalador`, `shell/sessao/autostart::boot=live` | ADR 064 | main |
+| Papéis de parede padrão: paisagem na Área de Trabalho, Lua na Entrada e no Bloqueio | `shell/comum/papel.py` | `shell/comum/papel.py::def papel_de_acesso`, `shell/comum/papel.py::paisagem.jpg` | ADR 064 | main |
 
 ## Interface (shell)
 
@@ -95,7 +97,11 @@ Regras:
 | Serviço duiaos-ia (D-Bus org.duiaos.IA1, polkit com dono) | `ia/servico.py`, `pacotes/duiaos-ia/` | `pacotes/duiaos-ia/raiz/usr/share/polkit-1/actions/org.duiaos.ia.policy::org.freedesktop.policykit.owner` | ADR 031 | main |
 | Modelo ativo carregado no boot, antes do login | `pacotes/duiaos-ia/raiz/usr/lib/systemd/system/duiaos-ia.service` | `pacotes/duiaos-ia/raiz/usr/lib/systemd/system/duiaos-ia.service::WantedBy=multi-user.target` | ADR 032 | main |
 | Calibração por computador (threads, placa) publicada em "opcoes" | `ia/servico.py`, `ia/hardware.py` | `ia/servico.py::def calibrar`, `ia/hardware.py::def threads_candidatas` | ADR 033 | main |
-| Central de IA (modelo ativo, catálogo, download em tempo real) | `apps/central-de-ia/` | `apps/central-de-ia/CentralDeIA.qml::Um só modelo ativo para o sistema inteiro` | ADR 031 | main |
+| Configurações › Inteligência Artificial (IA local: modelo ativo, catálogo, download ao vivo, pausar; motores na nuvem com chave no cofre e modelos) — substitui a Central de IA | `apps/configuracoes/ia.py, shell/comum/motores_ia.py` | `apps/configuracoes/ia.py::class InteligenciaArtificial`, `shell/comum/motores_ia.py::def filtrar_modelos`, `apps/configuracoes/Configuracoes.qml::paginaIa`, `shell/testes/test_ia_e_wise.py::class ` | ADR 063 | main |
+| Configurações › Wise (tempo, agenda, usar o computador, saudação, voz, motor e modelo padrão) pelo D-Bus org.duiaos.Wise1 | `apps/configuracoes/` | `apps/configuracoes/Configuracoes.qml::paginaWise`, `apps/configuracoes/ia.py::org.duiaos.Wise1` | ADR 063 | main |
+| Pausar a IA local (tira o modelo da memória; usado por "Desligar o Wise") | `ia/servico.py` | `ia/servico.py::Pausar` | ADR 063 | main |
+| Ícone do Wise entre os indicadores e menu do botão direito (Abrir, Configurações, Configurar IA, Desligar o Wise) | `shell/barra-de-recursos/` | `shell/barra-de-recursos/main.py::def abrirMenuDoWise`, `shell/barra-de-recursos/Barra.qml::clicadoDireito`, `shell/testes/test_menu_do_app.py::TesteMenuDoWise`, `shell/sessao/autostart::duiaos-wise-desligado` | ADR 063 | main |
+| Pacote duiaos-voz (script GPL do duiaos-fontes-abertas + sherpa-onnx; um .deb por arquitetura) | `pacotes/duiaos-voz/` | `pacotes/duiaos-voz/construir.sh::sherpa`, `pacotes/duiaos-voz/DEBIAN/control::Package: duiaos-voz` | ADR 063 | main |
 | Termos: motor (Ollama) × modelo | `ia/`, `apps/central-de-ia/` | `ia/catalogo.json::qwen3.5:4b` | PR #8 | main |
 | Medição de motores (Ollama × llama-server × MTP × OpenVINO) | `ferramentas/medir-motores.py` | `ferramentas/medir-motores.py::--placa` | 12/10 | main |
 

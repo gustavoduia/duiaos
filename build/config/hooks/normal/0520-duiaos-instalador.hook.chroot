@@ -1,0 +1,9 @@
+#!/bin/sh
+# DuiaOS — instalador (ADR 064): só o atalho do DuiaOS aparece; o do Debian e o ícone automático saem.
+set -e
+rm -f /usr/share/applications/calamares-install-debian.desktop /usr/share/applications/calamares.desktop \
+      /etc/xdg/autostart/calamares-desktop-icon.desktop
+# A identidade "debian" não é usada: sai para não confundir
+rm -rf /etc/calamares/branding/debian
+[ -x /usr/lib/duiaos/instalar ] || exit 0
+systemctl disable duiaos-programas.service >/dev/null 2>&1 || true

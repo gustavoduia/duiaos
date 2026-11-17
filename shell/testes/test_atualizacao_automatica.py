@@ -104,7 +104,7 @@ class TesteListaDoModo(unittest.TestCase):
         """No QML, um id do arquivo ganha de uma propriedade de mesmo nome usada sem o objeto na frente.
         Propriedade e id com o mesmo nome só onde todo uso é qualificado (lista abaixo, conferida à mão)."""
         import re
-        conferidos = {("shell/ilha-de-aplicativos/Ilha.qml", "vaga"), ("apps/central-de-ia/CentralDeIA.qml", "aviso"),
+        conferidos = {("shell/ilha-de-aplicativos/Ilha.qml", "vaga"), 
                       ("apps/ajude-a-melhorar/AjudeAMelhorar.qml", "cartao")}
         problemas = []
         for arquivo in sorted(list(RAIZ.glob("apps/**/*.qml")) + list(RAIZ.glob("shell/**/*.qml"))):

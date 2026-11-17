@@ -21,7 +21,7 @@ import pastas  # noqa: E402
 
 PASTA_SHELL = Path(os.environ.get("DUIAOS_SHELL", Path(__file__).resolve().parents[1]))
 PAPEIS_DO_SISTEMA = Path("/usr/share/duiaos/papel-de-parede")
-PAPEL_PADRAO = PAPEIS_DO_SISTEMA / "orbita.jpg"
+PAPEL_PADRAO = PAPEIS_DO_SISTEMA / "paisagem.jpg"
 COR_PADRAO = "#E8F0FE"
 BLOQUEIO_PADRAO = 10          # minutos
 EXTENSOES_DE_IMAGEM = (".jpg", ".jpeg", ".png", ".webp")

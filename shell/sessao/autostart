@@ -68,13 +68,15 @@ if [ -x /usr/bin/duiaos-wise ]; then
     sleep 8
     while kill -0 "${LABWC_PID}" 2>/dev/null; do
       /usr/bin/duiaos-wise --fundo >>/tmp/duiaos-wise.log 2>&1
+      # "Desligar o Wise" (Barra de Recursos, ADR 063): fica desligado até a pessoa abrir o Wise de novo
+      while [ -e "${XDG_RUNTIME_DIR:-/tmp}/duiaos-wise-desligado" ] && kill -0 "${LABWC_PID}" 2>/dev/null; do sleep 2; done
       sleep 2
     done
   ) &
 fi
 
 # IA do sistema (ADR 030): sem modelo ativo (1º login), ativa o modelo padrão
-# ou começa a baixá-lo; o Wise e a Central de IA mostram o progresso.
+# ou começa a baixá-lo; o Wise e as Configurações mostram o progresso.
 if [ -x /usr/bin/duiaos-ia ]; then
   (sleep 6; /usr/bin/duiaos-ia garantir-padrao >/tmp/duiaos-ia.log 2>&1) &
 fi
@@ -83,4 +85,10 @@ fi
 # aparece ao entrar, sem opção marcada (nada sai antes). Escolhido, o programa sai na hora.
 if [ -x /usr/bin/duiaos-ajude-a-melhorar ]; then
   (sleep 4; /usr/bin/duiaos-ajude-a-melhorar --primeira-entrada >/dev/null 2>&1) &
+fi
+
+# Modo live (pendrive): abre o instalador do DuiaOS (ADR 064). Fechar a janela deixa experimentar o sistema;
+# o atalho "Instalar o DuiaOS" fica na Central de Aplicativos.
+if [ -x /usr/lib/duiaos/instalar ] && grep -q 'boot=live' /proc/cmdline 2>/dev/null; then
+  (sleep 6; /usr/lib/duiaos/instalar >>"${XDG_RUNTIME_DIR:-/tmp}/duiaos-instalador.log" 2>&1) &
 fi

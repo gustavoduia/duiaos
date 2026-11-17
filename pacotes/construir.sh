@@ -4,7 +4,7 @@
 #
 #   duiaos-identidade  identidade, padrões do sistema, scripts, repositório apt
 #   duiaos-shell       interface gráfica (pasta shell/), Tela de Entrada, Explorador de Arquivos e Configurações
-#   duiaos-ia          IA do sistema: serviço org.duiaos.IA1, comando e Central de IA
+#   duiaos-ia          IA do sistema: serviço org.duiaos.IA1 e comando duiaos-ia (as telas ficam nas Configurações)
 #   duiaos-agente      agente do sistema: ações aprovadas (org.duiaos.Agente1, ADR 034)
 #   duiaos-relatorios  registros do sistema e "Ajude a melhorar o DuiaOS" (ADR 040)
 #   duiaos-desktop     metapacote: instala e mantém todos os acima
@@ -150,10 +150,8 @@ fechar duiaos-shell
 # ------------------------------------------------------------------ duiaos-ia
 preparar duiaos-ia
 IA="${TRABALHO}/duiaos-ia"
-install -d "${IA}/usr/share/duiaos/ia" "${IA}/usr/share/duiaos/central-de-ia"
+install -d "${IA}/usr/share/duiaos/ia"
 install -m 0644 "${RAIZ}"/ia/*.py "${RAIZ}/ia/catalogo.json" "${IA}/usr/share/duiaos/ia/"
-install -m 0644 "${RAIZ}"/apps/central-de-ia/*.py "${RAIZ}"/apps/central-de-ia/*.qml \
-  "${IA}/usr/share/duiaos/central-de-ia/"
 fechar duiaos-ia
 
 # -------------------------------------------------------------- duiaos-agente

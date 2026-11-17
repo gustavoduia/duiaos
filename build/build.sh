@@ -41,7 +41,7 @@ log "DuiaOS ${VERSION} (${CODENAME}) — arquitetura ${ARCH}"
 log "Instalando o live-build"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
-apt-get install -y -qq live-build curl ca-certificates zstd python3 git >/dev/null   # curl e zstd: pacote duiaos-ollama; python3 e git: catálogo de atualizações
+apt-get install -y -qq live-build curl ca-certificates zstd python3 python3-pip unzip git >/dev/null   # curl e zstd: pacote duiaos-ollama; python3 e git: catálogo de atualizações
 
 log "Preparando a pasta de trabalho ${WORK}"
 rm -rf "${WORK}"
@@ -109,6 +109,25 @@ fi
 # oficial sem CUDA. O modelo padrão não vai na ISO: é baixado no 1º login.
 bash "${ROOT}/pacotes/duiaos-ollama/construir.sh" "${ARCH}" config/packages.chroot \
   "${OLLAMA_CACHE:-${ROOT}/.cache/ollama}"
+# Voz do sistema (ADR 063): duiaos-voz da arquitetura da ISO. As vozes não vão na ISO: a pessoa as
+# baixa ao ligar a voz em Configurações › Wise.
+bash "${ROOT}/pacotes/duiaos-voz/construir.sh" "${ARCH}" config/packages.chroot "${ROOT}/.cache"
+
+# Instalador próprio (ADR 064): o Calamares com a identidade do DuiaOS. Os arquivos vêm do
+# duiaos-fontes-abertas (instalador/raiz) e entram por cima dos pacotes calamares e calamares-settings-debian.
+INSTALADOR=""
+for CANDIDATO in "${ROOT}/fontes-abertas" "${ROOT}/../duiaos-fontes-abertas"; do
+  [ -n "${INSTALADOR}" ] || { [ -d "${CANDIDATO}/instalador/raiz" ] && INSTALADOR="${CANDIDATO}/instalador/raiz"; }
+done
+if [ -n "${INSTALADOR}" ]; then
+  mkdir -p config/includes.chroot_after_packages
+  cp -a "${INSTALADOR}/." config/includes.chroot_after_packages/
+  sed -i "s/@VERSAO@/${VERSION}/g" config/includes.chroot_after_packages/etc/calamares/branding/duiaos/branding.desc
+  chmod 0755 config/includes.chroot_after_packages/usr/lib/duiaos/*
+else
+  echo "AVISO: sem o duiaos-fontes-abertas/instalador: a ISO sai só com o instalador clássico." >&2
+  sed -i '/^calamares/d' config/package-lists/base.list.chroot
+fi
 
 chmod +x config/hooks/normal/*.hook.* 2>/dev/null || true
 

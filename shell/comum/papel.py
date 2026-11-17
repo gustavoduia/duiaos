@@ -30,7 +30,15 @@ import pastas
 AJUSTES = ("preencher", "ajustar", "esticar", "centralizar", "lado-a-lado")
 MODOS_TELAS = ("mesmo", "separado", "estender")
 COR_PADRAO = "#E8F0FE"
-PAPEL_PADRAO = Path("/usr/share/duiaos/papel-de-parede/orbita.jpg")
+# Papéis do DuiaOS (decisão do Gustavo, 16/11): a paisagem na área de trabalho; a Lua nas Telas de Entrada e de Bloqueio
+PAPEL_PADRAO = Path("/usr/share/duiaos/papel-de-parede/paisagem.jpg")
+NOME_DO_PAPEL_DE_ACESSO = "lua.jpg"
+
+
+def papel_de_acesso(papel_padrao=PAPEL_PADRAO):
+    """O papel do DuiaOS para as Telas de Entrada e de Bloqueio (fica na mesma pasta do padrão), ou None."""
+    caminho = Path(papel_padrao).parent / NOME_DO_PAPEL_DE_ACESSO
+    return caminho if caminho.is_file() else None
 PASTA_ENTRADA = Path("/var/lib/duiaos/entrada")
 ENTRADA_CONF = PASTA_ENTRADA / "papel.conf"
 INTERVALOS = (0, 15, 30, 60, 180, 1440)
@@ -115,6 +123,11 @@ def ler_bloqueio(preferencias, papel_padrao=PAPEL_PADRAO):
     if secao.get("modo", "area") == "proprio":
         papel = _so_imagem(_existe_ou_padrao(_papel(secao, area["padrao"]), papel_padrao), papel_padrao)
         return {**papel, "modo": "proprio", "desfocar": desfocar, "acesso": acesso(secao)}
+    lua = papel_de_acesso(papel_padrao)
+    if lua is not None and secao.get("modo") != "area":
+        # Sem escolha da pessoa: o papel de acesso do DuiaOS (a Lua). "area" = ela pediu o da área de trabalho
+        return {"arquivo": str(lua), "cor": COR_PADRAO, "ajuste": "preencher", "modo": "duiaos", "desfocar": desfocar,
+                "acesso": acesso(secao)}
     return {**_so_imagem(area["padrao"], papel_padrao), "modo": "area", "desfocar": desfocar, "acesso": acesso(secao)}
 
 
@@ -133,6 +146,7 @@ def ler_entrada(conf=ENTRADA_CONF, papel_padrao=PAPEL_PADRAO):
     if secao.get("modo") == "proprio":
         papel = _so_imagem(_existe_ou_padrao(_papel(secao, {"arquivo": str(papel_padrao)}), papel_padrao), papel_padrao)
         return {**papel, "modo": "proprio", "desfocar": desfocar, "acesso": acesso(secao)}
+    papel_padrao = papel_de_acesso(papel_padrao) or papel_padrao
     return {"arquivo": str(papel_padrao) if Path(papel_padrao).is_file() else "", "cor": COR_PADRAO,
             "ajuste": "preencher", "modo": "padrao", "desfocar": desfocar, "acesso": acesso(secao)}
 

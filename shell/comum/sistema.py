@@ -13,8 +13,8 @@ RAIZ_REPOSITORIO = PASTA_SHELL.parent
 # Instalado: /usr/share/duiaos/...; no repositório (desenvolvimento): pacotes/duiaos-identidade/raiz/...
 _INCLUDES = RAIZ_REPOSITORIO / "pacotes/duiaos-identidade/raiz"
 PAPEIS_DE_PAREDE = [
-    Path("/usr/share/duiaos/papel-de-parede/orbita.jpg"),
-    _INCLUDES / "usr/share/duiaos/papel-de-parede/orbita.jpg",
+    Path("/usr/share/duiaos/papel-de-parede/paisagem.jpg"),
+    _INCLUDES / "usr/share/duiaos/papel-de-parede/paisagem.jpg",
 ]
 REINICIAR_NO_WINDOWS = [
     Path("/usr/lib/duiaos/reiniciar-no-windows"),
@@ -199,7 +199,6 @@ APLICATIVOS_DUIAOS = {
     "configuracoes": ("/usr/bin/duiaos-configuracoes", RAIZ_REPOSITORIO / "apps/configuracoes/main.py"),
     "explorador-de-arquivos": ("/usr/bin/duiaos-explorador-de-arquivos",
                                RAIZ_REPOSITORIO / "apps/explorador-de-arquivos/main.py"),
-    "central-de-ia": ("/usr/bin/duiaos-central-de-ia", RAIZ_REPOSITORIO / "apps/central-de-ia/main.py"),
     "ajude-a-melhorar": ("/usr/bin/duiaos-ajude-a-melhorar", RAIZ_REPOSITORIO / "apps/ajude-a-melhorar/main.py"),
     "loja": ("/usr/bin/duiaos-loja", RAIZ_REPOSITORIO / "apps/loja/main.py"),
 }

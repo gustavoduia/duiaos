@@ -4,7 +4,12 @@
 > commits, o que está instalado em cada máquina. Desde 13/10 é o estado de TODO o projeto (ADR 043): o Wise e o
 > site não têm mais arquivos de estado próprios.
 
-Atualizado em: 14/11/2026 · por: Claude (conta do Gustavo) · sessão session_017QRdLiNuMN3h9iSaFMGT25
+Atualizado em: 16/11/2026 · por: Claude (conta do Gustavo) · sessão session_017QRdLiNuMN3h9iSaFMGT25
+**16/11 (noite): ADRs 063 e 064, ficha DUIA-2026-0021** — Central de IA removida; Configurações › Inteligência
+Artificial (IA local + Gemini/OpenAI) e Configurações › Wise; Wise com texto fluido, rosto novo, voz (`duiaos-voz`),
+motor e modelo na janela, menu do ícone na barra e Desligar o Wise; instalador próprio (Calamares) com escolha de
+programas; papéis de parede paisagem e Lua; site (órbita, celular, maquetes) e documentação da 0.3.0. **Sem teste no
+Dell**: a voz nunca foi ouvida e o instalador nunca fez uma instalação de verdade (o d-i fica de reserva).
 **14/11: interface completa (ADR 044) enviada à `main`** — Barra de Recursos nova (Menu do DuiaOS, ícones + balão,
 Central de Controle), Ilha com Aplicativos/Downloads/Lixeira, Central de Aplicativos em tela cheia, Explorador de
 Arquivos e Configurações, com as páginas da documentação para usuários. **14/11 (tarde): 2ª rodada (ADR 045)** — Área de

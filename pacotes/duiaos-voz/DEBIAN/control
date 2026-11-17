@@ -1,0 +1,17 @@
+Package: duiaos-voz
+Version: @VERSAO_DEB@
+Architecture: @ARQUITETURA@
+Maintainer: DuiaOS <53358870+gustavoduia@users.noreply.github.com>
+Section: sound
+Priority: optional
+Depends: python3 (>= 3.13), python3 (<< 3.14), python3-numpy, pipewire-bin | pulseaudio-utils | alsa-utils
+Homepage: https://github.com/gustavoduia/duiaos-fontes-abertas
+Description: DuiaOS — voz do sistema (falar e ouvir, no próprio computador)
+ Comando duiaos-voz: transforma texto em fala com vozes naturais em português
+ (Kokoro e Piper) e fala em texto (Whisper), sem enviar nada para a internet.
+ Os modelos de voz são baixados quando a pessoa liga a voz nas Configurações.
+ .
+ O programa duiaos-voz é software livre (GPL-3 ou posterior); o código-fonte
+ está em https://github.com/gustavoduia/duiaos-fontes-abertas (pasta voz/).
+ Motor: sherpa-onnx (Apache-2.0), que inclui o espeak-ng (GPL-3).
+ Licenças em /usr/share/doc/duiaos-voz/copyright.

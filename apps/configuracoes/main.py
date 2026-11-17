@@ -49,7 +49,7 @@ from PySide6.QtQml import QQmlApplicationEngine  # noqa: E402
 
 DEMONSTRACAO = "--demonstracao" in sys.argv
 SECOES = ("wifi", "bluetooth", "notificacoes", "som", "tela", "energia", "aparencia", "papel", "descanso", "barra",
-          "usuario", "data", "teclado", "padroes", "armazenamento", "atualizacoes", "privacidade", "ia", "sobre")
+          "usuario", "data", "teclado", "padroes", "armazenamento", "atualizacoes", "privacidade", "ia", "wise", "sobre")
 PASTA_FUNDOS = pastas.DADOS / "duiaos" / "fundos"          # imagens e vídeos importados
 EXTENSOES_FUNDO = (".jpg", ".jpeg", ".png", ".webp", ".gif", ".mp4", ".webm", ".mkv", ".mov", ".m4v")
 AGENTE = ("org.duiaos.Agente1", "/org/duiaos/Agente1")
@@ -1447,6 +1447,11 @@ def main():
     menu = menu_do_app.criar("configuracoes", [])          # guardado numa variável: sem isso o Python o descarta
     contexto.setContextProperty("menuDoApp", menu)
     contexto.setContextProperty("controles", estado)
+    # Inteligência Artificial e Wise (ADR 063)
+    from ia import InteligenciaArtificial
+    ia = InteligenciaArtificial(DEMONSTRACAO)
+    ia.aviso.connect(ajustes.aviso)
+    contexto.setContextProperty("ia", ia)
     contexto.setContextProperty("capturaArquivo", captura)
     contexto.setContextProperty("caminhoComum", str(comum.PASTA_SHELL / "comum"))
     engine.load(PASTA / "Configuracoes.qml")

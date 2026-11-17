@@ -52,7 +52,7 @@ import re  # noqa: E402
 
 # Dica própria do DuiaOS: abrir uma tela do sistema ao clicar no balão (ex.: "configuracoes:atualizacoes").
 # Só aplicativos do DuiaOS e uma seção com letras e hífen: nada de comandos arbitrários por notificação.
-ABRIR_PERMITIDO = re.compile(r"^(configuracoes|loja|explorador-de-arquivos|central-de-ia)(:[a-z-]{1,40})?$")
+ABRIR_PERMITIDO = re.compile(r"^(configuracoes|loja|explorador-de-arquivos)(:[a-z-]{1,40})?$")
 
 
 def interpretar(app_name, replaces_id, app_icon, summary, body, actions, hints, expire_timeout):

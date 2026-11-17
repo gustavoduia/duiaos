@@ -1,3 +1,0 @@
-#!/bin/sh
-# DuiaOS — Central de IA.
-exec /usr/bin/python3 /usr/share/duiaos/central-de-ia/main.py "$@"

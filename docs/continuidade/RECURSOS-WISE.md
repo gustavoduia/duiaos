@@ -9,8 +9,8 @@ linha nova ou atualizada no mesmo envio.
 
 | Recurso | Onde | Conferência | Desde | Situação |
 | --- | --- | --- | --- | --- |
-| Carinha de robô alegre (aberto, feliz, pensando, descansando; pisca, olha em volta, pulinho) | `wise/interface/Carinha.qml` | `wise/interface/Carinha.qml::a carinha de robô do botão flutuante`, `wise/interface/Carinha.qml::function pular()` | W10 | main |
-| Reticências de "pensando" sem redesenhar a tela (não disputa o processador) | `wise/interface/Carinha.qml` | `wise/interface/Carinha.qml::Reticências de "pensando"` | W12 | main |
+| Rosto do Wise (vidro, visor e olhos de luz; aberto, feliz, pensando, ouvindo, falando, descansando; pulinho) | `wise/interface/Carinha.qml` | `wise/interface/Carinha.qml::o rosto do Wise (botão flutuante e cabeçalho da janela)`, `wise/interface/Carinha.qml::function pular()` | ADR 063 | main |
+| Rosto animado só pela placa de vídeo (corpo pintado uma vez; não disputa o processador com a IA) | `wise/interface/Carinha.qml` | `wise/interface/Carinha.qml::O corpo é pintado uma vez (Canvas)` | ADR 063 | main |
 | Balão animado: saudação digitada, resposta com a janela fechada, progresso da IA | `wise/interface/ConteudoBolha.qml` | `wise/interface/ConteudoBolha.qml::a carinha de robô e o balão de fala`, `wise/interface/ConteudoBolha.qml::responder(resumo)` | W10 | main |
 | Botão flutuante (layer-shell) acima da Ilha | `wise/interface/Bolha.qml`, `wise/interface/bolha.py` | `wise/interface/Bolha.qml::botão flutuante no canto inferior direito` | W09 | main |
 | Estado para a Barra de Recursos ($XDG_RUNTIME_DIR/duiaos-wise.estado) | `wise/interface/presenca.py` | `wise/interface/presenca.py::duiaos-wise.estado` | W09 | main |
@@ -25,7 +25,11 @@ linha nova ou atualizada no mesmo envio.
 | Abertura fixa + aquecimento (pergunta lê só as palavras novas) | `wise/modelos/local.py`, `wise/orquestrador.py` | `wise/modelos/local.py::ABERTURA = [`, `wise/modelos/local.py::def aquecer` | W11 | main |
 | Aquecimento antes do login (serviço do sistema; mesma abertura da sessão) | `wise/aquecimento.py`, `pacote/raiz/usr/lib/systemd/system/duiaos-wise-aquecimento.service` | `wise/aquecimento.py::def esperar_modelo`, `pacote/raiz/usr/lib/systemd/system/duiaos-wise-aquecimento.service::Type=exec`, `pacote/raiz/usr/lib/systemd/system/duiaos-wise-aquecimento.service::Environment=HOME=/tmp` | W20 | main |
 | Agir sem anunciar; fazer exatamente o que foi pedido | `wise/orquestrador.py` | `wise/orquestrador.py::sem anunciar antes`, `wise/orquestrador.py::def _usar_ferramenta` | W20 | main |
-| Texto parcial no máximo 4x/s, numa área própria | `wise/interface/main.py` | `wise/interface/main.py::_tempo_parcial = QTimer(self, interval=250` | W12 | main |
+| Texto fluido: parciais a cada 80 ms e letras reveladas com rastro, como no Claude | `wise/interface/` | `wise/interface/main.py::_tempo_parcial = QTimer(self, interval=80`, `wise/interface/main.py::def concluirEscrita`, `wise/interface/Wise.qml::parcialCompleto` | ADR 063 | main |
+| Motor e modelo da conversa (Local, Gemini, OpenAI) lidos do ia.conf do sistema; janela sem página de configurações | `wise/motores.py, wise/modelos/` | `wise/motores.py::def modelo_preferido`, `wise/modelos/__init__.py::def definir_sessao`, `wise/modelos/openai.py::class `, `wise/interface/main.py::def escolherMotor` | ADR 063 | main |
+| Voz: o Wise fala (frase a frase) e ouve pelo duiaos-voz | `wise/voz.py` | `wise/voz.py::class Fala`, `wise/voz.py::class Escuta`, `testes/test_motores_e_voz.py::def test` | ADR 063 | main |
+| Wise no D-Bus da sessão (Estado, Definir, Acao, Mudou) para as Configurações | `wise/servico.py` | `wise/servico.py::org.duiaos.Wise1` | ADR 063 | main |
+| Desligar o Wise (--desligar: sai, pausa a IA local e não volta até ser aberto) | `wise/interface/main.py` | `wise/interface/main.py::--desligar`, `wise/interface/main.py::ARQUIVO_DESLIGADO` | ADR 063 | main |
 | Gemini só com consentimento; chave no cofre | `wise/modelos/gemini.py`, `wise/segredos.py` | `wise/segredos.py::Secret Service` | W1 | main |
 | Auditoria de tudo em SQLite | `wise/auditoria.py` | `wise/auditoria.py::Tudo o que o Wise faz fica registrado` | W1 | main |
 

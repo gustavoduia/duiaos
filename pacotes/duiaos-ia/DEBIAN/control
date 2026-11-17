@@ -6,11 +6,11 @@ Section: utils
 Priority: optional
 Depends: duiaos-ollama, python3, python3-gi, gir1.2-glib-2.0, dbus, polkitd, adduser, python3-pyside6.qtdbus, python3-pyside6.qtquick, python3-pyside6.qtqml, python3-pyside6.qtgui, qml6-module-qtquick-controls, qml6-module-qtquick-window
 Homepage: https://github.com/gustavoduia/duiaos-fontes-abertas
-Description: DuiaOS — IA do sistema e Central de IA
+Description: DuiaOS — IA do sistema
  Serviço duiaos-ia (D-Bus org.duiaos.IA1): um só modelo de IA local ativo
  para o sistema inteiro, catálogo de modelos (Qwen, Gemma, Llama, Phi),
- download com progresso e conferência de memória. Inclui a Central de IA
- e o comando duiaos-ia.
+ download com progresso e conferência de memória. As telas ficam em
+ Configurações › Inteligência Artificial. Inclui o comando duiaos-ia.
  .
  Software proprietário. Uso regido pelo EULA:
  /usr/share/duiaos/licenca/EULA.md

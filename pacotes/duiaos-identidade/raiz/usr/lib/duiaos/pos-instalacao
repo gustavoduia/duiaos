@@ -25,12 +25,16 @@ if [ -f /etc/apt/sources.list ]; then
   mv /etc/apt/sources.list /etc/apt/sources.list.instalador
 fi
 
+# No instalador do DuiaOS (Calamares, ADR 064) o idioma e o teclado são os que a pessoa escolheu nas
+# telas dele, e a imagem de inicialização é refeita por ele: os passos 2, 3 e 6 ficam de fora.
+if [ "${DUIAOS_INSTALADOR:-}" != calamares ]; then
 # 2. Idioma: português do Brasil (o locale já vem gerado na ISO).
 update-locale LANG=pt_BR.UTF-8 LANGUAGE=pt_BR:pt
 
 # 3. Teclado ABNT2, gravado e compilado para o boot.
 /usr/lib/duiaos/configurar-teclado
 setupcon --force --save-only || true
+fi
 
 # 4. SSH: chaves exclusivas deste computador. O acesso remoto fica
 #    DESLIGADO por padrão (privacidade e segurança por padrão), como no
@@ -41,6 +45,8 @@ systemctl disable ssh.service || true
 # 5. Repositório de atualizações do DuiaOS (pacotes duiaos-*): a partir de
 #    agora o sistema se atualiza com: sudo apt update && sudo apt full-upgrade
 /usr/lib/duiaos/configurar-repositorio
+# O atalho do instalador só faz sentido no modo live
+rm -f /usr/share/applications/duiaos-instalar.desktop
 
 # 6. Atualiza a imagem de inicialização com o teclado e o idioma novos.
-update-initramfs -u
+[ "${DUIAOS_INSTALADOR:-}" = calamares ] || update-initramfs -u

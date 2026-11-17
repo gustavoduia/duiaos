@@ -36,7 +36,8 @@ import sistema as comum  # noqa: E402
 
 POSICOES = ("topo", "base", "esquerda", "direita")
 INDICADORES = ("wise", "wifi", "som", "bateria", "bluetooth", "brilho", "luz")
-INDICADORES_PADRAO = "wise,wifi,som,bateria,bluetooth,brilho,luz"
+# O Wise fica depois dos quatro visíveis (atrás da seta): ele já tem o botão à esquerda e o rosto no canto da tela
+INDICADORES_PADRAO = "wifi,som,bateria,bluetooth,wise,brilho,luz"
 MAXIMO_VISIVEIS = 4
 PASTA_CONFIG = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "duiaos"
 ARQUIVO_CONFIG = PASTA_CONFIG / "barra-de-recursos.conf"
@@ -489,6 +490,26 @@ class Sistema(QObject):
         self.painelMudou.emit()
         self.menusMudaram.emit()
 
+    @Slot(float)
+    def abrirMenuDoWise(self, ancora):
+        """Botão direito no Wise (ADR 063): abrir, as duas páginas das Configurações e desligar (ou ligar)."""
+        if self._painel == "appmenuwise":
+            self.fecharPainel()
+            return
+        desligado = (Path(os.environ.get("XDG_RUNTIME_DIR") or "/tmp") / "duiaos-wise-desligado").exists()
+
+        def item(ident, rotulo, tipo="item"):
+            return {"id": ident, "rotulo": rotulo, "tipo": tipo, "ativo": True, "marcado": False, "atalho": "", "itens": []}
+        self._menu_aberto = -2
+        self._itens_menu = [item("wise:abrir", "Ligar e abrir o Wise" if desligado else "Abrir o Wise"),
+                            item(-1, "", "separador"),
+                            item("wise:configuracoes", "Configurações do Wise…"),
+                            item("wise:ia", "Configurar a IA…")] + \
+                           ([] if desligado else [item(-1, "", "separador"), item("wise:desligar", "Desligar o Wise")])
+        self._painel, self._ancora, self._confirmar = "appmenuwise", ancora, ""
+        self.painelMudou.emit()
+        self.menusMudaram.emit()
+
     @Slot("QVariant")
     def acionarMenu(self, identificador):
         """Item escolhido num menu do aplicativo: as ações da janela (texto "janela:...") o DuiaOS faz;
@@ -496,6 +517,18 @@ class Sistema(QObject):
         self.fecharPainel()
         if DEMONSTRACAO:
             print("Demonstração: menu", identificador, flush=True)
+            return
+        if isinstance(identificador, str) and identificador.startswith("wise:"):
+            acao = identificador.split(":", 1)[1]
+            if acao == "abrir":
+                aplicativos.iniciar(["/usr/bin/duiaos-wise"])
+            elif acao == "configuracoes":
+                comum.abrir_app_duiaos("configuracoes", "--secao", "wise")
+            elif acao == "ia":
+                comum.abrir_app_duiaos("configuracoes", "--secao", "ia")
+            elif acao == "desligar":
+                # O Wise sai, a sessão não o reabre e a IA local sai da memória (volta ao abrir o Wise)
+                aplicativos.iniciar(["/usr/bin/duiaos-wise", "--desligar"])
             return
         app_id, titulo = self._janela
         filtro = ["app_id:" + app_id] + (["title:" + titulo] if titulo else [])

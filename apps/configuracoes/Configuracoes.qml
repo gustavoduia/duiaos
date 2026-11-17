@@ -55,8 +55,9 @@ Window {
         { id: "armazenamento", nome: "Armazenamento", icone: "disco", cor: "noite", grupo: 4 },
         { id: "atualizacoes", nome: "Atualizações", icone: "reiniciar", cor: "azul", grupo: 4 },
         { id: "privacidade", nome: "Privacidade", icone: "escudo", cor: "azul", grupo: 4 },
-        { id: "ia", nome: "Inteligência artificial", icone: "ia", cor: "noite", grupo: 4 },
-        { id: "sobre", nome: "Sobre este computador", icone: "info", cor: "cinza", grupo: 4 }
+        { id: "ia", nome: "Inteligência Artificial", icone: "ia", cor: "noite", grupo: 5 },
+        { id: "wise", nome: "Wise", icone: "wise", cor: "azul", grupo: 5 },
+        { id: "sobre", nome: "Sobre este computador", icone: "info", cor: "cinza", grupo: 6 }
     ]
     function nomeDaSecao(id) { for (var i = 0; i < secoes.length; i++) if (secoes[i].id === id) return secoes[i].nome; return "" }
     property string filtro: ""
@@ -234,7 +235,7 @@ Window {
                                 tela: paginaTela, energia: paginaEnergia, aparencia: paginaAparencia, papel: paginaPapel,
                                 descanso: paginaDescanso, barra: paginaBarra, usuario: paginaUsuario, data: paginaData,
                                 teclado: paginaTeclado, padroes: paginaPadroes, armazenamento: paginaArmazenamento, atualizacoes: paginaAtualizacoes,
-                                privacidade: paginaPrivacidade, ia: paginaIa, sobre: paginaSobre })[ajustes.secao]
+                                privacidade: paginaPrivacidade, ia: paginaIa, wise: paginaWise, sobre: paginaSobre })[ajustes.secao]
         }
     }
 
@@ -1861,18 +1862,449 @@ Window {
     }
 
     // ---------------------------------------------- Inteligência artificial
+    // ------------------------------------------------ Inteligência Artificial (ADR 063)
+    // Etiqueta pequena (Em uso, Padrão, Livre…)
+    component Etiqueta: Rectangle {
+        property string texto: ""
+        property color cor: Tema.azulDuia
+        width: textoEtiqueta.implicitWidth + 14; height: 20; radius: 10
+        color: Qt.rgba(cor.r, cor.g, cor.b, 0.14)
+        Text { id: textoEtiqueta; anchors.centerIn: parent; text: parent.texto; color: parent.cor
+               font { family: Tema.fonteTexto; pixelSize: 11; weight: Font.DemiBold } }
+    }
+    // Barra de andamento fina
+    component Andamento: Rectangle {
+        property real fracao: 0
+        height: 6; radius: 3; color: Tema.controleDesligado
+        Rectangle { height: parent.height; radius: 3; color: Tema.azulDuia; width: parent.width * Math.max(0.02, Math.min(1, parent.fracao))
+                    Behavior on width { NumberAnimation { duration: 250 } } }
+    }
+    function gb(bytes) { return ((bytes || 0) / 1073741824).toFixed(1).replace(".", ",") + " GB" }
+    function nomeDoModelo(id) {
+        var fs = ia.estado.familias || []
+        for (var i = 0; i < fs.length; i++) for (var j = 0; j < fs[i].modelos.length; j++) if (fs[i].modelos[j].id === id) return janela.rotuloDoModelo(fs[i].modelos[j])
+        return id || ""
+    }
+    function rotuloDoModelo(m) { return (m.familia || "") + " " + (m.tamanho || "") }
+
     Component {
         id: paginaIa
         Pagina {
-            Destaque { icone: "ia"; estilo: "noite"; titulo: "IA do sistema"
-                       texto: "O modelo de IA local que todos os programas usam, inclusive o Wise. Escolha, baixe ou remova modelos na Central de IA." }
-            Botao { texto: "Abrir a Central de IA"; tipo: "primario"; onClicado: ajustes.abrirApp("central-de-ia") }
+            id: pia
+            readonly property var e: ia.estado
+            readonly property var tarefa: e.tarefa || null
+            property bool verCatalogo: false
+            property string chaveAberta: ""           // motor com o campo de chave aberto
+            Component.onCompleted: ia.abrir()
+            readonly property var instalados: {
+                var lista = [], fs = e.familias || []
+                for (var i = 0; i < fs.length; i++) for (var j = 0; j < fs[i].modelos.length; j++) if (fs[i].modelos[j].instalado) lista.push(fs[i].modelos[j])
+                return lista
+            }
+
+            Destaque { icone: "ia"; estilo: "noite"; titulo: "A IA do DuiaOS"
+                       texto: "A IA local roda neste computador e é a mesma para todos os programas. Se quiser, ligue também motores na nuvem com a sua chave." }
+
+            // ============================== IA local
             Grupo {
-                visible: ajustes.wise
-                titulo: "Wise"
+                titulo: "IA local · neste computador"
+                Linha {
+                    icone: "computador"
+                    titulo: !ia.servicoOk ? "O serviço de IA não respondeu" : (pia.e.ativo ? janela.nomeDoModelo(pia.e.ativo) : "Nenhum modelo em uso")
+                    descricao: !ia.servicoOk ? "Reinicie o computador; se continuar, envie um relatório ao suporte."
+                             : (!pia.e.ollama ? "O motor de IA local não está rodando."
+                             : (pia.e.pausado ? "Pausada: fora da memória até você retomar ou abrir o Wise."
+                             : (pia.e.calibrando ? "Ajustando ao seu computador (só na primeira vez)…"
+                             : (!pia.e.ativo ? "Escolha um modelo abaixo." : (pia.e.carregado ? "Em uso · pronta na memória" : "Em uso · carregando na memória…")))))
+                    ultima: !pia.tarefa
+                    Botao { visible: ia.servicoOk && !!pia.e.ativo; texto: pia.e.pausado ? "Retomar" : "Pausar"
+                            onClicado: ia.pausar(!pia.e.pausado) }
+                }
+                // Download em andamento
+                Linha {
+                    visible: !!pia.tarefa
+                    icone: "download"
+                    titulo: pia.tarefa ? "Baixando " + janela.nomeDoModelo(pia.tarefa.modelo) : ""
+                    descricao: pia.tarefa ? janela.gb(pia.tarefa.concluido) + " de " + janela.gb(pia.tarefa.total) + " · " + Math.round((pia.tarefa.fracao || 0) * 100) + "%" : ""
+                    ultima: true
+                    Andamento { width: 150; anchors.verticalCenter: parent.verticalCenter; fracao: pia.tarefa ? pia.tarefa.fracao || 0 : 0 }
+                    Botao { texto: "Cancelar"; onClicado: ia.cancelar() }
+                }
+            }
+
+            Grupo {
+                visible: pia.instalados.length > 0
+                titulo: "Modelos neste computador"
+                Repeater {
+                    model: pia.instalados
+                    Linha {
+                        required property var modelData
+                        required property int index
+                        titulo: janela.rotuloDoModelo(modelData)
+                        descricao: modelData.descricao + " · ocupa " + String(modelData.download_gb).replace(".", ",") + " GB"
+                        ultima: index === pia.instalados.length - 1
+                        Etiqueta { visible: modelData.ativo; texto: "Em uso"; cor: Tema.sucesso; anchors.verticalCenter: parent.verticalCenter }
+                        Botao { visible: !modelData.ativo; texto: "Usar"; tipo: "primario"; ativo: modelData.cabe; onClicado: ia.usar(modelData.id) }
+                        Botao { visible: !modelData.ativo; texto: "Remover"; onClicado: ia.remover(modelData.id) }
+                    }
+                }
+            }
+
+            Botao { visible: ia.servicoOk; texto: pia.verCatalogo ? "Esconder o catálogo" : "Baixar outros modelos"
+                    icone: pia.verCatalogo ? "seta-cima" : "download"; onClicado: pia.verCatalogo = !pia.verCatalogo }
+            Rotulo { visible: pia.verCatalogo; width: parent.width; secundario: true
+                     text: "Este computador tem " + String(pia.e.memoria_gb || 0).replace(".", ",") + " GB de memória. Modelos maiores respondem melhor, mas são mais lentos; os que não cabem na memória aparecem desativados." }
+            Repeater {
+                model: pia.verCatalogo ? (pia.e.familias || []) : []
+                Grupo {
+                    id: grupoFamilia
+                    required property var modelData
+                    readonly property var faltam: modelData.modelos.filter(function (m) { return !m.instalado })
+                    visible: faltam.length > 0
+                    titulo: modelData.nome + " · " + (modelData.autor || "")
+                    Repeater {
+                        model: grupoFamilia.faltam
+                        Linha {
+                            required property var modelData
+                            required property int index
+                            titulo: janela.rotuloDoModelo(modelData)
+                            descricao: modelData.descricao + " · download de " + String(modelData.download_gb).replace(".", ",") + " GB · usa "
+                                       + String(modelData.memoria_gb).replace(".", ",") + " GB de memória"
+                                       + (modelData.aviso ? "\n" + modelData.aviso : "")
+                                       + (modelData.licenca && !modelData.licenca.livre ? "\nLicença: " + modelData.licenca.nome + " (não é livre)" : "")
+                            ultima: index === grupoFamilia.faltam.length - 1
+                            opacity: modelData.cabe ? 1 : 0.55
+                            Etiqueta { visible: modelData.padrao; texto: "Recomendado"; anchors.verticalCenter: parent.verticalCenter }
+                            Botao { texto: "Baixar"; ativo: modelData.cabe && !pia.tarefa; onClicado: ia.baixar(modelData.id) }
+                        }
+                    }
+                }
+            }
+
+            // ============================== IA na nuvem
+            Repeater {
+                model: ia.motores
+                Grupo {
+                    id: grupoMotor
+                    required property var modelData
+                    required property int index
+                    readonly property var m: modelData
+                    readonly property bool editando: pia.chaveAberta === m.id || !m.tem_chave
+                    titulo: index === 0 ? "IA na nuvem · com a sua chave" : ""
+                    Linha {
+                        icone: "globo"
+                        titulo: m.titulo
+                        descricao: m.esperando && m.ocupado ? m.ocupado
+                                 : (m.ativado && m.tem_chave ? "Ligado · " + (m.modelos.length ? m.modelos.length + " modelos disponíveis" : "atualize a lista de modelos")
+                                 : (m.tem_chave ? "Desligado: nada é enviado para a " + m.empresa + "." : "Sem chave: cole a sua para ligar."))
+                        Interruptor { ligado: m.ativado && m.tem_chave; opacity: m.tem_chave ? 1 : 0.4
+                                      onAlternado: (v) => { if (m.tem_chave) ia.ativarMotor(m.id, v) } }
+                    }
+                    Linha {
+                        visible: m.ativado || !m.tem_chave
+                        titulo: "Privacidade"
+                        descricao: m.aviso + " Desligado, nada sai do computador."
+                    }
+                    Linha {
+                        icone: "cadeado"
+                        titulo: "Chave"
+                        descricao: grupoMotor.editando ? "Crie a chave no site da " + m.empresa + " e cole aqui. Ela fica no cofre do sistema, nunca em arquivo."
+                                                       : "Guardada no cofre do sistema."
+                        ultima: !grupoMotor.editando && !(m.tem_chave && m.ativado) && m.mensagem === ""
+                        Botao { visible: grupoMotor.editando; texto: "Criar chave"; icone: "abrir"; onClicado: ia.abrirEndereco(m.chave_em) }
+                        Botao { visible: !grupoMotor.editando; texto: "Trocar"; onClicado: pia.chaveAberta = m.id }
+                        Botao { visible: !grupoMotor.editando; texto: "Remover"; ativo: !m.esperando; onClicado: ia.removerChave(m.id) }
+                    }
+                    Item {
+                        visible: grupoMotor.editando
+                        width: parent.width; height: 52
+                        Campo { id: campoChave; anchors { left: parent.left; leftMargin: 14; right: botoesChave.left; rightMargin: 8; verticalCenter: parent.verticalCenter }
+                                dica: "Colar a chave de " + m.titulo; senha: true
+                                onConfirmado: if (texto.length > 7) { ia.salvarChave(m.id, texto); texto = ""; pia.chaveAberta = "" } }
+                        Row {
+                            id: botoesChave
+                            anchors { right: parent.right; rightMargin: 14; verticalCenter: parent.verticalCenter }
+                            spacing: 8
+                            Botao { texto: m.esperando ? "Conferindo…" : "Salvar e conferir"; tipo: "primario"; ativo: campoChave.texto.length > 7 && !m.esperando
+                                    onClicado: { ia.salvarChave(m.id, campoChave.texto); campoChave.texto = ""; pia.chaveAberta = "" } }
+                            Botao { visible: m.tem_chave; texto: "Cancelar"; onClicado: { campoChave.texto = ""; pia.chaveAberta = "" } }
+                        }
+                        Rectangle { anchors { left: parent.left; leftMargin: 14; right: parent.right; bottom: parent.bottom } height: 1; color: Tema.borda
+                                    visible: m.mensagem !== "" || (m.tem_chave && m.ativado) }
+                    }
+                    Linha {
+                        visible: m.tem_chave && m.ativado
+                        icone: "lista"
+                        titulo: "Modelo preferido"
+                        descricao: "O que os programas usam quando escolhem este motor."
+                        ultima: m.mensagem === ""
+                        Seletor { width: 220; opcoes: m.modelos.map(function (x) { return { valor: x, rotulo: x } }); valor: m.modelo
+                                  vazio: "Nenhum modelo"; onEscolhido: (v) => ia.modeloDoMotor(m.id, v) }
+                        BotaoIcone { icone: "reiniciar"; onClicado: ia.atualizarModelos(m.id) }
+                    }
+                    Linha { visible: m.mensagem !== ""; icone: "info"; titulo: m.mensagem; ultima: true }
+                }
+            }
+
+            Grupo {
+                visible: ia.wiseInstalado
+                Linha { icone: "wise"; titulo: "Wise"; descricao: "Motor e modelo padrão, voz, agenda, previsão do tempo e o que o Wise pode fazer."
+                        clicavel: true; ultima: true; onClicada: ajustes.irPara("wise")
+                        Icone { nome: "seta-direita"; tamanho: 14; cor: Tema.textoApagado } }
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------ Wise (ADR 063)
+    Component {
+        id: paginaWise
+        Pagina {
+            id: pw
+            readonly property var w: ia.wise
+            readonly property var voz: w.voz || ({ vozes: [], pacotes: {}, baixando: {} })
+            readonly property var motorPadrao: {
+                var ms = w.motores || []
+                for (var i = 0; i < ms.length; i++) if (ms[i].id === w.motor_padrao) return ms[i]
+                return ({ id: "local", modelos: [], modelo: "" })
+            }
+            readonly property bool temNuvem: (w.motores || []).some(function (m) { return m.nuvem })
+            property bool verCalDav: false
+            function baixando(item) { return pw.voz.baixando && pw.voz.baixando[item] !== undefined }
+            function mb(bytes) { return Math.round((bytes || 0) / 1000000) + " MB" }
+            Component.onCompleted: ia.abrir()
+
+            Destaque { icone: "wise"; estilo: "azul"
+                       titulo: !ia.wiseInstalado ? "O Wise não está instalado" : (ia.wiseLigado ? "Wise ligado" : "Wise desligado")
+                       texto: !ia.wiseInstalado ? "Instale o Wise pelas Atualizações para usar o assistente do DuiaOS."
+                            : (ia.wiseLigado ? "O assistente do DuiaOS. Abra com Super + W, pelo rosto no canto da tela ou pela barra do alto."
+                                             : "Desligado, o Wise e a IA local ficam fora da memória. Ligue para mudar as preferências.") }
+            Row {
+                visible: ia.wiseInstalado
+                spacing: 8
+                Botao { texto: ia.wiseLigado ? "Abrir o Wise" : "Ligar o Wise"; tipo: "primario"; icone: "wise"; onClicado: ia.abrirWise() }
+                Botao { visible: ia.wiseLigado; texto: "Desligar o Wise"; icone: "energia"; onClicado: ia.desligarWise() }
+            }
+
+            // ============================== motor e modelo
+            Grupo {
+                visible: ia.wiseLigado
+                titulo: "Motor e modelo padrão"
+                Linha {
+                    icone: "ia"; titulo: "Motor"
+                    descricao: "O que o Wise usa ao abrir. Na janela dele dá para trocar só para aquela conversa."
+                    Seletor { width: 220; valor: pw.w.motor_padrao || "local"
+                              opcoes: (pw.w.motores || []).map(function (m) { return { valor: m.id, rotulo: m.id === "local" ? "Local (neste computador)" : m.titulo } })
+                              onEscolhido: (v) => ia.definirWise("motor_padrao", v) }
+                }
+                Linha {
+                    icone: "lista"; titulo: "Modelo"
+                    descricao: pw.w.motor_padrao === "local" ? "O modelo local é o do sistema, igual para todos os programas."
+                                                             : "O modelo preferido deste motor."
+                    ultima: !(pw.w.motor_padrao === "local" && pw.temNuvem)
+                    Text { visible: pw.w.motor_padrao === "local"; anchors.verticalCenter: parent.verticalCenter
+                           text: janela.nomeDoModelo(pw.motorPadrao.modelo) || "Nenhum"; color: Tema.textoSecundario
+                           font { family: Tema.fonteTexto; pixelSize: 13; weight: Font.DemiBold } }
+                    Text { visible: pw.w.motor_padrao !== "local"; anchors.verticalCenter: parent.verticalCenter
+                           text: pw.motorPadrao.modelo || "Nenhum"; color: Tema.textoSecundario
+                           font { family: Tema.fonteTexto; pixelSize: 13; weight: Font.DemiBold } }
+                    Botao { texto: "Trocar"; onClicado: ajustes.irPara("ia") }
+                }
+                Linha {
+                    visible: pw.w.motor_padrao === "local" && pw.temNuvem
+                    icone: "globo"; titulo: "Usar a nuvem quando a IA local não estiver pronta"
+                    descricao: "Enquanto o modelo local baixa ou carrega, o Wise responde por um motor na nuvem ligado."
+                    ultima: true
+                    Interruptor { ligado: pw.w.reserva_na_nuvem === true; onAlternado: (v) => ia.definirWise("reserva_na_nuvem", v ? "sim" : "nao") }
+                }
+            }
+            Rotulo { visible: ia.wiseLigado && !pw.temNuvem; width: parent.width; secundario: true
+                     text: "Para usar o Gemini ou a OpenAI no Wise, ligue o motor e cole a chave em Inteligência Artificial." }
+
+            // ============================== voz
+            Grupo {
+                visible: ia.wiseLigado
+                titulo: "Voz"
+                Linha {
+                    visible: !pw.voz.disponivel
+                    icone: "som-mudo"; titulo: "A voz do sistema não está instalada"
+                    descricao: "Instale as atualizações do DuiaOS para o Wise falar e ouvir."; ultima: true
+                }
+                Linha {
+                    visible: !!pw.voz.disponivel
+                    icone: "som-2"; titulo: "Respostas faladas"
+                    descricao: "O Wise fala a resposta enquanto escreve. Tudo é feito neste computador."
+                    Interruptor { ligado: pw.voz.falar_respostas === true; onAlternado: (v) => ia.definirWise("falar_respostas", v ? "sim" : "nao") }
+                }
+                Repeater {
+                    model: pw.voz.disponivel ? pw.voz.vozes : []
+                    Linha {
+                        required property var modelData
+                        required property int index
+                        readonly property bool escolhida: pw.voz.voz === modelData.id
+                        readonly property bool descendo: pw.baixando(modelData.pacote)
+                        icone: escolhida ? "check" : ""
+                        titulo: modelData.nome
+                        descricao: descendo ? "Baixando… " + Math.round((pw.voz.baixando[modelData.pacote] || 0) * 100) + "%"
+                                 : (modelData.instalada ? (escolhida ? "A voz do Wise" : "Instalada") : "Download de " + pw.mb(modelData.tamanho))
+                        clicavel: modelData.instalada && !escolhida
+                        onClicada: ia.definirWise("voz", modelData.id)
+                        Andamento { visible: descendo; width: 120; anchors.verticalCenter: parent.verticalCenter; fracao: pw.voz.baixando[modelData.pacote] || 0 }
+                        Botao { visible: !modelData.instalada && !descendo; texto: "Baixar"; onClicado: ia.acaoWise("baixar_voz", { item: modelData.id }) }
+                        Botao { visible: modelData.instalada && !escolhida; texto: "Usar"; onClicado: ia.definirWise("voz", modelData.id) }
+                    }
+                }
+                Linha {
+                    visible: !!pw.voz.disponivel
+                    icone: "relogio"; titulo: "Velocidade da fala"
+                    Segmentos { opcoes: [{ valor: "0.88", rotulo: "Devagar" }, { valor: "1.00", rotulo: "Normal" }, { valor: "1.15", rotulo: "Rápida" }]
+                                valor: (pw.voz.velocidade || 1) < 0.95 ? "0.88" : ((pw.voz.velocidade || 1) > 1.07 ? "1.15" : "1.00")
+                                onEscolhido: (v) => ia.definirWise("velocidade_da_voz", v) }
+                    Botao { texto: "Ouvir"; icone: "som-2"; onClicado: ia.acaoWise("testar_voz", {}) }
+                }
+                Linha {
+                    visible: !!pw.voz.disponivel
+                    readonly property var p: pw.voz.pacotes["ouvir"] || ({})
+                    icone: "microfone"; titulo: "Falar com o Wise"
+                    descricao: pw.baixando("ouvir") ? "Baixando… " + Math.round((pw.voz.baixando["ouvir"] || 0) * 100) + "%"
+                             : (p.instalado ? "Ligado: clique no microfone da janela do Wise e fale. O áudio não sai do computador."
+                                            : "O Wise entende o que você fala (download de " + pw.mb(p.tamanho) + ").")
+                    Andamento { visible: pw.baixando("ouvir"); width: 120; anchors.verticalCenter: parent.verticalCenter; fracao: pw.voz.baixando["ouvir"] || 0 }
+                    Botao { visible: !parent.parent.p.instalado && !pw.baixando("ouvir"); texto: "Baixar"; tipo: "primario"; onClicado: ia.acaoWise("baixar_voz", { item: "ouvir" }) }
+                    Botao { visible: !!parent.parent.p.instalado; texto: "Remover"; onClicado: ia.acaoWise("remover_voz", { item: "ouvir" }) }
+                }
+                Linha {
+                    visible: !!pw.voz.disponivel
+                    readonly property var p: pw.voz.pacotes["ouvir-preciso"] || ({})
+                    icone: "microfone"; titulo: "Reconhecimento mais preciso"
+                    descricao: pw.baixando("ouvir-preciso") ? "Baixando… " + Math.round((pw.voz.baixando["ouvir-preciso"] || 0) * 100) + "%"
+                             : (p.instalado ? "Instalado: o Wise entende melhor, um pouco mais devagar."
+                                            : "Entende melhor nomes e frases longas; um pouco mais lento (download de " + pw.mb(p.tamanho) + ").")
+                    ultima: (pw.voz.mensagem || "") === ""
+                    Andamento { visible: pw.baixando("ouvir-preciso"); width: 120; anchors.verticalCenter: parent.verticalCenter; fracao: pw.voz.baixando["ouvir-preciso"] || 0 }
+                    Botao { visible: !parent.parent.p.instalado && !pw.baixando("ouvir-preciso"); texto: "Baixar"; onClicado: ia.acaoWise("baixar_voz", { item: "ouvir-preciso" }) }
+                    Botao { visible: !!parent.parent.p.instalado; texto: "Remover"; onClicado: ia.acaoWise("remover_voz", { item: "ouvir-preciso" }) }
+                }
+                Linha { visible: (pw.voz.mensagem || "") !== ""; icone: "info"; titulo: pw.voz.mensagem || ""; ultima: true }
+            }
+
+            // ============================== saudação
+            Grupo {
+                visible: ia.wiseLigado
+                titulo: "Ao entrar na sessão"
+                Linha {
+                    icone: "sino"; titulo: "Saudação"
+                    descricao: ({ escrita: "Um balão ao lado do rosto do Wise.", fala: "O Wise cumprimenta em voz alta.",
+                                  fala_e_escrita: "O balão e a voz.", desativada: "O Wise fica quieto no canto." })[pw.w.saudacao] || ""
+                    ultima: true
+                    Seletor { width: 180; valor: pw.w.saudacao || "escrita"
+                              opcoes: [{ valor: "escrita", rotulo: "Escrita" }, { valor: "fala", rotulo: "Falada" },
+                                       { valor: "fala_e_escrita", rotulo: "Falada e escrita" }, { valor: "desativada", rotulo: "Desativada" }]
+                              onEscolhido: (v) => ia.definirWise("saudacao", v) }
+                    Botao { texto: "Ver agora"; onClicado: ia.acaoWise("testar_saudacao", {}) }
+                }
+            }
+
+            // ============================== previsão do tempo
+            Grupo {
+                visible: ia.wiseLigado
+                titulo: "Previsão do tempo"
+                Linha {
+                    icone: "globo"; titulo: pw.w.cidade ? pw.w.cidade : "Nenhuma cidade escolhida"
+                    descricao: "A previsão vem do Instituto Meteorológico da Noruega; só a posição da cidade sai do computador."
+                    Botao { visible: !!pw.w.cidade; texto: "Esquecer"; onClicado: ia.acaoWise("esquecer_cidade", {}) }
+                }
+                Item {
+                    width: parent.width; height: 52
+                    Campo { id: campoCidade; anchors { left: parent.left; leftMargin: 14; right: botaoCidade.left; rightMargin: 8; verticalCenter: parent.verticalCenter }
+                            dica: "Cidade, estado"; icone: "busca"
+                            onConfirmado: if (texto.length > 1) ia.acaoWise("definir_cidade", { texto: texto, escolha: 0 }) }
+                    Botao { id: botaoCidade; anchors { right: parent.right; rightMargin: 14; verticalCenter: parent.verticalCenter }
+                            texto: "Procurar"; tipo: "primario"; ativo: campoCidade.texto.length > 1
+                            onClicado: ia.acaoWise("definir_cidade", { texto: campoCidade.texto, escolha: 0 }) }
+                }
+                Linha { visible: (pw.w.cidade_mensagem || "") !== ""; titulo: pw.w.cidade_mensagem || ""; ultima: (pw.w.cidade_opcoes || []).length === 0 }
+                Repeater {
+                    model: pw.w.cidade_opcoes || []
+                    Linha {
+                        required property string modelData
+                        required property int index
+                        titulo: modelData; clicavel: true; ultima: index === (pw.w.cidade_opcoes || []).length - 1
+                        onClicada: ia.acaoWise("definir_cidade", { texto: campoCidade.texto, escolha: index + 1 })
+                        Icone { nome: "seta-direita"; tamanho: 14; cor: Tema.textoApagado }
+                    }
+                }
+            }
+
+            // ============================== agenda
+            Grupo {
+                visible: ia.wiseLigado
+                titulo: "Agenda"
+                Linha { icone: "recentes"; titulo: "Agenda do computador"; descricao: "Sempre ligada. Conecte outras para o Wise ver tudo junto. Senhas e acessos ficam no cofre e nunca passam pela IA." }
+                Repeater {
+                    model: pw.w.contas_agenda || []
+                    Linha {
+                        required property var modelData
+                        titulo: modelData.nome; descricao: modelData.tipo
+                        Botao { texto: "Remover"; onClicado: ia.acaoWise("remover_conta_agenda", { "id": modelData.id }) }
+                    }
+                }
+                Linha {
+                    titulo: "Conectar uma conta"
+                    descricao: (pw.w.login_google && pw.w.login_microsoft) ? "O navegador abre para você entrar e autorizar."
+                             : "O login com Google e Microsoft ainda não está configurado neste DuiaOS: use o link .ics abaixo."
+                    Botao { texto: "Google"; ativo: pw.w.login_google === true && !pw.w.agenda_ocupada; onClicado: ia.acaoWise("conectar_agenda", { provedor: "google" }) }
+                    Botao { texto: "Outlook / Teams"; ativo: pw.w.login_microsoft === true && !pw.w.agenda_ocupada; onClicado: ia.acaoWise("conectar_agenda", { provedor: "microsoft" }) }
+                }
+                Linha { titulo: "Link .ics (só leitura)"; descricao: "No Google: Configurações da agenda › Endereço secreto em formato iCal." }
+                Item {
+                    width: parent.width; height: 52
+                    Campo { id: campoLinkNome; anchors { left: parent.left; leftMargin: 14; verticalCenter: parent.verticalCenter } width: 170; dica: "Nome" }
+                    Campo { id: campoLink; anchors { left: campoLinkNome.right; leftMargin: 8; right: botaoLink.left; rightMargin: 8; verticalCenter: parent.verticalCenter }
+                            dica: "https://… ou webcal://…"; senha: true }
+                    Botao { id: botaoLink; anchors { right: parent.right; rightMargin: 14; verticalCenter: parent.verticalCenter }
+                            texto: "Adicionar"; ativo: campoLink.texto.length > 10 && !pw.w.agenda_ocupada
+                            onClicado: { ia.acaoWise("adicionar_link_agenda", { nome: campoLinkNome.texto, url: campoLink.texto }); campoLink.texto = "" } }
+                    Rectangle { anchors { left: parent.left; leftMargin: 14; right: parent.right; bottom: parent.bottom } height: 1; color: Tema.borda }
+                }
+                Linha { titulo: "CalDAV"; descricao: "iCloud, Nextcloud e provedores próprios."; clicavel: true; onClicada: pw.verCalDav = !pw.verCalDav
+                        ultima: !pw.verCalDav && (pw.w.agenda_mensagem || "") === ""
+                        Icone { nome: pw.verCalDav ? "seta-cima" : "seta-baixo"; tamanho: 14; cor: Tema.textoApagado } }
+                Item {
+                    visible: pw.verCalDav
+                    width: parent.width; height: 100
+                    Grid {
+                        anchors { left: parent.left; right: parent.right; margins: 14; verticalCenter: parent.verticalCenter }
+                        columns: 2; spacing: 8
+                        Campo { id: davNome; width: (parent.width - 8) / 2; dica: "Nome (ex.: iCloud)" }
+                        Campo { id: davUrl; width: (parent.width - 8) / 2; dica: "Servidor (https://caldav.icloud.com)" }
+                        Campo { id: davUsuario; width: (parent.width - 8) / 2; dica: "Usuário ou e-mail" }
+                        Row {
+                            width: (parent.width - 8) / 2; spacing: 8
+                            Campo { id: davSenha; width: parent.width - botaoDav.width - 8; dica: "Senha de aplicativo"; senha: true }
+                            Botao { id: botaoDav; texto: "Conectar"; tipo: "primario"
+                                    ativo: davUrl.texto.length > 8 && davUsuario.texto.length > 0 && davSenha.texto.length > 0 && !pw.w.agenda_ocupada
+                                    onClicado: { ia.acaoWise("adicionar_caldav", { nome: davNome.texto, url: davUrl.texto, usuario: davUsuario.texto, senha: davSenha.texto }); davSenha.texto = "" } }
+                        }
+                    }
+                }
+                Linha { visible: (pw.w.agenda_mensagem || "") !== ""; icone: "info"; titulo: pw.w.agenda_mensagem || ""; ultima: true
+                        Botao { visible: pw.w.agenda_ocupada === true; texto: "Cancelar"; onClicado: ia.acaoWise("cancelar_conexao_agenda", {}) } }
+            }
+
+            // ============================== usar o computador
+            Grupo {
+                visible: ia.wiseLigado
+                titulo: "Usar o computador"
+                Linha {
+                    icone: "escudo"; titulo: "Pedir aprovação para toda ação na tela"
+                    descricao: "Desligado, o Wise só pede aprovação quando a ação envia, apaga, paga, instala ou confirma algo. Ligado, pede para cada clique e cada texto digitado. Tudo fica registrado."
+                    Interruptor { ligado: pw.w.aprovar_toda_acao === true; onAlternado: (v) => ia.definirWise("aprovar_toda_acao", v ? "sim" : "nao") }
+                }
                 Linha { icone: "teclado"; titulo: "Abrir e fechar o Wise"; ultima: true
                         Text { anchors.verticalCenter: parent.verticalCenter; text: "Super + W"; color: Tema.textoSecundario; font { family: Tema.fonteTexto; pixelSize: 12; weight: Font.DemiBold } } }
             }
+            Rotulo { visible: ia.wiseLigado; secundario: true; width: parent.width
+                     text: "Wise " + (pw.w.versao || "") + " · Previsão do tempo: MET Norway (CC BY 4.0). Busca de cidades: © colaboradores do OpenStreetMap (ODbL)." }
         }
     }
 

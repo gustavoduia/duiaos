@@ -68,6 +68,7 @@ Rectangle {
         property bool aberto: painel !== "" && sistema.painel === painel
         default property alias conteudo: dentro.data
         signal clicado()
+        signal clicadoDireito()
         width: barra.horizontal ? Math.max(28, dentro.childrenRect.width + 14) : 52
         height: barra.horizontal ? 24 : Math.max(26, dentro.childrenRect.height + 10)
         radius: 6
@@ -81,7 +82,8 @@ Rectangle {
             id: area
             anchors.fill: parent
             hoverEnabled: true
-            onClicked: botao.clicado()
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
+            onClicked: (m) => m.button === Qt.RightButton ? botao.clicadoDireito() : botao.clicado()
         }
     }
 
@@ -116,6 +118,9 @@ Rectangle {
         Accessible.name: ({ wise: "Wise", wifi: "Wi-Fi", som: "Som", bateria: "Bateria", bluetooth: "Bluetooth",
                             brilho: "Brilho", luz: "Luz noturna" })[modelData] || modelData
         onClicado: barra.abrir(modelData, ind)
+        // Botão direito no Wise: abrir, configurações e desligar (ADR 063)
+        aberto: (painel !== "" && sistema.painel === painel) || (modelData === "wise" && sistema.painel === "appmenuwise")
+        onClicadoDireito: if (modelData === "wise") sistema.abrirMenuDoWise(barra.ancoraDe(ind))
         Row {
             spacing: 5
             Image {
@@ -283,7 +288,9 @@ Rectangle {
             }
             BotaoDaBarra {
                 visible: sistema.wise
+                id: botaoWise
                 onClicado: sistema.abrirWise()
+                onClicadoDireito: sistema.abrirMenuDoWise(barra.ancoraDe(botaoWise))
                 Text { text: "Wise"; color: Tema.azulDuia; font { family: Tema.fonteTexto; pixelSize: 12; weight: Font.Bold } }
             }
         }

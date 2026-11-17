@@ -71,3 +71,37 @@ class TesteAplicativosDoDuiaOS(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TesteMenuDoWise(unittest.TestCase):
+    """Botão direito no Wise, na Barra (ADR 063): abrir, as páginas das Configurações e desligar."""
+
+    def test_itens_e_acoes(self):
+        try:
+            import PySide6  # noqa: F401
+        except ImportError:
+            self.skipTest("sem PySide6")
+        import os
+        import tempfile
+        from unittest import mock
+        from shell.testes.test_armazenamento import carregar_barra      # a Barra só carrega uma vez por processo
+        barra = carregar_barra()
+        self.assertNotIn("wise", barra.INDICADORES_PADRAO.split(",")[:barra.MAXIMO_VISIVEIS])   # atrás da seta, por padrão
+        Sistema = next(v for v in vars(barra).values() if isinstance(v, type) and hasattr(v, "abrirMenuDoWise"))
+        falso = mock.Mock()
+        falso._painel = ""
+        with tempfile.TemporaryDirectory() as pasta, mock.patch.dict(os.environ, {"XDG_RUNTIME_DIR": pasta}):
+            Sistema.abrirMenuDoWise(falso, 100.0)
+            ids = [i["id"] for i in falso._itens_menu if i["tipo"] == "item"]
+            self.assertEqual(ids, ["wise:abrir", "wise:configuracoes", "wise:ia", "wise:desligar"])
+            Path(pasta, "duiaos-wise-desligado").write_text("x")
+            falso._painel = ""
+            Sistema.abrirMenuDoWise(falso, 100.0)
+            self.assertNotIn("wise:desligar", [i["id"] for i in falso._itens_menu])
+            self.assertIn("Ligar", falso._itens_menu[0]["rotulo"])
+        with mock.patch.object(barra, "DEMONSTRACAO", False), mock.patch.object(barra.aplicativos, "iniciar") as iniciar, \
+                mock.patch.object(barra.comum, "abrir_app_duiaos") as abrir:
+            Sistema.acionarMenu(falso, "wise:desligar")
+            Sistema.acionarMenu(falso, "wise:ia")
+        iniciar.assert_called_once_with(["/usr/bin/duiaos-wise", "--desligar"])
+        abrir.assert_called_once_with("configuracoes", "--secao", "ia")

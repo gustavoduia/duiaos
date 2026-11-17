@@ -13,7 +13,7 @@
 command -v swaybg >/dev/null 2>&1 || exit 0
 
 DICA="${XDG_CACHE_HOME:-${HOME}/.cache}/duiaos/papel-inicio"
-ARQUIVO=/usr/share/duiaos/papel-de-parede/orbita.jpg
+ARQUIVO=/usr/share/duiaos/papel-de-parede/paisagem.jpg
 COR='#000000'
 MODO=fill
 if [ -r "${DICA}" ]; then

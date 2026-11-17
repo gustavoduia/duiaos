@@ -96,3 +96,6 @@ flatpak
 appstream
 apt-config-icons
 python3-yaml
+# Cofre do sistema: chaves dos motores de IA na nuvem (Configurações › Inteligência Artificial)
+python3-secretstorage
+gnome-keyring

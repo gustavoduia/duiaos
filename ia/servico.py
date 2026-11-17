@@ -46,6 +46,7 @@ XML = """
     <method name="Cancelar"/>
     <method name="GarantirPadrao"/>
     <method name="Calibrar"/>
+    <method name="Pausar"><arg name="pausar" type="b" direction="in"/></method>
     <signal name="Mudou"><arg name="json" type="s"/></signal>
   </interface>
 </node>
@@ -140,6 +141,8 @@ class Servico:
             # diferentes fazem o Ollama recarregar o modelo
             "opcoes": self.opcoes_do(self.config["ativo"]),
             "calibrando": bool(self._calibrando),
+            # "Desligar o Wise" (ADR 063): o modelo sai da memória e não volta sozinho até retomarem
+            "pausado": bool(getattr(self, "_pausado", False)),
             "instalados": sorted(m["id"] for _f, m, _l in cat.modelos(self.catalogo) if m["id"] in self._instalados),
             "atualizado": int(time.time()),
         }
@@ -196,8 +199,8 @@ class Servico:
         """Carrega o modelo ativo na memória em segundo plano (e tira o anterior),
         para a primeira pergunta não esperar o carregamento."""
         ativo = self.config["ativo"]
-        if not ativo or self._aquecendo or self._calibrando:
-            return                      # a calibração recarrega o ativo quando terminar
+        if not ativo or self._aquecendo or self._calibrando or getattr(self, "_pausado", False):
+            return                      # a calibração recarrega o ativo quando terminar; pausado, só ao retomar
         self._aquecendo = True
         self._carregado = False
         manter = self.manter_na_memoria(ativo)
@@ -226,6 +229,23 @@ class Servico:
             self.calibrar(modelo)                   # 1ª vez deste modelo neste computador
         self.mudou(recarregar=False)
         return False
+
+    def pausar(self, pausar):
+        """Pausar: tira o modelo ativo da memória e não o recarrega sozinho (libera RAM e processador
+        para o resto do sistema). Retomar: carrega de novo. Não muda o modelo ativo nem o que está baixado.
+        Vale até reiniciar o computador."""
+        pausar = bool(pausar)
+        if pausar == getattr(self, "_pausado", False):
+            return
+        self._pausado = pausar
+        if pausar:
+            self._carregado = False
+            ativo = self.config["ativo"]
+            if ativo:
+                threading.Thread(target=self.ollama.descarregar, args=(ativo,), daemon=True).start()
+        else:
+            self.aquecer()
+        self.mudou(recarregar=False)
 
     # ------------------------------------------------------------ calibração
     def calibrado(self, modelo):
@@ -515,6 +535,8 @@ class Servico:
                 self.garantir_padrao()
             elif metodo == "Calibrar":
                 self.recalibrar()
+            elif metodo == "Pausar":
+                self.pausar(argumentos[0])
             else:
                 raise Recusa("Invalido", f"Método desconhecido: {metodo}")
             invocacao.return_value(None)

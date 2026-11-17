@@ -328,7 +328,7 @@ class Ilha(QObject):
         self._todos = [dict(i) for i in self._itens] + [
             {"id": f"exemplo{n}.desktop", "nome": nome, "icone": "", "exec": "", "classe": "", "terminal": False,
              "descricao": "", "busca": normalizar(nome)}
-            for n, nome in enumerate(["Calculadora", "Calendário", "Câmera", "Central de IA", "Editor de Texto",
+            for n, nome in enumerate(["Calculadora", "Calendário", "Câmera", "Editor de Texto",
                                       "Fotos", "GIMP", "Inkscape", "LibreOffice Calc", "LibreOffice Impress",
                                       "Mapas", "Música", "Relógio", "Thunderbird", "VLC", "Visualizador de PDF",
                                       "Ajude a melhorar o DuiaOS", "Gravador de Som"])]

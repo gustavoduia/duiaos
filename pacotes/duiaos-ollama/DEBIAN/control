@@ -16,4 +16,4 @@ Description: Ollama — motor que roda os modelos de IA local do DuiaOS
  NVIDIA (CUDA); usa o processador e, quando disponível, Vulkan.
  .
  Licença MIT (/usr/share/doc/duiaos-ollama/copyright). Os modelos são
- baixados e gerenciados pela Central de IA do DuiaOS.
+ baixados e gerenciados em Configurações › Inteligência Artificial do DuiaOS.

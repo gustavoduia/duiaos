@@ -52,3 +52,12 @@ usbutils
 
 # Firmware livre
 firmware-linux-free
+
+# Instalador do DuiaOS (ADR 064): Calamares, com os passos do Debian 13; a identidade vem do
+# duiaos-fontes-abertas (instalador/). O instalador clássico (debian-installer) continua no menu de boot.
+calamares
+calamares-settings-debian
+qml6-module-qtquick
+qml6-module-qtqml
+rsync
+squashfs-tools
