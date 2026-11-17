@@ -40,6 +40,11 @@ def descrever_data(momento, agora=None):
     return data.strftime("%d/%m/%Y, %H:%M")
 
 
+def _eh_compactado(nome):
+    import compactados                      # aqui dentro: compactados importa este módulo
+    return compactados.eh_compactado(nome)
+
+
 def item_de(caminho, nome=None, info_lixeira=None):
     """Dicionário de um arquivo ou pasta para a interface."""
     caminho = Path(caminho)
@@ -68,6 +73,7 @@ def item_de(caminho, nome=None, info_lixeira=None):
         "modificadoTexto": descrever_data(estado.st_mtime),
         "miniatura": caminho.as_uri() if miniatura and estado.st_size < 40_000_000 else "",
         "link": caminho.is_symlink(),
+        "compactado": not eh_pasta and _eh_compactado(nome),
     }
     if info_lixeira:
         item.update(info_lixeira)

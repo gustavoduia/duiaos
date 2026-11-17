@@ -44,6 +44,7 @@ from PySide6.QtGui import QGuiApplication  # noqa: E402
 from PySide6.QtQml import QQmlApplicationEngine  # noqa: E402
 
 import aplicativos  # noqa: E402
+import compactados  # noqa: E402
 import interface  # noqa: E402
 import operacoes  # noqa: E402
 import papel  # noqa: E402
@@ -71,6 +72,8 @@ class Area(QObject):
     itensMudaram = Signal()
     aviso = Signal(str)
     renomearNovo = Signal(str)
+    destacar = Signal(str)
+    _descompactado = Signal(object)
 
     def __init__(self):
         super().__init__()
@@ -79,6 +82,8 @@ class Area(QObject):
         self._papel = papel_de_parede()
         self._posicao_barra = "topo"
         self._transferencia, self._recortar = [], False
+        self._descompactando = False
+        self._descompactado.connect(self._ao_descompactar)
         if DEMONSTRACAO:
             self._demonstracao()
             return
@@ -105,13 +110,14 @@ class Area(QObject):
 
     def _demonstracao(self):
         nomes = [("Projetos", True), ("Fotos da viagem", True), ("Contrato de aluguel.pdf", False),
-                 ("Orçamento 2026.xlsx", False), ("Anotações.txt", False)]
+                 ("Orçamento 2026.xlsx", False), ("Anotações.txt", False), ("Documentos.zip", False)]
         self._itens = []
         for nome, eh_pasta in nomes:
             import tipos
             icone, descricao, _ = tipos.tipo(nome, eh_pasta)
             self._itens.append({"nome": nome, "caminho": "/demo/" + nome, "pasta": eh_pasta, "icone": icone,
-                                "tipo": descricao, "miniatura": "", "oculto": False})
+                                "tipo": descricao, "miniatura": "", "oculto": False,
+                                "compactado": compactados.eh_compactado(nome)})
 
     @Slot()
     def recarregar(self):
@@ -153,8 +159,40 @@ class Area(QObject):
                 return
         if Path(caminho).is_dir():
             comum.abrir_app_duiaos("explorador-de-arquivos", caminho)
+        elif compactados.eh_compactado(caminho):
+            self.descompactar([caminho])           # como no macOS: descompacta ao lado
         elif not aplicativos.abrir_arquivo(caminho):
             self.aviso.emit("Não há um aplicativo para abrir este arquivo.")
+
+    @Slot("QVariantList")
+    def descompactar(self, caminhos):
+        """Descompacta na própria Área de Trabalho (compactados.py), sem travar os ícones."""
+        caminhos = [c for c in caminhos if compactados.eh_compactado(c)]
+        if not caminhos or DEMONSTRACAO or self._descompactando:
+            return
+        self._descompactando = True
+        self.aviso.emit("Descompactando…")
+
+        def tarefa():
+            resultados = []
+            for caminho in caminhos:
+                try:
+                    resultados.append(compactados.descompactar(caminho))
+                except operacoes.ErroDeArquivo as erro:
+                    resultados.append(erro)
+            self._descompactado.emit(resultados)
+        import threading
+        threading.Thread(target=tarefa, daemon=True).start()
+
+    def _ao_descompactar(self, resultados):
+        self._descompactando = False
+        self.recarregar()
+        erros = [r for r in resultados if isinstance(r, Exception)]
+        prontos = [r for r in resultados if not isinstance(r, Exception)]
+        if erros:
+            self.aviso.emit(str(erros[0]))
+        if prontos:
+            self.destacar.emit(prontos[-1])
 
     @Slot(str)
     def mostrarNoExplorador(self, caminho):

@@ -29,6 +29,16 @@ Item {
         target: area
         function onRenomearNovo(caminho) { var n = ({}); n[caminho] = true; raiz.selecao = n; raiz.renomeando = caminho }
         function onAviso(m) { aviso.mostrar(m) }
+        function onDestacar(caminho) { var n = ({}); n[caminho] = true; raiz.selecao = n }
+    }
+    function selecionadosCompactados() {
+        var lista = []
+        for (var i = 0; i < area.itens.length; i++) {
+            if (!selecao[area.itens[i].caminho]) continue
+            if (area.itens[i].compactado !== true) return []
+            lista.push(area.itens[i].caminho)
+        }
+        return lista
     }
 
     Keys.onPressed: (e) => {
@@ -59,16 +69,63 @@ Item {
         estendido: area.papeis.telas === "estender" ? raiz.estendido : null
     }
 
-    // Clique no vazio: esquerdo limpa a seleção, direito abre o menu da área de trabalho
+    // Clique no vazio: esquerdo limpa a seleção, direito abre o menu da área de trabalho.
+    // Segurar o botão esquerdo e arrastar desenha o retângulo de seleção (Ctrl inverte, Shift soma).
     MouseArea {
+        id: fundoArea
         anchors.fill: parent
         acceptedButtons: Qt.LeftButton | Qt.RightButton
+        preventStealing: true
+        property bool arrastando: false
+        property point inicio: Qt.point(0, 0)
+        property var base: ({})
+        property int modo: 0                       // 0 substitui, 1 soma (Shift), 2 inverte (Ctrl)
+        function atualizar(x, y) {
+            var x1 = Math.min(inicio.x, x), y1 = Math.min(inicio.y, y)
+            var x2 = Math.max(inicio.x, x), y2 = Math.max(inicio.y, y)
+            faixa.x = x1; faixa.y = y1; faixa.width = x2 - x1; faixa.height = y2 - y1
+            var nova = modo === 0 ? ({}) : Object.assign({}, base)
+            for (var i = 0; i < icones.count; i++) {
+                var icone = icones.itemAt(i)
+                if (!icone || !grade.visible) continue
+                var p = icone.mapToItem(raiz, 0, 0)
+                // só o desenho do ícone e do nome, não a célula inteira
+                var l = p.x + 12, r = p.x + icone.width - 12, t = p.y + 2, b = p.y + icone.height - 4
+                if (l > x2 || r < x1 || t > y2 || b < y1) continue
+                var c = icone.modelData.caminho
+                if (modo === 2 && base[c]) delete nova[c]; else nova[c] = true
+            }
+            raiz.selecao = nova
+        }
         onPressed: (m) => {
             raiz.forceActiveFocus()
             menu.tipo = ""
-            if (m.button === Qt.LeftButton) raiz.selecao = ({})
+            arrastando = false
+            inicio = Qt.point(m.x, m.y)
+            modo = (m.modifiers & Qt.ControlModifier) ? 2 : ((m.modifiers & Qt.ShiftModifier) ? 1 : 0)
+            base = Object.assign({}, raiz.selecao)
+            if (m.button === Qt.LeftButton && modo === 0) raiz.selecao = ({})
         }
-        onClicked: (m) => { if (m.button === Qt.RightButton) { raiz.selecao = ({}); menu.abrir("fundo", m.x, m.y) } }
+        onPositionChanged: (m) => {
+            if (!(m.buttons & Qt.LeftButton) || !raiz.mostrarIcones) return
+            if (!arrastando && Math.abs(m.x - inicio.x) < 5 && Math.abs(m.y - inicio.y) < 5) return
+            arrastando = true
+            atualizar(m.x, m.y)
+        }
+        onReleased: (m) => {
+            if (arrastando) { arrastando = false; return }
+            if (m.button === Qt.RightButton) { raiz.selecao = ({}); menu.abrir("fundo", m.x, m.y) }
+        }
+        onCanceled: arrastando = false
+    }
+    Rectangle {
+        id: faixa
+        visible: fundoArea.arrastando && width > 0 && height > 0
+        z: 2
+        radius: 3
+        // Azul do DuiaOS translúcido: aparece em papéis de parede claros e escuros
+        color: Qt.rgba(Tema.azulDuia.r, Tema.azulDuia.g, Tema.azulDuia.b, 0.22)
+        border { color: Qt.rgba(Tema.azulDuia.r, Tema.azulDuia.g, Tema.azulDuia.b, 0.9); width: 1 }
     }
 
     // ------------------------------------------------------------- ícones
@@ -86,6 +143,7 @@ Item {
         layoutDirection: Qt.RightToLeft
         spacing: 4
         Repeater {
+            id: icones
             model: area.itens
             Item {
                 id: icone
@@ -198,6 +256,8 @@ Item {
                 readonly property bool item: menu.tipo === "item"
                 readonly property bool varios: raiz.selecionados().length > 1
                 ItemDeMenu { visible: colunaMenu.item; texto: "Abrir"; icone: "abrir"; onClicado: menu.feito(function () { area.abrir(raiz.selecionados()[0]) }) }
+                ItemDeMenu { visible: colunaMenu.item && raiz.selecionadosCompactados().length > 0; texto: "Descompactar"; icone: "compactado"
+                             onClicado: menu.feito(function () { area.descompactar(raiz.selecionadosCompactados()) }) }
                 ItemDeMenu { visible: colunaMenu.item && !colunaMenu.varios; texto: "Mostrar no Explorador de Arquivos"; icone: "pasta"
                              onClicado: menu.feito(function () { area.mostrarNoExplorador(raiz.selecionados()[0]) }) }
                 Separador { visible: colunaMenu.item }

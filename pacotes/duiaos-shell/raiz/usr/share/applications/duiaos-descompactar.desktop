@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Descompactar
+Comment=Descompacta o arquivo na mesma pasta
+Exec=duiaos-explorador-de-arquivos --descompactar %F
+Icon=duiaos-explorador-de-arquivos
+Terminal=false
+NoDisplay=true
+Categories=Utility;Archiving;
+MimeType=application/zip;application/x-zip-compressed;application/x-tar;application/x-compressed-tar;application/x-bzip-compressed-tar;application/x-bzip2-compressed-tar;application/x-xz-compressed-tar;application/gzip;application/x-gzip;application/x-bzip;application/x-bzip2;application/x-xz;application/x-7z-compressed;application/vnd.rar;application/x-rar;application/x-rar-compressed;

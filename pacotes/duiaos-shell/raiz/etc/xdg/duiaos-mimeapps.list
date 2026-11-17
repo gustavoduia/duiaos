@@ -2,3 +2,20 @@
 # Aplicativos padrão, gravado em ~/.config/mimeapps.list).
 [Default Applications]
 inode/directory=duiaos-explorador-de-arquivos.desktop
+# Arquivos compactados: descompactar ao lado, como no macOS (ADR 067)
+application/zip=duiaos-descompactar.desktop
+application/x-zip-compressed=duiaos-descompactar.desktop
+application/x-tar=duiaos-descompactar.desktop
+application/x-compressed-tar=duiaos-descompactar.desktop
+application/x-bzip-compressed-tar=duiaos-descompactar.desktop
+application/x-bzip2-compressed-tar=duiaos-descompactar.desktop
+application/x-xz-compressed-tar=duiaos-descompactar.desktop
+application/gzip=duiaos-descompactar.desktop
+application/x-gzip=duiaos-descompactar.desktop
+application/x-bzip=duiaos-descompactar.desktop
+application/x-bzip2=duiaos-descompactar.desktop
+application/x-xz=duiaos-descompactar.desktop
+application/x-7z-compressed=duiaos-descompactar.desktop
+application/vnd.rar=duiaos-descompactar.desktop
+application/x-rar=duiaos-descompactar.desktop
+application/x-rar-compressed=duiaos-descompactar.desktop

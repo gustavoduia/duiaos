@@ -66,6 +66,11 @@ fundos com GIF/vídeo, Atualizações nas Configurações, foto da conta, menu d
    Entrada/Bloqueio, Central de IA e "Ajude a melhorar"; janelas presas aos cantos.
 
 ## 5. Decisões recentes (detalhe nos ADRs)
+- 17/11: **Seleção por arraste e Descompactar** (ADR 067, ficha DUIA-2026-0024): retângulo de seleção no Explorador
+  e na Área de Trabalho (as vistas do Explorador eram `interactive`: o arraste virava rolagem); Descompactar no botão
+  direito e com dois cliques (.zip, .tar.*, .gz/.bz2/.xz, .7z; pacote `7zip`); correção da seleção que se perdia a
+  cada recarga da pasta. **Pendentes**: .rar precisa do `7zip-rar` (non-free) — decisão do Gustavo; página da
+  documentação no `duiaos-websites` (o ambiente não liberou o repositório nesta sessão). **Sem teste no Dell.**
 - 16/11: **Barra do Armazenamento completa (com o livre) e arrastar na Ilha como no Dock do macOS** (ADR 062,
   ficha DUIA-2026-0020). **Sem teste no Dell** (suavidade real só lá).
 - 16/11: **Menu do ☰ do GNOME na Barra, Ilha que reorganiza ao arrastar, listas das Configurações, procura a

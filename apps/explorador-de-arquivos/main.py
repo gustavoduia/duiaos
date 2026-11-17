@@ -12,6 +12,7 @@ A interface fica em ExploradorDeArquivos.qml; as operações, em operacoes.py.
 Uso:
   main.py [PASTA | aplicativos: | lixeira:]      abre uma janela (padrão: Início)
   main.py PASTA --captura ARQUIVO [--lista]      salva uma imagem da janela e sai
+  main.py --descompactar ARQUIVO...             abre a pasta do arquivo e descompacta ali
 """
 import os
 import subprocess
@@ -22,6 +23,7 @@ from pathlib import Path
 PASTA = Path(__file__).resolve().parent
 sys.path.insert(0, str(PASTA))
 import operacoes  # noqa: E402  (também põe shell/comum no caminho)
+import compactados  # noqa: E402
 import aplicativos  # noqa: E402
 import interface  # noqa: E402
 import pastas  # noqa: E402
@@ -33,6 +35,15 @@ from PySide6.QtGui import QGuiApplication, QIcon  # noqa: E402
 from PySide6.QtQml import QQmlApplicationEngine  # noqa: E402
 
 APLICATIVOS = "aplicativos:"
+
+
+def registrar(nivel, evento, mensagem, **dados):
+    """Registro do DuiaOS (duiaos_registro); sem a biblioteca (testes), nada."""
+    try:
+        import duiaos_registro
+    except ImportError:
+        return
+    getattr(duiaos_registro, nivel)(evento, mensagem, **dados)
 LIXEIRA = "lixeira:"
 BUSCA = "busca:"
 
@@ -43,6 +54,7 @@ class Explorador(QObject):
     tarefaMudou = Signal()
     aviso = Signal(str)
     renomearNovo = Signal(str)
+    destacar = Signal(str)                      # seleciona um item recém-criado (ex.: o que foi descompactado)
     _pronto = Signal(str, object)
 
     def __init__(self, inicial):
@@ -93,6 +105,17 @@ class Explorador(QObject):
             if isinstance(resultado, Exception):
                 self.aviso.emit(str(resultado))
             self.recarregar()
+            return
+        if nome == "descompactar":
+            self._tarefa = {"ativa": False, "titulo": "", "progresso": 1.0}
+            self.tarefaMudou.emit()
+            self.recarregar()
+            erros = [r for r in resultado if isinstance(r, Exception)]
+            prontos = [r for r in resultado if not isinstance(r, Exception)]
+            if erros:
+                self.aviso.emit(str(erros[0]))
+            if prontos:
+                self.destacar.emit(prontos[-1])
             return
         if nome == "aviso":
             if isinstance(resultado, Exception):
@@ -215,6 +238,9 @@ class Explorador(QObject):
             return
         if Path(caminho).is_dir():
             self.abrir(caminho)
+        elif compactados.eh_compactado(caminho):
+            # Como no macOS: abrir um arquivo compactado descompacta ao lado dele
+            self.descompactar([caminho])
         elif not aplicativos.abrir_arquivo(caminho):
             self.aviso.emit("Não há um aplicativo para abrir este arquivo.")
 
@@ -329,6 +355,35 @@ class Explorador(QObject):
         if caminhos and destino not in (APLICATIVOS, LIXEIRA, BUSCA):
             mesmo_disco = all(os.stat(c).st_dev == os.stat(destino).st_dev for c in caminhos if os.path.exists(c))
             self._transferir(caminhos, destino, mesmo_disco)
+
+    @Slot("QVariantList")
+    def descompactar(self, caminhos):
+        """Descompacta cada arquivo na pasta dele (compactados.py), com andamento no rodapé."""
+        caminhos = [c for c in caminhos if compactados.eh_compactado(c) and Path(c).is_file()]
+        if not caminhos or self._tarefa["ativa"]:
+            return
+        self._cancelar = False
+        titulo = "Descompactando " + (f"“{Path(caminhos[0]).name}”" if len(caminhos) == 1 else f"{len(caminhos)} arquivos")
+        self._tarefa = {"ativa": True, "titulo": titulo, "progresso": 0.0}
+        self.tarefaMudou.emit()
+
+        def todos():
+            resultados = []
+            for posicao, caminho in enumerate(caminhos):
+                def progresso(fracao, posicao=posicao):
+                    self._tarefa = {"ativa": True, "titulo": titulo, "progresso": (posicao + fracao) / len(caminhos)}
+                    self.tarefaMudou.emit()
+                try:
+                    resultados.append(compactados.descompactar(caminho, progresso, lambda: self._cancelar))
+                    registrar("info", "explorador.descompactado", "Arquivo compactado aberto",
+                              formato=compactados.extensao(caminho))
+                except operacoes.ErroDeArquivo as erro:
+                    resultados.append(erro)
+                    registrar("aviso", "explorador.descompactar_falhou", str(erro), formato=compactados.extensao(caminho))
+                    if self._cancelar:
+                        break
+            return resultados
+        self._em_fundo("descompactar", todos)
 
     @Slot()
     def cancelarTarefa(self):
@@ -546,6 +601,11 @@ def main():
     if captura:
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
     inicial = next((a for a in sys.argv[1:] if not a.startswith("--") and a != captura), "")
+    arquivos = []
+    if "--descompactar" in sys.argv:
+        arquivos = [a for a in sys.argv[sys.argv.index("--descompactar") + 1:] if not a.startswith("--")]
+        arquivos = [str(Path(QUrl(a).toLocalFile() if a.startswith("file:") else a).resolve()) for a in arquivos]
+        inicial = str(Path(arquivos[0]).parent) if arquivos else ""
     app = QGuiApplication(sys.argv)
     app.setApplicationName("Explorador de Arquivos")
     app.setDesktopFileName("duiaos-explorador-de-arquivos")
@@ -553,6 +613,10 @@ def main():
     QIcon.setThemeName(QIcon.themeName() or "hicolor")
 
     explorador = Explorador(inicial)
+    # duiaos-explorador-de-arquivos --descompactar ARQUIVO...: o que o sistema chama ao abrir um
+    # arquivo compactado de qualquer programa (duiaos-descompactar.desktop, aplicativo padrão)
+    if arquivos:
+        QTimer.singleShot(300, lambda: explorador.descompactar(arquivos))
     if "--lista" in sys.argv:
         explorador._visualizacao = "lista"
     engine = QQmlApplicationEngine()

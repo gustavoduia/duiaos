@@ -68,6 +68,8 @@ pkexec
 xdg-user-dirs
 xdg-utils
 udisks2
+# Descompactar .7z e .rar (o .zip e o .tar.* usam o próprio Python; ADR 067)
+7zip
 
 # Área de Trabalho e Tela de Descanso: vídeos de fundo (QtMultimedia, com FFmpeg) e escolha de
 # arquivos (FileDialog do Qt Quick, sem portal)

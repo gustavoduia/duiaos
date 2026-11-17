@@ -31,6 +31,16 @@ Window {
         return lista
     }
     function quantosSelecionados() { return selecionados().length }
+    // Descompactar: todos os selecionados são arquivos compactados (.zip, .tar.gz, .7z, .rar…)
+    function selecionadosCompactados() {
+        var n = 0
+        for (var i = 0; i < visiveis.length; i++) {
+            if (!selecao[visiveis[i].caminho]) continue
+            if (visiveis[i].compactado !== true) return []
+            n++
+        }
+        return n > 0 ? selecionados() : []
+    }
     function limpar() { selecao = ({}); atual = -1 }
     function escolher(indice, modificadores) {
         if (indice < 0 || indice >= visiveis.length) return
@@ -74,7 +84,9 @@ Window {
         return [
             { rotulo: "Arquivo", itens: [
                 it("nova-janela", "Nova janela"), it("nova-pasta", "Nova pasta", "Ctrl+Shift+N", normal), sep,
-                it("abrir", "Abrir", "Enter", n > 0), it("terminal", "Abrir o terminal aqui", "", normal), sep,
+                it("abrir", "Abrir", "Enter", n > 0),
+                it("descompactar", "Descompactar", "", janela.selecionadosCompactados().length > 0 && explorador.especial !== "lixeira"),
+                it("terminal", "Abrir o terminal aqui", "", normal), sep,
                 it("renomear", "Renomear", "F2", n === 1 && normal), it("informacoes", "Informações", "Ctrl+I", n > 0),
                 it("lixeira", lixeira ? "Excluir para sempre" : "Mover para a Lixeira", "Delete", n > 0) ]
                 .concat(lixeira ? [it("esvaziar", "Esvaziar a Lixeira")] : [])
@@ -113,6 +125,7 @@ Window {
             case "nova-janela": explorador.novaJanela(); break
             case "nova-pasta": explorador.novaPasta(); break
             case "abrir": janela.abrirSelecionados(); break
+            case "descompactar": explorador.descompactar(janela.selecionadosCompactados()); break
             case "terminal": explorador.abrirTerminalAqui(); break
             case "renomear": if (s.length === 1) janela.renomeando = s[0]; break
             case "informacoes": if (s.length > 0) dialogo.abrir("informacoes", s); break
@@ -155,7 +168,6 @@ Window {
             janela.selecao = nova
             if (janela.atual >= janela.visiveis.length) janela.atual = janela.visiveis.length - 1
         }
-        function onLocalChanged() { janela.limpar() }
         function onMudou() { }
         function onAviso(mensagem) { aviso.mostrar(mensagem) }
         function onRenomearNovo(caminho) {
@@ -163,8 +175,23 @@ Window {
             janela.selecao = nova
             janela.renomeando = caminho
         }
+        function onDestacar(caminho) {
+            var nova = ({}); nova[caminho] = true
+            janela.selecao = nova
+            for (var i = 0; i < janela.visiveis.length; i++) {
+                if (janela.visiveis[i].caminho !== caminho) continue
+                janela.atual = i
+                if (explorador.visualizacao === "icones") grade.positionViewAtIndex(i, GridView.Contain)
+                else lista.positionViewAtIndex(i, ListView.Contain)
+            }
+        }
     }
     onVisiveisChanged: if (atual >= visiveis.length) atual = -1
+    // Pasta aberta. O "local" do Python avisa pelo mesmo sinal de tudo (mudou), que também vem a cada
+    // recarga da pasta; esta cópia só muda quando a pasta muda de verdade. Antes, cada recarga (um
+    // arquivo novo na pasta, o fim de uma cópia) limpava a seleção e o filtro da busca.
+    readonly property string pastaAberta: explorador.local
+    onPastaAbertaChanged: limpar()
 
     // ------------------------------------------------------------ teclado
     Item {
@@ -410,8 +437,8 @@ Window {
                     }
                 }
                 Connections {
-                    target: explorador
-                    function onLocalChanged() {
+                    target: janela
+                    function onPastaAbertaChanged() {
                         if (explorador.especial !== "busca" && campoBusca.texto !== "" && !campoBusca.entrada.activeFocus) campoBusca.texto = ""
                         janela.filtro = ""
                     }
@@ -427,14 +454,109 @@ Window {
         clip: true
         Rectangle { anchors.fill: parent; color: Tema.cartao }
 
-        // Clique no vazio: limpa a seleção; clique direito: menu da pasta
+        // Espaço vazio: clique limpa a seleção; clique direito abre o menu da pasta; segurar o botão
+        // esquerdo e arrastar desenha o retângulo de seleção (Ctrl inverte, Shift soma), rolando a
+        // vista quando o ponteiro chega perto da borda. A roda do mouse rola a vista daqui também:
+        // as vistas não são "interactive" para o arraste não virar rolagem (como num celular).
         MouseArea {
+            id: fundoArea
             anchors.fill: parent
             acceptedButtons: Qt.LeftButton | Qt.RightButton
-            onClicked: (m) => {
+            preventStealing: true
+            property bool arrastando: false
+            property point inicio: Qt.point(0, 0)      // onde começou, nas coordenadas do conteúdo da vista
+            property point ponteiro: Qt.point(0, 0)    // onde está, nas coordenadas desta área
+            property var base: ({})
+            property int modo: 0                       // 0 substitui, 1 soma (Shift), 2 inverte (Ctrl)
+            readonly property real bordaRolagem: 28
+
+            function vista() { return explorador.visualizacao === "icones" ? grade : lista }
+            // Retângulo de cada item nas coordenadas do conteúdo (também os que estão fora da tela)
+            function retanguloDoItem(i) {
+                if (explorador.visualizacao === "icones") {
+                    var col = i % grade.colunas, lin = Math.floor(i / grade.colunas)
+                    return Qt.rect(col * grade.cellWidth + (grade.cellWidth - 92) / 2, lin * grade.cellHeight + 2, 92, grade.cellHeight - 8)
+                }
+                return Qt.rect(0, i * 30, lista.width, 30)
+            }
+            function atualizar() {
+                var v = vista()
+                var agora = mapToItem(v.contentItem, ponteiro.x, ponteiro.y)
+                var x1 = Math.min(inicio.x, agora.x), y1 = Math.min(inicio.y, agora.y)
+                var x2 = Math.max(inicio.x, agora.x), y2 = Math.max(inicio.y, agora.y)
+                var nova = modo === 0 ? ({}) : Object.assign({}, base)
+                var ultimo = -1
+                for (var i = 0; i < janela.visiveis.length; i++) {
+                    var r = retanguloDoItem(i)
+                    if (r.x > x2 || r.x + r.width < x1 || r.y > y2 || r.y + r.height < y1) continue
+                    var c = janela.visiveis[i].caminho
+                    if (modo === 2 && base[c]) delete nova[c]; else nova[c] = true
+                    ultimo = i
+                }
+                janela.selecao = nova
+                if (ultimo >= 0) janela.atual = ultimo
+                var a = v.contentItem.mapToItem(fundoArea, x1, y1)
+                var b = v.contentItem.mapToItem(fundoArea, x2, y2)
+                var topo = v.mapToItem(fundoArea, 0, 0).y
+                var ya = Math.max(a.y, topo), yb = Math.min(b.y, topo + v.height)
+                faixa.x = a.x; faixa.width = b.x - a.x
+                faixa.y = ya; faixa.height = Math.max(0, yb - ya)
+            }
+            function rolar(dy) {
+                var v = vista()
+                var maximo = v.originY + Math.max(0, v.contentHeight - v.height)
+                var antes = v.contentY
+                v.contentY = Math.max(v.originY, Math.min(maximo, v.contentY + dy))
+                return v.contentY !== antes
+            }
+
+            onPressed: (m) => {
                 teclado.forceActiveFocus()
-                janela.limpar()
-                if (m.button === Qt.RightButton) { var p = mapToItem(null, m.x, m.y); menu.abrir("fundo", p.x, p.y) }
+                arrastando = false
+                ponteiro = Qt.point(m.x, m.y)
+                inicio = mapToItem(vista().contentItem, m.x, m.y)
+                modo = (m.modifiers & Qt.ControlModifier) ? 2 : ((m.modifiers & Qt.ShiftModifier) ? 1 : 0)
+                base = Object.assign({}, janela.selecao)
+                if (m.button === Qt.LeftButton && modo === 0) janela.limpar()
+            }
+            onPositionChanged: (m) => {
+                if (!(m.buttons & Qt.LeftButton) || janela.visiveis.length === 0) return
+                ponteiro = Qt.point(m.x, m.y)
+                if (!arrastando) {
+                    var c = mapToItem(vista().contentItem, m.x, m.y)
+                    if (Math.abs(c.x - inicio.x) < 5 && Math.abs(c.y - inicio.y) < 5) return
+                    arrastando = true
+                }
+                atualizar()
+            }
+            onReleased: (m) => {
+                if (arrastando) { arrastando = false; return }
+                if (m.button === Qt.RightButton) {
+                    janela.limpar()
+                    var p = mapToItem(null, m.x, m.y)
+                    menu.abrir("fundo", p.x, p.y)
+                }
+            }
+            onCanceled: arrastando = false
+            onWheel: (w) => {
+                var dy = w.pixelDelta.y !== 0 ? -w.pixelDelta.y : -w.angleDelta.y / 120 * 96
+                rolar(dy)
+                if (arrastando) atualizar()
+            }
+            Timer {
+                // Rolagem automática enquanto o retângulo encosta na borda de cima ou de baixo
+                interval: 30
+                repeat: true
+                running: fundoArea.arrastando
+                onTriggered: {
+                    var v = fundoArea.vista()
+                    var topo = v.mapToItem(fundoArea, 0, 0).y
+                    var y = fundoArea.ponteiro.y
+                    var passo = 0
+                    if (y < topo + fundoArea.bordaRolagem) passo = -Math.min(40, (topo + fundoArea.bordaRolagem - y) / 2 + 4)
+                    else if (y > topo + v.height - fundoArea.bordaRolagem) passo = Math.min(40, (y - topo - v.height + fundoArea.bordaRolagem) / 2 + 4)
+                    if (passo !== 0 && fundoArea.rolar(passo)) fundoArea.atualizar()
+                }
             }
         }
         DropArea {
@@ -536,7 +658,7 @@ Window {
             model: janela.visiveis
             clip: true
             boundsBehavior: Flickable.StopAtBounds
-            interactive: true
+            interactive: false              // arrastar no vazio seleciona (fundoArea); a roda rola por lá
             delegate: Item {
                 id: celula
                 required property var modelData
@@ -597,8 +719,11 @@ Window {
                     }
                 }
                 CampoRenomear { item: modelData; anchors { horizontalCenter: parent.horizontalCenter; top: figura.bottom; topMargin: 5 } width: parent.width - 8 }
-                Toque { id: toqueGrade; anchors.fill: parent; item: modelData; indice: index; enabled: janela.renomeando !== modelData.caminho }
-                AlvoDePasta { anchors.fill: parent; item: modelData }
+                // Só o desenho do item (ícone e nome): o espaço entre os ícones começa o retângulo de seleção
+                Toque { id: toqueGrade; width: Math.min(parent.width, 92); height: parent.height - 6
+                        anchors { horizontalCenter: parent.horizontalCenter; top: parent.top; topMargin: 2 }
+                        item: modelData; indice: index; enabled: janela.renomeando !== modelData.caminho }
+                AlvoDePasta { anchors.fill: toqueGrade; item: modelData }
             }
         }
 
@@ -633,6 +758,7 @@ Window {
                 model: janela.visiveis
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
+                interactive: false          // arrastar abaixo das linhas seleciona (fundoArea)
                 delegate: Rectangle {
                     id: linhaLista
                     required property var modelData
@@ -676,6 +802,16 @@ Window {
                     AlvoDePasta { anchors.fill: parent; item: modelData }
                 }
             }
+        }
+
+        // Retângulo de seleção (desenhado por fundoArea)
+        Rectangle {
+            id: faixa
+            visible: fundoArea.arrastando && width > 0 && height > 0
+            z: 10
+            radius: 3
+            color: Qt.rgba(Tema.azulDuia.r, Tema.azulDuia.g, Tema.azulDuia.b, 0.16)
+            border { color: Tema.azulDuia; width: 1 }
         }
 
         // Pasta vazia, erro ou buscando
@@ -765,6 +901,9 @@ Window {
                 ItemDeMenu { visible: colunaMenu.emItem && !colunaMenu.lixeira; texto: "Abrir"; icone: "abrir"; onClicado: menu.feito(janela.abrirSelecionados) }
                 ItemDeMenu { visible: colunaMenu.emItem && !colunaMenu.lixeira && !colunaMenu.apps && !colunaMenu.varios; texto: "Abrir com…"; icone: "aplicativos"
                              onClicado: menu.feito(function () { dialogo.abrir("abrirCom", janela.selecionados()) }) }
+                ItemDeMenu { visible: colunaMenu.emItem && !colunaMenu.lixeira && !colunaMenu.apps && janela.selecionadosCompactados().length > 0
+                             texto: "Descompactar"; icone: "compactado"
+                             onClicado: menu.feito(function () { explorador.descompactar(janela.selecionadosCompactados()) }) }
                 Separador { visible: colunaMenu.emItem && !colunaMenu.apps }
                 ItemDeMenu { visible: colunaMenu.emItem && !colunaMenu.lixeira && !colunaMenu.apps && !colunaMenu.varios && explorador.especial === ""; texto: "Renomear"; icone: "lapis"; atalho: "F2"
                              onClicado: menu.feito(function () { janela.renomeando = colunaMenu.primeiro }) }
