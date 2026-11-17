@@ -115,6 +115,10 @@ message-font: "Inter Regular 18"
 message-color: "#EEF2FF"
 terminal-font: "Inter Regular 16"
 terminal-box: "terminal_*.png"
+terminal-left: "0"
+terminal-top: "100%-24"
+terminal-width: "100%"
+terminal-height: "24"
 
 + image {
     file = "marca.png"
@@ -180,7 +184,8 @@ def main():
         svg_png(svg, 36).save(DESTINO / "icons" / f"{nome}.png")
     caixa_9("item", 18, (255, 255, 255, 14), (255, 255, 255, 34), 1)
     caixa_9("escolhido", 18, (61, 91, 255, 70), (125, 160, 255, 230), 2)
-    caixa_9("terminal", 12, (7, 11, 24, 235), (60, 72, 120, 255), 1)
+    # Caixa do terminal invisível: ao carregar o sistema, o GRUB mostra o terminal; fica só o fundo
+    caixa_9("terminal", 12, (0, 0, 0, 0), (0, 0, 0, 0), 1)
     fontes_pf2(opcoes.grub_mkfont, opcoes.chroot)
     (DESTINO / "theme.txt").write_text(TEMA.replace("{meia_marca}", str(largura // 2)).replace("{acima_marca}", str(altura + 40)))
 

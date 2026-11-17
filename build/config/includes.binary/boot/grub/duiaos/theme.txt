@@ -7,6 +7,10 @@ message-font: "Inter Regular 18"
 message-color: "#EEF2FF"
 terminal-font: "Inter Regular 16"
 terminal-box: "terminal_*.png"
+terminal-left: "0"
+terminal-top: "100%-24"
+terminal-width: "100%"
+terminal-height: "24"
 
 + image {
     file = "marca.png"
