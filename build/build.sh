@@ -129,7 +129,7 @@ else
 fi
 
 chmod +x config/hooks/normal/*.hook.* 2>/dev/null || true
-chmod 0755 config/includes.chroot/usr/lib/live/config/* 2>/dev/null || true
+chmod 0755 config/includes.chroot_after_packages/usr/lib/live/config/* 2>/dev/null || true
 
 log "Gerando a ISO (isso leva de 10 a 30 minutos)"
 lb build
