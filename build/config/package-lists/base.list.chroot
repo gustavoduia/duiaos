@@ -50,14 +50,20 @@ btrfs-progs
 pciutils
 usbutils
 
-# Firmware livre
+# Firmware
 firmware-linux-free
+# Som e microfone dos notebooks Intel recentes (Sound Open Firmware): sem ele, o microfone embutido
+# (DMIC) não aparece e o Wise não consegue ouvir (ADR 065)
+firmware-sof-signed
+alsa-ucm-conf
 
 # Instalador do DuiaOS (ADR 064): Calamares, com os passos do Debian 13; a identidade vem do
-# duiaos-fontes-abertas (instalador/). O instalador clássico (debian-installer) continua no menu de boot.
+# duiaos-fontes-abertas (instalador/). O instalador do Debian (d-i) não vai mais na ISO (ADR 065).
 calamares
 calamares-settings-debian
 qml6-module-qtquick
 qml6-module-qtqml
+qml6-module-qtquick-effects
+qt6-svg-plugins
 rsync
 squashfs-tools

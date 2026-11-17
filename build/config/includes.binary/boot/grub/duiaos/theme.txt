@@ -1,0 +1,56 @@
+# DuiaOS — tema do menu de boot da ISO (gerado por branding/grub/gerar-tema.py)
+title-text: ""
+desktop-image: "fundo.jpg"
+desktop-image-scale-method: "crop"
+desktop-color: "#070B18"
+message-font: "Inter Regular 18"
+message-color: "#EEF2FF"
+terminal-font: "Inter Regular 16"
+terminal-box: "terminal_*.png"
+
++ image {
+    file = "marca.png"
+    left = 50%-126
+    top = 50%-270
+}
+
++ boot_menu {
+    left = 50%-310
+    top = 50%+22
+    width = 620
+    height = 200
+    item_font = "Inter SemiBold 24"
+    selected_item_font = "Inter SemiBold 24"
+    item_color = "#B9C3E6"
+    selected_item_color = "#FFFFFF"
+    item_height = 52
+    item_spacing = 48
+    item_padding = 4
+    icon_width = 36
+    icon_height = 36
+    item_icon_space = 20
+    item_pixmap_style = "item_*.png"
+    selected_item_pixmap_style = "escolhido_*.png"
+    scrollbar = false
+}
+
++ label {
+    id = "__timeout__"
+    left = 0
+    top = 100%-92
+    width = 100%
+    align = "center"
+    font = "Inter Regular 18"
+    color = "#A7B2D6"
+    text = "Começa sozinho em %d s"
+}
+
++ label {
+    left = 0
+    top = 100%-58
+    width = 100%
+    align = "center"
+    font = "Inter Regular 16"
+    color = "#6F7AA3"
+    text = "Use as setas para escolher e Enter para começar"
+}

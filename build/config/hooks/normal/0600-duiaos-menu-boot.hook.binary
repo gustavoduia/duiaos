@@ -1,53 +1,113 @@
 #!/bin/sh
-# DuiaOS — textos do menu de boot (GRUB) em português e com o nome DuiaOS.
-# Roda depois que o live-build monta o menu, antes de gerar a ISO.
+# DuiaOS — menu de boot da ISO com só duas opções (ADR 065):
+#   "Instalar o DuiaOS neste computador"  → abre direto o instalador, em tela cheia (duiaos.modo=instalar)
+#   "Carregar o DuiaOS a partir da ISO"   → o DuiaOS completo, sem instalar nada
+# Roda depois que o live-build monta os menus, antes de gerar a ISO. Os caminhos do núcleo e as opções
+# vêm do menu que o live-build gerou; o visual vem do tema em boot/grub/duiaos/ (UEFI, Macs e máquinas
+# virtuais) e de isolinux/duiaos-fundo.png (computadores com BIOS), gerados por branding/grub/gerar-tema.py.
 set -e
 
-if [ -d boot/grub ]; then
-  GRUB_DIR=boot/grub
-elif [ -d binary/boot/grub ]; then
-  GRUB_DIR=binary/boot/grub
-else
-  echo "Pasta do GRUB não encontrada; menu não traduzido." >&2
-  exit 0
+if [ -d boot/grub ]; then RAIZ=.; elif [ -d binary/boot/grub ]; then RAIZ=binary; else
+  echo "Pasta do GRUB não encontrada; menu de boot não trocado." >&2; exit 0
+fi
+GRUB="${RAIZ}/boot/grub"
+
+# Primeira entrada "live" do menu gerado: o núcleo, as opções e o initrd
+LINUX="$(awk '/^[[:space:]]*linux[[:space:]]/ && /boot=live/ && !/failsafe|memtest|noapic/ { sub(/^[[:space:]]*linux[[:space:]]+/, ""); print; exit }' "${GRUB}/grub.cfg")"
+INITRD="$(awk '/^[[:space:]]*initrd[[:space:]]/ { sub(/^[[:space:]]*initrd[[:space:]]+/, ""); print; exit }' "${GRUB}/grub.cfg")"
+if [ -z "${LINUX}" ] || [ -z "${INITRD}" ]; then
+  echo "Entrada live não encontrada no grub.cfg; menu de boot não trocado." >&2; exit 0
+fi
+NUCLEO="${LINUX%% *}"
+OPCOES="${LINUX#* }"
+
+# ---------------------------------------------------------------- GRUB (UEFI, Macs, máquinas virtuais)
+cat > "${GRUB}/grub.cfg" <<EOF
+# DuiaOS — menu de boot da ISO (gerado por 0600-duiaos-menu-boot.hook.binary)
+set default=0
+set timeout=15
+set timeout_style=menu
+insmod all_video
+insmod gfxterm
+insmod gfxmenu
+insmod png
+insmod jpeg
+set gfxmode=1920x1080,1600x900,1280x800,1280x720,1024x768,auto
+set gfxpayload=keep
+if loadfont /boot/grub/duiaos/inter-semibold-24.pf2 ; then
+  loadfont /boot/grub/duiaos/inter-regular-18.pf2
+  loadfont /boot/grub/duiaos/inter-regular-16.pf2
+  terminal_output gfxterm
+  set theme=/boot/grub/duiaos/theme.txt
+  export theme
+fi
+set menu_color_normal=light-gray/black
+set menu_color_highlight=white/blue
+
+menuentry "Instalar o DuiaOS neste computador" --class instalar --id instalar {
+  linux ${NUCLEO} ${OPCOES} duiaos.modo=instalar
+  initrd ${INITRD}
+}
+menuentry "Carregar o DuiaOS a partir da ISO" --class carregar --id carregar {
+  linux ${NUCLEO} ${OPCOES}
+  initrd ${INITRD}
+}
+EOF
+
+# ---------------------------------------------------------------- BIOS (isolinux), só em amd64
+if [ -d "${RAIZ}/isolinux" ]; then
+  ISO="${RAIZ}/isolinux"
+  # No isolinux o initrd vai nas opções; o caminho é o mesmo do GRUB
+  cat > "${ISO}/isolinux.cfg" <<EOF
+# DuiaOS: menu de boot da ISO em computadores com BIOS (gerado por 0600-duiaos-menu-boot.hook.binary)
+path
+default vesamenu.c32
+prompt 0
+timeout 150
+ui vesamenu.c32
+menu resolution 1024 768
+menu background duiaos-fundo.png
+menu title
+menu width 128
+menu margin 40
+menu rows 2
+menu vshift 20
+menu timeoutrow 40
+menu tabmsgrow 42
+menu cmdlinerow 42
+menu helpmsgrow 44
+menu autoboot Começa sozinho em # s
+menu tabmsg Use as setas para escolher e Enter para começar
+menu color screen 0 #00000000 #00000000 none
+menu color border 0 #00000000 #00000000 none
+menu color title 0 #ffffffff #00000000 none
+menu color unsel 0 #ffb9c3e6 #00000000 none
+menu color sel 0 #ffffffff #c03d5bff none
+menu color hotsel 0 #ffffffff #c03d5bff none
+menu color hotkey 0 #ffffffff #00000000 none
+menu color tabmsg 0 #ff6f7aa3 #00000000 none
+menu color timeout_msg 0 #ffa7b2d6 #00000000 none
+menu color timeout 0 #ffffffff #00000000 none
+menu color help 0 #ff6f7aa3 #00000000 none
+
+label instalar
+  menu label   Instalar o DuiaOS neste computador
+  menu default
+  linux ${NUCLEO}
+  initrd ${INITRD}
+  append ${OPCOES} duiaos.modo=instalar
+
+label carregar
+  menu label   Carregar o DuiaOS a partir da ISO
+  linux ${NUCLEO}
+  initrd ${INITRD}
+  append ${OPCOES}
+EOF
+  # O vesamenu mostra os caracteres da página de código 437 (onde existem o "ç" e os acentos)
+  if command -v iconv >/dev/null 2>&1; then
+    iconv -f UTF-8 -t CP437//TRANSLIT "${ISO}/isolinux.cfg" > "${ISO}/isolinux.cfg.437" && mv "${ISO}/isolinux.cfg.437" "${ISO}/isolinux.cfg"
+  fi
+  rm -f "${ISO}/menu.cfg" "${ISO}/live.cfg" "${ISO}/install.cfg" "${ISO}/stdmenu.cfg" "${ISO}/splash.png" 2>/dev/null || true
 fi
 
-sed -i \
-  -e 's/Live system (autodetect)/DuiaOS — modo live/g' \
-  -e 's/Live system, kernel/DuiaOS — modo live, kernel/g' \
-  -e 's/Live system (\([a-z0-9]*\) fail-safe mode)/DuiaOS — modo de segurança (\1)/g' \
-  -e 's/Live system (\([a-z0-9]*\))/DuiaOS — modo live (\1)/g' \
-  -e 's/(fail-safe mode)/(modo de segurança)/g' \
-  -e "s/'Utilities\.\.\.'/'Utilitários...'/g" \
-  -e 's/"UEFI Firmware Settings"/"Configurações do firmware UEFI"/g' \
-  -e 's/"Verify integrity of the boot medium"/"Verificar a integridade da mídia"/g' \
-  -e "s/'Start installer with speech synthesis'/'Instalar o DuiaOS com síntese de voz'/g" \
-  -e "s/'Start installer'/'Instalar o DuiaOS'/g" \
-  -e "s/'Advanced install options \.\.\.'/'Opções avançadas de instalação...'/g" \
-  -e "s/'Graphical installer with dark theme \.\.\.'/'Instalador gráfico com tema escuro...'/g" \
-  -e "s/'Text installer with dark theme \.\.\.'/'Instalador em texto com tema escuro...'/g" \
-  -e "s/'Graphical installer \.\.\.'/'Instalador gráfico...'/g" \
-  -e "s/'Text installer \.\.\.'/'Instalador em texto...'/g" \
-  -e "s/'Installer with speech synthesis \.\.\.'/'Instalador com síntese de voz...'/g" \
-  -e "s/'Install'/'Instalar'/g" \
-  -e "s/'Expert install'/'Instalação avançada'/g" \
-  -e "s/'Automated install'/'Instalação automática'/g" \
-  -e "s/'Rescue mode'/'Modo de recuperação'/g" \
-  "${GRUB_DIR}"/*.cfg
-
-# Segunda entrada do modo live com teclado americano (US), útil em
-# máquinas virtuais no Mac e em teclados importados. É uma cópia da
-# primeira entrada "modo live", logo abaixo dela, trocando o layout.
-awk '
-  !feito && /^menuentry "DuiaOS — modo live \(/ { copiando = 1 }
-  { print }
-  copiando {
-    linha = $0
-    sub(/modo live \(/, "modo live, teclado US (", linha)
-    sub(/ --hotkey=l/, "", linha)
-    gsub(/keyboard-layouts=br/, "keyboard-layouts=us", linha)
-    bloco = bloco linha "\n"
-    if ($0 ~ /^}/) { printf "\n%s", bloco; copiando = 0; feito = 1 }
-  }
-' "${GRUB_DIR}/grub.cfg" > "${GRUB_DIR}/grub.cfg.novo"
-mv "${GRUB_DIR}/grub.cfg.novo" "${GRUB_DIR}/grub.cfg"
+echo "Menu de boot do DuiaOS: duas opções (${NUCLEO})."

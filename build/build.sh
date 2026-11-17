@@ -55,8 +55,8 @@ VOLUME="${VOLUME:0:32}"
 # Secure Boot: a ISO e o sistema instalado iniciam com o Secure Boot ligado
 # (shim e GRUB assinados). Assim o usuário não precisa desligá-lo na BIOS,
 # o que evita pedidos de chave do BitLocker em computadores com Windows.
-# Instalador: debian-installer em modo "live" (copia o sistema da ISO
-# para o disco). Respostas pré-definidas em config/includes.installer/.
+# Instalador: o do DuiaOS (Calamares, ADR 064), aberto pela opção "Instalar o DuiaOS neste
+# computador" do menu de boot (ADR 065). O instalador do Debian (d-i) não vai na ISO.
 # Firmwares: o live-build não instala todos automaticamente
 # (--firmware-chroot false). Entram só os listados em package-lists/.
 log "Configurando o live-build"
@@ -66,9 +66,8 @@ lb config \
   --architecture "${ARCH}" \
   --archive-areas "main contrib non-free non-free-firmware" \
   --binary-images iso-hybrid \
-  --debian-installer live \
+  --debian-installer none \
   --uefi-secure-boot enable \
-  --debian-installer-distribution trixie \
   --firmware-chroot false \
   --firmware-binary false \
   --image-name duiaos \
@@ -125,8 +124,8 @@ if [ -n "${INSTALADOR}" ]; then
   sed -i "s/@VERSAO@/${VERSION}/g" config/includes.chroot_after_packages/etc/calamares/branding/duiaos/branding.desc
   chmod 0755 config/includes.chroot_after_packages/usr/lib/duiaos/*
 else
-  echo "AVISO: sem o duiaos-fontes-abertas/instalador: a ISO sai só com o instalador clássico." >&2
-  sed -i '/^calamares/d' config/package-lists/base.list.chroot
+  echo "Sem o duiaos-fontes-abertas/instalador (o instalador do DuiaOS). Clone-o ao lado do duiaos." >&2
+  exit 1
 fi
 
 chmod +x config/hooks/normal/*.hook.* 2>/dev/null || true

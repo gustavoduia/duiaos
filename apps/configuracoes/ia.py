@@ -297,6 +297,7 @@ def exemplo():
                               {"id": "santa", "nome": "Santa — masculina, grave", "pacote": "kokoro", "instalada": True, "tamanho": 132 * mb},
                               {"id": "faber", "nome": "Faber — masculina, leve e rápida", "pacote": "faber", "instalada": False, "tamanho": 67 * mb}],
                     "pacotes": {"kokoro": {"instalado": True, "tamanho": 132 * mb}, "faber": {"instalado": False, "tamanho": 67 * mb},
-                                "ouvir": {"instalado": True, "tamanho": 208 * mb},
-                                "ouvir-preciso": {"instalado": False, "tamanho": 639 * mb}}}}
+                                "ouvir": {"instalado": True, "tamanho": 465 * mb}},
+                    "reconhecimento": "parakeet",
+                    "teste_microfone": {"estado": "pronto", "texto": "Qual é a previsão do tempo para amanhã?", "motivo": ""}}}
     return estado, motores, wise

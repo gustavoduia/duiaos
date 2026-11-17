@@ -1,7 +1,7 @@
 # Voz do sistema (ADR 063): versão do sherpa-onnx (Apache-2.0) e conferência das rodas do PyPI
 # (Python 3.13, o do Debian 13). Para atualizar: troque a versão e as quatro somas, e aumente a REVISAO.
 SHERPA=1.13.8
-REVISAO=1
+REVISAO=2
 SHA256_AMD64=0e5d870fb0648befb94e260c11de4cf4b293b2a90a63e3a6a2869be698927bc4
 SHA256_NUCLEO_AMD64=4da90acf435373d7b2ba9cc0be806e7e274d28f63f5780880b5dea6721626e36
 SHA256_ARM64=916ec38242e779ee3a99f7b161bd1bf3b02a7fad34cb073d091021c0469e0b58

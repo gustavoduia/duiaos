@@ -13,10 +13,11 @@ linha nova ou atualizada no mesmo envio.
 | Conversa de exemplo com o cartão "Posso fazer isto?" | `site/src/pages/index.astro` | `site/src/pages/index.astro::Posso fazer isto?` | ADR 038 | main |
 | Reserva sem WebGL e "reduzir movimento" respeitado | `site/src/scripts/cenas.js`, `site/src/pages/index.astro` | `site/src/scripts/cenas.js::sem-webgl`, `site/src/pages/index.astro::prefers-reduced-motion` | ADR 038 | main |
 | Downloads com a versão mais nova publicada (API + KV) | `site/src/pages/baixar.astro`, `site/worker/index.js` | `site/worker/index.js::/api/versoes` | ADR 038 | main |
-| Novidades vindas das notas de cada lançamento | `site/src/pages/novidades.astro`, `site/worker/index.js` | `site/worker/index.js::Notas da versão` | ADR 039 | main |
+| Novidades vindas das notas de cada lançamento | `site/src/pages/novidades.astro`, `site/worker/versoes.js` | `site/worker/versoes.js::Notas da versão` | ADR 039 | main |
 | Relatórios de "Ajude a melhorar o DuiaOS" sem credencial no computador; lote por hora no `duiaos-diagnosticos`; resumo semanal das falhas (issue) | `site/worker/relatorios.js`, `site/migrations/0002_relatorios.sql` | `site/worker/relatorios.js::export async function enviarLote`, `site/worker/relatorios.js::export async function resumoSemanal`, `site/wrangler.jsonc::0 12 * * 1` | ADR 040 (F3) | main |
 | Suporte com protocolo (D1 `duiaos-site`, limite por endereço) | `site/src/pages/suporte.astro`, `site/migrations/` | `site/worker/index.js::INSERT INTO chamados`, `site/worker/index.js::LIMITE_POR_HORA` | ADR 038 | main |
 | Ponto em órbita sem disparar ao rolar (fase integrada); celular em fluxo comum, sem 3D, com menu próprio; maquetes iguais ao sistema (Futurista, rosto novo do Wise) | `site/src/` | `site/src/scripts/orbita.js::fase`, `site/src/components/Rosto.astro::<`, `site/src/layouts/Site.astro::menu-celular` | 16/11 | main |
+| Downloads sempre no último lançamento (API com token, cron, feed releases.atom, última resposta boa; versoes.json no build e a cada 6 h) | `site/worker/versoes.js, site/scripts-build/versoes.mjs` | `site/worker/versoes.js::releases.atom`, `site/worker/versoes.js::versoes:ultima`, `site/worker/index.js::renovarVersoes`, `site/scripts-build/versoes.mjs::GITHUB_TOKEN`, `.github/workflows/site.yml::17 */6 * * *`, `package.json::site/worker/*.test.js` | ADR 065 | main |
 
 ## Documentação (`documentacao/`, Worker `duiaos-docs`)
 

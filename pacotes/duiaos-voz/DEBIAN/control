@@ -8,7 +8,7 @@ Depends: python3 (>= 3.13), python3 (<< 3.14), python3-numpy, pipewire-bin | pul
 Homepage: https://github.com/gustavoduia/duiaos-fontes-abertas
 Description: DuiaOS — voz do sistema (falar e ouvir, no próprio computador)
  Comando duiaos-voz: transforma texto em fala com vozes naturais em português
- (Kokoro e Piper) e fala em texto (Whisper), sem enviar nada para a internet.
+ (Kokoro e Piper) e fala em texto (Parakeet, da NVIDIA), sem enviar nada para a internet.
  Os modelos de voz são baixados quando a pessoa liga a voz nas Configurações.
  .
  O programa duiaos-voz é software livre (GPL-3 ou posterior); o código-fonte

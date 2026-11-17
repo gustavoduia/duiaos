@@ -15,6 +15,13 @@ if command -v dbus-update-activation-environment >/dev/null 2>&1; then
     WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE XDG_SESSION_DESKTOP >/dev/null 2>&1 || true
 fi
 
+# Modo instalar (opção "Instalar o DuiaOS neste computador" do menu de boot da ISO, ADR 065): primeiro só o
+# instalador, em tela cheia. Se a pessoa cancelar, o DuiaOS completo do modo live abre em seguida (o resto
+# deste arquivo continua quando o instalador fecha).
+if grep -qw 'duiaos.modo=instalar' /proc/cmdline 2>/dev/null && [ -x /usr/lib/duiaos/instalar ]; then
+  /usr/lib/duiaos/instalar >>"${XDG_RUNTIME_DIR:-/tmp}/duiaos-instalador.log" 2>&1 || true
+fi
+
 # Pastas do usuário (Área de Trabalho, Documentos, Downloads, Imagens, Música, Vídeos)
 (xdg-user-dirs-update >/dev/null 2>&1 || true) &
 
@@ -87,8 +94,13 @@ if [ -x /usr/bin/duiaos-ajude-a-melhorar ]; then
   (sleep 4; /usr/bin/duiaos-ajude-a-melhorar --primeira-entrada >/dev/null 2>&1) &
 fi
 
-# Modo live (pendrive): abre o instalador do DuiaOS (ADR 064). Fechar a janela deixa experimentar o sistema;
-# o atalho "Instalar o DuiaOS" fica na Central de Aplicativos.
+# Modo live ("Carregar o DuiaOS a partir da ISO", ADR 065): o instalador não abre sozinho; o atalho
+# "Instalar o DuiaOS" fica na Área de Trabalho e na Central de Aplicativos.
 if [ -x /usr/lib/duiaos/instalar ] && grep -q 'boot=live' /proc/cmdline 2>/dev/null; then
-  (sleep 6; /usr/lib/duiaos/instalar >>"${XDG_RUNTIME_DIR:-/tmp}/duiaos-instalador.log" 2>&1) &
+  (
+    sleep 2
+    AREA="$(xdg-user-dir DESKTOP 2>/dev/null || echo "${HOME}/Área de Trabalho")"
+    mkdir -p "${AREA}" && cp -f /usr/share/applications/duiaos-instalar.desktop "${AREA}/" 2>/dev/null \
+      && chmod +x "${AREA}/duiaos-instalar.desktop"
+  ) &
 fi

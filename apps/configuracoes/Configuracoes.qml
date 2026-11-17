@@ -2167,22 +2167,37 @@ Window {
                     icone: "microfone"; titulo: "Falar com o Wise"
                     descricao: pw.baixando("ouvir") ? "Baixando… " + Math.round((pw.voz.baixando["ouvir"] || 0) * 100) + "%"
                              : (p.instalado ? "Ligado: clique no microfone da janela do Wise e fale. O áudio não sai do computador."
-                                            : "O Wise entende o que você fala (download de " + pw.mb(p.tamanho) + ").")
+                                            : (pw.voz.reconhecimento === "whisper"
+                                               ? "Há um reconhecimento novo, bem mais preciso (download de " + pw.mb(p.tamanho) + ")."
+                                               : "O Wise entende o que você fala (download de " + pw.mb(p.tamanho) + ")."))
                     Andamento { visible: pw.baixando("ouvir"); width: 120; anchors.verticalCenter: parent.verticalCenter; fracao: pw.voz.baixando["ouvir"] || 0 }
                     Botao { visible: !parent.parent.p.instalado && !pw.baixando("ouvir"); texto: "Baixar"; tipo: "primario"; onClicado: ia.acaoWise("baixar_voz", { item: "ouvir" }) }
                     Botao { visible: !!parent.parent.p.instalado; texto: "Remover"; onClicado: ia.acaoWise("remover_voz", { item: "ouvir" }) }
                 }
+                // Teste do microfone: o Wise ouve uma frase e mostra o que entendeu (não vai para a conversa)
                 Linha {
-                    visible: !!pw.voz.disponivel
-                    readonly property var p: pw.voz.pacotes["ouvir-preciso"] || ({})
-                    icone: "microfone"; titulo: "Reconhecimento mais preciso"
-                    descricao: pw.baixando("ouvir-preciso") ? "Baixando… " + Math.round((pw.voz.baixando["ouvir-preciso"] || 0) * 100) + "%"
-                             : (p.instalado ? "Instalado: o Wise entende melhor, um pouco mais devagar."
-                                            : "Entende melhor nomes e frases longas; um pouco mais lento (download de " + pw.mb(p.tamanho) + ").")
+                    id: linhaTesteMicrofone
+                    visible: !!pw.voz.disponivel && !!(pw.voz.pacotes["ouvir"] || {}).instalado
+                    readonly property var t: pw.voz.teste_microfone || ({})
+                    icone: "microfone"; titulo: "Testar o microfone"
+                    descricao: t.estado === "ouvindo" ? "Pode falar: diga uma frase qualquer."
+                             : t.estado === "transcrevendo" ? "Entendendo…"
+                             : t.estado === "baixando" ? "Preparando o reconhecimento de fala…"
+                             : t.estado === "pronto" ? (t.texto ? "Entendi: \u201c" + t.texto + "\u201d" : (t.motivo || "Não ouvi nada."))
+                             : "Fale uma frase e veja o que o Wise entende."
                     ultima: (pw.voz.mensagem || "") === ""
-                    Andamento { visible: pw.baixando("ouvir-preciso"); width: 120; anchors.verticalCenter: parent.verticalCenter; fracao: pw.voz.baixando["ouvir-preciso"] || 0 }
-                    Botao { visible: !parent.parent.p.instalado && !pw.baixando("ouvir-preciso"); texto: "Baixar"; onClicado: ia.acaoWise("baixar_voz", { item: "ouvir-preciso" }) }
-                    Botao { visible: !!parent.parent.p.instalado; texto: "Remover"; onClicado: ia.acaoWise("remover_voz", { item: "ouvir-preciso" }) }
+                    // Nível do microfone enquanto ouve
+                    Rectangle {
+                        visible: linhaTesteMicrofone.t.estado === "ouvindo"
+                        width: 90; height: 6; radius: 3; color: Tema.controleDesligado
+                        anchors.verticalCenter: parent.verticalCenter
+                        Rectangle { height: parent.height; radius: 3; color: Tema.azulDuia
+                                    width: parent.width * Math.min(1, linhaTesteMicrofone.t.nivel || 0)
+                                    Behavior on width { NumberAnimation { duration: 90 } } }
+                    }
+                    Botao { visible: linhaTesteMicrofone.t.estado !== "ouvindo" && linhaTesteMicrofone.t.estado !== "transcrevendo"
+                            texto: linhaTesteMicrofone.t.estado === "pronto" ? "Testar de novo" : "Testar"; icone: "microfone"
+                            onClicado: ia.acaoWise("testar_microfone", {}) }
                 }
                 Linha { visible: (pw.voz.mensagem || "") !== ""; icone: "info"; titulo: pw.voz.mensagem || ""; ultima: true }
             }

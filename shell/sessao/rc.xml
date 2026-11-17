@@ -68,4 +68,10 @@
       <action name="Execute" command="sh -c &quot;python3 $DUIAOS_SHELL/menu-de-energia/main.py&quot;" />
     </keybind>
   </keyboard>
+  <!-- Instalador do DuiaOS (ADR 065): em tela cheia e sem a barra da janela, como o do macOS -->
+  <windowRules>
+    <windowRule identifier="calamares" serverDecoration="no">
+      <action name="ToggleFullscreen" />
+    </windowRule>
+  </windowRules>
 </labwc_config>
