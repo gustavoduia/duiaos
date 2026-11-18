@@ -45,10 +45,12 @@ sys.path.insert(0, str(PASTA.parent / "comum"))
 
 PASTA_CONFIG = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "duiaos"
 ARQUIVO_CONFIG = PASTA_CONFIG / "ilha-de-aplicativos.conf"
-FIXADOS_PADRAO = ["duiaos-configuracoes.desktop", "duiaos-loja.desktop", "firefox-esr.desktop", "foot.desktop"]
+FIXADOS_PADRAO = ["duiaos-configuracoes.desktop", "duiaos-loja.desktop", "duiaos-ora.desktop", "duiaos-mailbox.desktop",
+                  "foot.desktop"]
+NAVEGADORES_ANTIGOS = ("firefox-esr.desktop", "firefox.desktop", "google-chrome.desktop", "chromium.desktop")
 WISE_DESKTOP = "duiaos-wise.desktop"
 EXPLORADOR_DESKTOP = "duiaos-explorador-de-arquivos.desktop"
-VERSAO_CONFIG = "3"
+VERSAO_CONFIG = "4"
 DEMONSTRACAO = "--demonstracao" in sys.argv
 
 if not DEMONSTRACAO:
@@ -85,7 +87,7 @@ from aplicativos import comando_de_exec, iniciar, ler_desktop, listar_aplicativo
 
 def ler_fixados():
     """Fixados da Ilha. Configuração antiga ganha, uma vez, o que chegou depois: as Configurações
-    (versão 1) e a Duia App Store (versão 2)."""
+    (versão 1), a Duia App Store (versão 2) e o Ora e o Mail Box no lugar do navegador antigo (versão 4)."""
     config = configparser.ConfigParser()
     config.read(ARQUIVO_CONFIG)
     texto = config.get("ilha", "fixados", fallback=";".join(FIXADOS_PADRAO))
@@ -97,6 +99,14 @@ def ler_fixados():
         if "duiaos-loja.desktop" not in fixados:          # versão 3: chegou a Duia App Store
             posicao = fixados.index("duiaos-configuracoes.desktop") + 1 if "duiaos-configuracoes.desktop" in fixados else 0
             fixados.insert(posicao, "duiaos-loja.desktop")
+        if "duiaos-ora.desktop" not in fixados:            # versão 4: Ora e Mail Box (ADR 073)
+            antigo = next((n for n in NAVEGADORES_ANTIGOS if n in fixados), None)
+            if antigo:
+                fixados[fixados.index(antigo)] = "duiaos-ora.desktop"
+            else:
+                fixados.insert(fixados.index("duiaos-loja.desktop") + 1, "duiaos-ora.desktop")
+        if "duiaos-mailbox.desktop" not in fixados:
+            fixados.insert(fixados.index("duiaos-ora.desktop") + 1, "duiaos-mailbox.desktop")
         gravar_fixados(fixados)
     return fixados
 
@@ -325,14 +335,15 @@ class Ilha(QObject):
     def _preparar_demonstracao(self):
         exemplos = [
             ("duiaos-wise.desktop", "Wise", ""), (EXPLORADOR_DESKTOP, "", ""),
-            ("duiaos-configuracoes.desktop", "", ""), ("duiaos-loja.desktop", "", ""), ("firefox-esr.desktop", "Firefox", ""),
+            ("duiaos-configuracoes.desktop", "", ""), ("duiaos-loja.desktop", "", ""), ("duiaos-ora.desktop", "Ora", ""),
+            ("duiaos-mailbox.desktop", "Mail Box", ""),
             ("foot.desktop", "Terminal", ""), ("libreoffice-writer.desktop", "LibreOffice Writer", ""),
         ]
         self._itens = []
         for id_desktop, nome, icone in exemplos:
             app = entrada_de(id_desktop) or {"id": id_desktop, "nome": nome, "icone": icone, "exec": "", "classe": "",
                                               "terminal": False, "descricao": "", "busca": normalizar(nome)}
-            self._itens.append({**app, "fixado": True, "aberto": id_desktop in (EXPLORADOR_DESKTOP, "firefox-esr.desktop"),
+            self._itens.append({**app, "fixado": True, "aberto": id_desktop in (EXPLORADOR_DESKTOP, "duiaos-ora.desktop"),
                                 "appId": ""})
         self._todos = [dict(i) for i in self._itens] + [
             {"id": f"exemplo{n}.desktop", "nome": nome, "icone": "", "exec": "", "classe": "", "terminal": False,

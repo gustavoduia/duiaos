@@ -57,6 +57,8 @@ oficial do projeto (ADR 043).
 - `gustavoduia/duiaos-wise` (PRIVADO): o Wise. O público só conhece `/usr/bin/duiaos-wise --alternar` e
   `duiaos-wise.desktop`; o Wise só lê `/var/lib/duiaos-ia/estado.json`. Dell acessa por deploy key
   (Host github-duiaos-wise).
+- `gustavoduia/duiaos-ora` e `gustavoduia/duiaos-mailbox` (PRIVADOS, ADR 073): o Ora (navegador) e o Mail Box
+  (e-mail), aplicativos padrão instalados com o sistema; pacotes gerados por `pacotes/trazer-apps.sh`.
 - Enquanto `duiaos` for público: runners próprios PAUSADOS; o workflow recusa mac/dell.
 
 ## Pastas padrão (ADR 024) — iguais no Mac e no Dell

@@ -1,3 +1,0 @@
-#!/bin/sh
-# DuiaOS — Mail Box, o gerenciador de e-mails (ADR 072).
-exec /usr/bin/python3 /usr/share/duiaos/mailbox/main.py "$@"

@@ -325,11 +325,17 @@ class TesteIlha(unittest.TestCase):
         with tempfile.TemporaryDirectory() as pasta:
             ilha.PASTA_CONFIG, ilha.ARQUIVO_CONFIG = Path(pasta), Path(pasta) / "ilha.conf"
             ilha.ARQUIVO_CONFIG.write_text("[ilha]\nversao = 2\nfixados = duiaos-configuracoes.desktop;foot.desktop\n")
-            self.assertEqual(ilha.ler_fixados(), ["duiaos-configuracoes.desktop", "duiaos-loja.desktop", "foot.desktop"])
+            novos = ["duiaos-configuracoes.desktop", "duiaos-loja.desktop", "duiaos-ora.desktop", "duiaos-mailbox.desktop"]
+            self.assertEqual(ilha.ler_fixados(), novos + ["foot.desktop"])
             ilha.gravar_fixados(["foot.desktop"])                  # depois, a pessoa tirou: não volta
             self.assertEqual(ilha.ler_fixados(), ["foot.desktop"])
             ilha.ARQUIVO_CONFIG.write_text("[ilha]\nfixados = foot.desktop\n")     # versão 1
-            self.assertEqual(ilha.ler_fixados(), ["duiaos-configuracoes.desktop", "duiaos-loja.desktop", "foot.desktop"])
+            self.assertEqual(ilha.ler_fixados(), novos + ["foot.desktop"])
+            # versão 3 com o Firefox fixado: o lugar dele vai para o Ora, e o Mail Box entra logo depois (ADR 073)
+            ilha.ARQUIVO_CONFIG.write_text("[ilha]\nversao = 3\nfixados = duiaos-configuracoes.desktop;duiaos-loja.desktop;"
+                                           "foot.desktop;firefox-esr.desktop\n")
+            self.assertEqual(ilha.ler_fixados(), ["duiaos-configuracoes.desktop", "duiaos-loja.desktop", "foot.desktop",
+                                                  "duiaos-ora.desktop", "duiaos-mailbox.desktop"])
 
 
 @unittest.skipUnless(TEM_QT, "PySide6 não instalado")

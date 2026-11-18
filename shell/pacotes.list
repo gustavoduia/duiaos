@@ -111,7 +111,3 @@ python3-yaml
 # Cofre do sistema: chaves dos motores de IA na nuvem (Configurações › Inteligência Artificial)
 python3-secretstorage
 gnome-keyring
-
-# Mail Box (ADR 072): descoberta dos servidores pelo DNS (registros MX e SRV); o motor web do Ora e do
-# Mail Box é o pacote duiaos-motor-web (dependência do duiaos-desktop)
-python3-dnspython

@@ -5,6 +5,10 @@
 > site não têm mais arquivos de estado próprios.
 
 Atualizado em: 18/11/2026 · por: Claude (conta do Gustavo) · sessão session_017QRdLjWRKDXmQKV6vaZFDo
+**18/11 (noite): ADR 073, ficha DUIA-2026-0030** — Ora e Mail Box nos repositórios privados `duiaos-ora` e `duiaos-mailbox`
+(código, testes e `pacote/construir.sh`; `pacotes/trazer-apps.sh` com o segredo `DUIAOS_TOKEN_APPS`, que o Gustavo precisa
+criar); Ora navegador padrão e Mail Box e-mail padrão (mimeapps, alternativas, uma vez para quem já usava, Ilha); instalador
+sem Firefox e Chrome (`duiaos-fontes-abertas`); Ora com modo aplicativo; buscador Google confirmado. **Sem teste no Dell.**
 **18/11 (tarde): Ora e Mail Box 0.1 (ADR 072, ficha DUIA-2026-0029)** — estratégia aprovada pelo Gustavo (plano no doc
 "Ora e Mail Box — Estratégia e plano de desenvolvimento"): Ora = interface própria sobre o Qt WebEngine (Chromium 140), com o
 motor no pacote novo `duiaos-motor-web` (rodas oficiais do PySide6 fixadas pelo sha256, sem o Qt WebEngine do Debian); Mail Box

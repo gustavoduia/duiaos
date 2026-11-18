@@ -1,6 +1,12 @@
 # DuiaOS — aplicativos padrão do sistema (cada pessoa muda nas Configurações ›
 # Aplicativos padrão, gravado em ~/.config/mimeapps.list).
 [Default Applications]
+# Navegador e e-mail: o Ora e o Mail Box (ADR 073)
+x-scheme-handler/http=duiaos-ora.desktop
+x-scheme-handler/https=duiaos-ora.desktop
+text/html=duiaos-ora.desktop
+application/xhtml+xml=duiaos-ora.desktop
+x-scheme-handler/mailto=duiaos-mailbox.desktop
 inode/directory=duiaos-explorador-de-arquivos.desktop
 # Arquivos compactados: descompactar ao lado, como no macOS (ADR 067)
 application/zip=duiaos-descompactar.desktop

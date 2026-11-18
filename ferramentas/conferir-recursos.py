@@ -28,6 +28,8 @@ INVENTARIO = CONTINUIDADE / "RECURSOS.md"
 INVENTARIOS = [
     ("duiaos", INVENTARIO, RAIZ),
     ("duiaos-wise", CONTINUIDADE / "RECURSOS-WISE.md", RAIZ.parent / "duiaos-wise"),
+    ("duiaos-ora", CONTINUIDADE / "RECURSOS-ORA.md", RAIZ.parent / "duiaos-ora"),
+    ("duiaos-mailbox", CONTINUIDADE / "RECURSOS-MAILBOX.md", RAIZ.parent / "duiaos-mailbox"),
     ("duiaos-websites", CONTINUIDADE / "RECURSOS-WEBSITES.md", RAIZ.parent / "duiaos-websites"),
 ]
 CONFERENCIA = re.compile(r"`([^`]+?)::([^`]+)`")

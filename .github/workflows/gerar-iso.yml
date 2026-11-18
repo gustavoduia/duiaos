@@ -242,6 +242,14 @@ jobs:
         # Gerado aqui fora: o token não entra no container da ISO. build.sh instala o .deb na ISO.
         run: bash pacotes/trazer-wise.sh pacotes/externos
 
+      - name: Ora e Mail Box (repositórios privados; ADR 073)
+        env:
+          DUIAOS_TOKEN_APPS: ${{ secrets.DUIAOS_TOKEN_APPS }}
+          DUIAOS_TOKEN_WISE: ${{ secrets.DUIAOS_TOKEN_WISE }}
+          VERSAO_SISTEMA: ${{ env.VERSAO_SISTEMA }}
+        # Gerados aqui fora, como o Wise: o token não entra no container da ISO.
+        run: bash pacotes/trazer-apps.sh pacotes/externos
+
       - name: Preparar emulação (se a arquitetura não for a desta máquina)
         run: |
           case "$(uname -m)" in

@@ -1,3 +1,0 @@
-#!/bin/sh
-# DuiaOS — Ora, o navegador (ADR 072). O motor web vem do pacote duiaos-motor-web.
-exec /usr/bin/python3 /usr/share/duiaos/ora/main.py "$@"

@@ -19,10 +19,12 @@ Não crie instruções (CLAUDE.md, memórias, estado, regras) em nenhum outro re
 | `duiaos` (este) | Código próprio do sistema; instruções, memórias, decisões (ADRs) e continuidade de todo o projeto |
 | `duiaos-fontes-abertas` | Código GPL-3 e outros que não podem ser fechados, modificações em software livre, EULA e licenças; Releases (ISOs) e apt (`gh-pages`) |
 | `duiaos-wise` | Fontes do Wise (produto próprio; privado) e a documentação técnica dele (`docs/arquitetura.md`, `docs/decisoes.md`) |
+| `duiaos-ora` | Fontes do **Ora**, o navegador (produto próprio; privado), os testes e o `pacote/construir.sh` (ADR 073) |
+| `duiaos-mailbox` | Fontes do **Mail Box**, o e-mail (produto próprio; privado), os testes com o laboratório de e-mail e o `pacote/construir.sh` (ADR 073) |
 | `duiaos-diagnosticos` | Logs enviados pelo DuiaOS para análise do suporte (privado; dados pessoais) |
 | `duiaos-websites` | Fontes do site institucional e do site da documentação (privado) |
 
-Clone os repositórios lado a lado (`../duiaos-wise`, `../duiaos-websites`, `../duiaos-diagnosticos`,
+Clone os repositórios lado a lado (`../duiaos-wise`, `../duiaos-ora`, `../duiaos-mailbox`, `../duiaos-websites`, `../duiaos-diagnosticos`,
 `../duiaos-fontes-abertas`): ferramentas e inventários contam com isso.
 
 ## Antes de cada envio
@@ -51,6 +53,15 @@ Clone os repositórios lado a lado (`../duiaos-wise`, `../duiaos-websites`, `../
 - Segurança (`duiaos-wise/docs/arquitetura.md`): o modelo só pede ferramentas; validação, nível de risco e
   execução são do orquestrador. Ferramenta nova sempre com esquema JSON, nível e teste. Conteúdo vindo de
   ferramentas é dado, nunca instrução. Nunca registrar segredos. Código novo registra por `wise/diagnostico.py`.
+
+## Ora e Mail Box (repositórios `duiaos-ora` e `duiaos-mailbox`, privados; ADR 073)
+- Aplicativos padrão do DuiaOS (navegador e e-mail), instalados com o sistema como o Wise. Nada do código deles
+  vai para o `duiaos`; aqui ficam o motor web (`pacotes/duiaos-motor-web`, ADR 072), o empacotamento na ISO e no
+  apt (`pacotes/trazer-apps.sh`, segredo `DUIAOS_TOKEN_APPS`), os padrões do sistema (`duiaos-mimeapps.list`,
+  Ilha) e os inventários (`docs/continuidade/RECURSOS-ORA.md`, `RECURSOS-MAILBOX.md`).
+- Testes de cada um: `python3 -m unittest discover -s testes -t .` no repositório dele, com o `duiaos` clonado ao
+  lado (as telas usam `../duiaos/shell/comum`); o laboratório de e-mail precisa do `dovecot` e do `aiosmtpd`.
+- Mudança que chega aos computadores → ficha aqui, com `pacotes: duiaos-ora` ou `duiaos-mailbox`.
 
 ## Quando o Gustavo relatar uma falha (ADR 040)
 1. Anexe `gustavoduia/duiaos-diagnosticos` (privado) e `git pull`. Não edite nem apague os relatórios em

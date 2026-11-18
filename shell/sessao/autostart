@@ -24,6 +24,8 @@ fi
 
 # Pastas do usuário (Área de Trabalho, Documentos, Downloads, Imagens, Música, Vídeos)
 (xdg-user-dirs-update >/dev/null 2>&1 || true) &
+# Ora e Mail Box como navegador e e-mail padrão, uma vez para quem já usava o DuiaOS (ADR 073)
+("${DUIAOS_SHELL}/sessao/padroes-de-aplicativos" >/dev/null 2>&1 || true) &
 
 # Área de Trabalho: papel de parede (imagem, GIF, vídeo ou cor) e ícones da pasta Área de
 # Trabalho, por baixo das janelas. Se fechar ou travar, volta em 2 segundos.

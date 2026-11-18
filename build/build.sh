@@ -104,6 +104,16 @@ elif [ "${SUITE:-teste}" = "estavel" ]; then
 else
   echo "AVISO: ISO de teste sem o Wise (sem pacotes/externos/duiaos-wise_*.deb)." >&2
 fi
+# Ora e Mail Box (ADR 073): aplicativos padrão do DuiaOS, gerados antes, fora do container
+# (pacotes/trazer-apps.sh, repositórios privados), como o Wise.
+if compgen -G "${ROOT}/pacotes/externos/duiaos-ora_*.deb" >/dev/null; then
+  cp "${ROOT}"/pacotes/externos/duiaos-ora_*.deb "${ROOT}"/pacotes/externos/duiaos-mailbox_*.deb config/packages.chroot/
+elif [ "${SUITE:-teste}" = "estavel" ]; then
+  echo "Lançamento sem o Ora e o Mail Box (pacotes/externos). Veja o passo 'Ora e Mail Box' do workflow." >&2
+  exit 1
+else
+  echo "AVISO: ISO de teste sem o Ora e o Mail Box (sem pacotes/externos/duiaos-ora_*.deb)." >&2
+fi
 # Ollama (IA local, ADR 030): pacote da arquitetura da ISO, feito do release
 # oficial sem CUDA. O modelo padrão não vai na ISO: é baixado no 1º login.
 bash "${ROOT}/pacotes/duiaos-ollama/construir.sh" "${ARCH}" config/packages.chroot \

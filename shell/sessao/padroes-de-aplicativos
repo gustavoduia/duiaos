@@ -1,0 +1,25 @@
+#!/bin/sh
+# =============================================================================
+# DuiaOS — o Ora como navegador e o Mail Box como e-mail padrão (ADR 073), uma vez por pessoa.
+#
+# Instalações novas já nascem assim (/etc/xdg/duiaos-mimeapps.list). Este passo vale para quem já usava o
+# DuiaOS antes: uma escolha antiga em ~/.config/mimeapps.list (ex.: o Firefox que o instalador oferecia)
+# ganharia do padrão do sistema. Roda uma vez só (marcador em ~/.local/state/duiaos); depois, vale o que
+# a pessoa escolher em Configurações › Aplicativos padrão.
+# Chamado pelo autostart, no fundo.
+# =============================================================================
+MARCADOR="${XDG_STATE_HOME:-$HOME/.local/state}/duiaos/padroes-ora-mailbox"
+[ -e "${MARCADOR}" ] && exit 0
+command -v xdg-mime >/dev/null 2>&1 || exit 0
+
+if [ -e /usr/share/applications/duiaos-ora.desktop ]; then
+  xdg-mime default duiaos-ora.desktop x-scheme-handler/http x-scheme-handler/https text/html application/xhtml+xml
+fi
+if [ -e /usr/share/applications/duiaos-mailbox.desktop ]; then
+  xdg-mime default duiaos-mailbox.desktop x-scheme-handler/mailto
+fi
+# Só marca quando os dois estão instalados (uma ISO de teste sem eles tenta de novo na próxima sessão)
+if [ -e /usr/share/applications/duiaos-ora.desktop ] && [ -e /usr/share/applications/duiaos-mailbox.desktop ]; then
+  mkdir -p "$(dirname "${MARCADOR}")" && : > "${MARCADOR}"
+fi
+exit 0

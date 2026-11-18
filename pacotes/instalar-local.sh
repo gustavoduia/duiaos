@@ -43,6 +43,15 @@ if ! command -v unzip >/dev/null || ! python3 -m pip --version >/dev/null 2>&1; 
   sudo apt-get install -y -qq unzip python3-pip
 fi
 bash pacotes/duiaos-motor-web/construir.sh "$(dpkg --print-architecture)" "${TEMP}/debs"
+# Ora e Mail Box (ADR 073): dos repositórios privados, clonados ao lado deste (~/Projetos/duiaos-ora e -mailbox)
+for APP in ora mailbox; do
+  if [ -x "../duiaos-${APP}/pacote/construir.sh" ]; then
+    git -C "../duiaos-${APP}" pull -q --ff-only || true
+    bash "../duiaos-${APP}/pacote/construir.sh" "${TEMP}/debs" >/dev/null
+  else
+    echo "AVISO: sem ../duiaos-${APP} (repositório privado): o ${APP} não foi instalado." >&2
+  fi
+done
 
 chmod 755 "${TEMP}" "${TEMP}/debs"
 chmod 644 "${TEMP}"/debs/*.deb

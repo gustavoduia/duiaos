@@ -77,6 +77,7 @@ jobs:
       - name: Gerar os pacotes
         env:
           DUIAOS_TOKEN_WISE: ${{ secrets.DUIAOS_TOKEN_WISE }}
+          DUIAOS_TOKEN_APPS: ${{ secrets.DUIAOS_TOKEN_APPS }}
         run: |
           CHAVE=""
           [ -s pacotes/chave.gpg ] && CHAVE="${PWD}/pacotes/chave.gpg"
@@ -95,6 +96,8 @@ jobs:
           bash pacotes/duiaos-voz/construir.sh arm64 saida
           # Wise (ADR 042): parte nativa do sistema, do repositório privado duiaos-wise
           bash pacotes/trazer-wise.sh saida
+          # Ora e Mail Box (ADR 073): aplicativos padrão, dos repositórios privados duiaos-ora e duiaos-mailbox
+          bash pacotes/trazer-apps.sh saida
 
       - name: Guardar os pacotes no GitHub (30 dias)
         uses: actions/upload-artifact@v4

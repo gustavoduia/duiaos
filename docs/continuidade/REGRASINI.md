@@ -41,6 +41,8 @@ O **Wise é o cérebro do DuiaOS**: vai embarcado e instalado com o sistema (ISO
 | `gustavoduia/duiaos` | **Repositório oficial do projeto.** Código próprio do sistema e **todas** as instruções, memórias, decisões e a continuidade do projeto (inclusive do Wise e do site). |
 | `gustavoduia/duiaos-fontes-abertas` | Código herdado com licença **GPL-3** (e outras que exigem publicação) que não podemos fechar, modificações em software livre de terceiros, EULA e licenças; ISOs nos Releases e o repositório apt (branch `gh-pages`, gerada pelo workflow). |
 | `gustavoduia/duiaos-wise` | Todos os fontes do **Wise** (produto próprio). |
+| `gustavoduia/duiaos-ora` | Todos os fontes do **Ora**, o navegador (produto próprio; ADR 073). |
+| `gustavoduia/duiaos-mailbox` | Todos os fontes do **Mail Box**, o e-mail (produto próprio; ADR 073). |
 | `gustavoduia/duiaos-diagnosticos` | Logs do DuiaOS enviados para análise do suporte ("Ajude a melhorar o DuiaOS"). |
 | `gustavoduia/duiaos-websites` | Fontes do site institucional e do site da documentação. |
 
