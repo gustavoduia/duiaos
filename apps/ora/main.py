@@ -580,7 +580,7 @@ def main():
         preparar_demonstracao(ora.banco)
         if "--escuro" in sys.argv:
             try:
-                interface.aparencia().setProperty("escuro", True)
+                interface.aparencia().definirEscuro(True)      # preferências da pasta temporária da demonstração
             except Exception:  # noqa: BLE001 — só a captura
                 pass
     contexto = motor.rootContext()

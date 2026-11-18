@@ -624,7 +624,7 @@ def main():
     menu = menu_do_app.criar("mailbox", [])
     contexto.setContextProperty("menuDoApp", menu)
     if DEMONSTRACAO and "--escuro" in sys.argv:
-        interface.aparencia().setProperty("escuro", True)
+        interface.aparencia().definirEscuro(True)      # preferências da pasta temporária da demonstração
     motor.load(PASTA / "JanelaMailBox.qml")
     if not motor.rootObjects():
         sys.exit(1)
