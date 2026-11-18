@@ -54,6 +54,15 @@ class TesteEstado(unittest.TestCase):
         self.assertEqual((dados["disponiveis"], dados["instalacao"]["reiniciar"], dados["instalacao"]["quantidade"]), (0, "computador", 2))
         self.assertEqual(self.estado.stat().st_mode & 0o777, 0o644)
 
+    def test_rede_limitada_pelo_networkmanager(self):
+        class Saida:
+            def __init__(self, texto):
+                self.stdout = texto
+        self.assertTrue(au.rede_limitada(lambda c: Saida("u 1\n")))
+        self.assertTrue(au.rede_limitada(lambda c: Saida("u 3\n")))                 # provavelmente (celular)
+        self.assertFalse(au.rede_limitada(lambda c: Saida("u 4\n")))
+        self.assertFalse(au.rede_limitada(lambda c: Saida("")))                       # sem NetworkManager
+
     def test_reinicio(self):
         self.assertEqual(au.reinicio(["vim", "curl"]), "nao")
         self.assertEqual(au.reinicio(["vim", "duiaos-shell"]), "sessao")
@@ -74,7 +83,7 @@ class TesteEstado(unittest.TestCase):
             chamadas.append(("instalar",))
             return "ok", pacotes
         with mock.patch.object(au, "ESTADO", self.estado):
-            funcoes = {"ao_preparar": preparar, "ao_baixar": baixar, "ao_instalar": instalar}
+            funcoes = {"ao_preparar": preparar, "ao_baixar": baixar, "ao_instalar": instalar, "limitada": lambda: False}
             esperado = {"desativado": ("desativado", []), "avisar": ("avisado", [("preparar", True)]),
                         "baixar": ("baixado", [("preparar", True), ("baixar",)]),
                         "instalar-avisando": ("instalado", [("preparar", True), ("baixar",), ("instalar",)]),
@@ -89,6 +98,11 @@ class TesteEstado(unittest.TestCase):
             au.gravar_estado({"baixadas": True}, self.estado)
             au.ciclo("baixar", **funcoes)
             self.assertNotIn(("baixar",), chamadas)
+            # Rede limitada (celular, franquia): só procura e avisa, não baixa nem instala (ADR 069)
+            chamadas.clear()
+            au.gravar_estado({"baixadas": False}, self.estado)
+            self.assertEqual(au.ciclo("instalar", **{**funcoes, "limitada": lambda: True}), "rede-limitada")
+            self.assertEqual(chamadas, [("preparar", True)])
             # Em dia: nada além de procurar
             chamadas.clear()
             pacotes.clear()

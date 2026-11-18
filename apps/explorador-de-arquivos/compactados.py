@@ -209,6 +209,7 @@ def _extrair_7z(arquivo, raiz, avisar, cancelado):
             processo.wait()
             raise ErroDeArquivo("Operação cancelada.")
     codigo = processo.wait()
+    processo.stdout.close()
     if codigo != 0:
         texto = saida.decode("utf-8", "replace").lower()
         if "password" in texto or "encrypted" in texto:

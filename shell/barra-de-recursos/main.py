@@ -233,6 +233,22 @@ def notificar(titulo, texto, origem="Atualizações", destino="configuracoes:atu
         print("Barra: aviso não enviado:", erro, file=sys.stderr, flush=True)
 
 
+def vigiar_portal(objeto_rede, mandar=None):
+    """Rede com página de login (hotel, aeroporto, café): avisa uma vez quando a conexão cai nesse estado.
+    O NetworkManager descobre testando um endereço do Debian (network-manager-config-connectivity-debian)."""
+    mandar = mandar or (lambda: notificar("Esta rede pede login", "Abra a página de login para usar a internet (comum em hotéis, "
+                                          "aeroportos e cafés).", origem="Rede e Internet", destino="configuracoes:rede", botao="Fazer login"))
+    estado = {"antes": objeto_rede.property("conectividade")}
+
+    def mudou():
+        agora = objeto_rede.property("conectividade")
+        if agora == "portal" and estado["antes"] != "portal":
+            mandar()
+        estado["antes"] = agora
+    objeto_rede.mudou.connect(mudou)
+    return mudou
+
+
 ARQUIVO_ESPACO_AVISADO = AVISADOS.parent / "espaco-avisado.json"
 
 
@@ -687,6 +703,11 @@ def main():
     contexto.setContextProperty("configuracao", configuracao)
     contexto.setContextProperty("sistema", sistema)
     contexto.setContextProperty("controles", estado)
+    # Rede e Internet (ADR 069): cabo, Wi-Fi e VPN no mesmo indicador, e o aviso de rede que pede login
+    import rede_interface
+    objeto_rede = rede_interface.Rede(demonstracao=DEMONSTRACAO)
+    contexto.setContextProperty("rede", objeto_rede)
+    vigiar_portal(objeto_rede)
     contexto.setContextProperty("papelDeParede", comum.papel_de_parede())
     contexto.setContextProperty("capturaArquivo", argumento("--captura"))
     contexto.setContextProperty("painelInicial", argumento("--painel"))

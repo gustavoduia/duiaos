@@ -182,6 +182,21 @@ DESENHOS = {
     "recentes": '<circle cx="12" cy="12" r="8.8"/><path d="M12 7v5l3.3 2"/>',
     "rede": ('<rect x="9" y="3" width="6" height="5" rx="1"/><rect x="3" y="16" width="6" height="5" rx="1"/>'
              '<rect x="15" y="16" width="6" height="5" rx="1"/><path d="M12 8v4M6 16v-2h12v2"/>'),
+    # Rede e Internet (ADR 069): cabo sem conexão, sem internet (exclamação), VPN, ponto de acesso, celular
+    "rede-desligada": ('<rect x="9" y="3" width="6" height="5" rx="1"/><rect x="3" y="16" width="6" height="5" rx="1"/>'
+                       '<rect x="15" y="16" width="6" height="5" rx="1"/><path d="M12 8v4M6 16v-2h12v2" stroke-opacity="0.35"/>'
+                       '<path d="M3.5 3.5l17 17"/>'),
+    "rede-alerta": ('<rect x="3" y="16" width="6" height="5" rx="1"/><rect x="11" y="3" width="6" height="5" rx="1"/>'
+                    '<path d="M14 8v4M6 16v-2h8"/><path d="M19.5 12.5v4.5M19.5 20.2v.1"/>'),
+    "wifi-alerta": ('<path d="M8.6 15.6a4.9 4.9 0 0 1 6.8 0" stroke-opacity="0.28"/><path d="M5.6 12.6a9.1 9.1 0 0 1 9.4-2.3"/>'
+                    '<path d="M2.6 9.4a13.4 13.4 0 0 1 15.6-2.6"/><circle cx="12" cy="19" r="1.4" fill="C" stroke="none"/>'
+                    '<path d="M20 11v5M20 19.4v.1"/>'),
+    "vpn": '<rect x="5" y="10.5" width="14" height="10" rx="2.2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5M12 14.5v2.5"/>',
+    "ponto-de-acesso": ('<circle cx="12" cy="11" r="1.6" fill="C" stroke="none"/><path d="M8.5 14.5a5 5 0 0 1 0-7M15.5 7.5a5 5 0 0 1 0 7'
+                        'M5.6 17.4a9 9 0 0 1 0-12.8M18.4 4.6a9 9 0 0 1 0 12.8M12 13v8"/>'),
+    "celular": '<rect x="7" y="2.5" width="10" height="19" rx="2.4"/><path d="M11 18.5h2"/>',
+    "qr": ('<rect x="3.5" y="3.5" width="6.5" height="6.5" rx="1"/><rect x="14" y="3.5" width="6.5" height="6.5" rx="1"/>'
+           '<rect x="3.5" y="14" width="6.5" height="6.5" rx="1"/><path d="M14 14h2.5v2.5H14zM18 18h2.5v2.5H18zM14 20.5h1M20.5 14v1"/>'),
 }
 
 

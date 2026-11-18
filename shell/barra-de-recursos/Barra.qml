@@ -23,7 +23,7 @@ Rectangle {
     function existe(id) {
         switch (id) {
         case "wise": return sistema.wise
-        case "wifi": return controles.wifiExiste
+        case "wifi": return rede.temPlaca || controles.wifiExiste       // qualquer placa de rede (cabo, Wi-Fi, celular)
         case "som": return controles.volume >= 0
         case "bateria": return controles.bateria >= 0
         case "bluetooth": return controles.bluetoothExiste
@@ -158,14 +158,17 @@ Rectangle {
                 visible: ind.modelData !== "bateria" && !imagemWise.visible
                 anchors.verticalCenter: parent.verticalCenter
                 tamanho: 17
-                cor: (ind.modelData === "wifi" && !controles.wifiLigado) || (ind.modelData === "bluetooth" && !controles.bluetoothLigado)
+                cor: (ind.modelData === "wifi" && !controles.wifiLigado && rede.icone !== "rede" && rede.icone !== "rede-alerta")
+                     || (ind.modelData === "bluetooth" && !controles.bluetoothLigado)
                      || (ind.modelData === "luz" && controles.luzNoturna === "desligada") ? Tema.textoApagado : Tema.texto
                 nome: {
                     switch (ind.modelData) {
                     case "wise": return "ia"
                     case "wifi":
-                        if (controles.ethernet && controles.wifiRede === "") return "rede"
-                        if (!controles.wifiLigado) return "wifi-desligado"
+                        // rede.icone: cabo, sem internet, sem conexão; "" = Wi-Fi conectada (o sinal decide)
+                        if (rede.vpnAtiva !== "" && rede.icone === "" && controles.wifiRede !== "") return "wifi-" + controles.nivelWifi
+                        if (rede.icone !== "" && rede.icone !== "wifi-0") return rede.icone
+                        if (!controles.wifiLigado) return rede.temWifi || !rede.temPlaca ? "wifi-desligado" : "rede-desligada"
                         return controles.wifiRede !== "" ? "wifi-" + controles.nivelWifi : "wifi-0"
                     case "som":
                         if (controles.mudo || controles.volume === 0) return "som-mudo"

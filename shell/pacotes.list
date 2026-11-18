@@ -68,6 +68,8 @@ pkexec
 xdg-user-dirs
 xdg-utils
 udisks2
+# Rede e Internet (ADR 069): o teste de internet do NetworkManager (avisa quando a rede pede login)
+network-manager-config-connectivity-debian
 # Descompactar .7z e .rar (o .zip e o .tar.* usam o próprio Python; ADR 067)
 7zip
 

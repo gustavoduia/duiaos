@@ -1,0 +1,15 @@
+#!/bin/sh
+# DuiaOS — rede (ADR 069): o NetworkManager cuida de todas as placas.
+# O ifupdown também vem na ISO (dependência do Debian); se o /etc/network/interfaces descrever alguma placa,
+# o NetworkManager a deixa "não gerenciada" e ela some das Configurações › Rede e Internet. Aqui o arquivo
+# fica só com o loopback, como no Debian com o NetworkManager instalado.
+set -e
+cat > /etc/network/interfaces <<'FIM'
+# Este arquivo só descreve o loopback: as outras placas ficam com o NetworkManager
+# (Configurações › Rede e Internet). Veja interfaces(5).
+source /etc/network/interfaces.d/*
+
+auto lo
+iface lo inet loopback
+FIM
+mkdir -p /etc/network/interfaces.d

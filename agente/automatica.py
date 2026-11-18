@@ -184,8 +184,22 @@ def instalar():
     return "erro", pacotes
 
 
-def ciclo(modo=None, ao_preparar=None, ao_baixar=None, ao_instalar=None):
-    """Uma rodada do temporizador. Devolve o que fez (para o registro e os testes)."""
+def rede_limitada(rodar=None):
+    """A conexão em uso é limitada (celular, plano com franquia; marcada pela pessoa ou deduzida pelo
+    NetworkManager)? Propriedade Metered do NetworkManager: 1 sim, 3 provavelmente sim (ADR 069)."""
+    rodar = rodar or (lambda c: subprocess.run(c, capture_output=True, text=True, timeout=10, check=False))
+    try:
+        saida = rodar(["busctl", "get-property", "org.freedesktop.NetworkManager", "/org/freedesktop/NetworkManager",
+                       "org.freedesktop.NetworkManager", "Metered"]).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    partes = saida.split()
+    return len(partes) == 2 and partes[0] == "u" and partes[1] in ("1", "3")
+
+
+def ciclo(modo=None, ao_preparar=None, ao_baixar=None, ao_instalar=None, limitada=None):
+    """Uma rodada do temporizador. Devolve o que fez (para o registro e os testes).
+    Numa rede limitada só procura e avisa: baixar e instalar ficam para quando houver outra rede (ADR 069)."""
     modo = modo or ler_modo()
     ao_preparar, ao_baixar, ao_instalar = ao_preparar or preparar, ao_baixar or baixar, ao_instalar or instalar
     if modo == "desativado":
@@ -195,6 +209,8 @@ def ciclo(modo=None, ao_preparar=None, ao_baixar=None, ao_instalar=None):
         return "em-dia"
     if modo == "avisar":
         return "avisado"
+    if (limitada or rede_limitada)():
+        return "rede-limitada"
     if not ler_estado().get("baixadas"):
         ao_baixar()
         registrar_download()

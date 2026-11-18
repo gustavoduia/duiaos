@@ -13,7 +13,7 @@ regras do DuiaOS liberam a pessoa que está no computador e é administradora, e
 troca de senha confere a senha atual (/usr/lib/duiaos/conta).
 
 Uso:
-  main.py [--secao NOME]              abre (seções: wifi, bluetooth, notificacoes, som, tela,
+  main.py [--secao NOME]              abre (seções: rede (ou wifi), bluetooth, notificacoes, som, tela,
                                       energia, aparencia, papel, descanso, barra, usuario,
                                       data, teclado, padroes, atualizacoes, privacidade, ia, sobre)
   main.py --demonstracao [--secao NOME] [--captura ARQUIVO]
@@ -48,7 +48,7 @@ from PySide6.QtGui import QGuiApplication  # noqa: E402
 from PySide6.QtQml import QQmlApplicationEngine  # noqa: E402
 
 DEMONSTRACAO = "--demonstracao" in sys.argv
-SECOES = ("wifi", "bluetooth", "notificacoes", "som", "tela", "energia", "aparencia", "papel", "descanso", "barra",
+SECOES = ("rede", "bluetooth", "notificacoes", "som", "tela", "energia", "aparencia", "papel", "descanso", "barra",
           "usuario", "data", "teclado", "padroes", "armazenamento", "atualizacoes", "privacidade", "ia", "wise", "sobre")
 PASTA_FUNDOS = pastas.DADOS / "duiaos" / "fundos"          # imagens e vídeos importados
 EXTENSOES_FUNDO = (".jpg", ".jpeg", ".png", ".webp", ".gif", ".mp4", ".webm", ".mkv", ".mov", ".m4v")
@@ -56,6 +56,8 @@ AGENTE = ("org.duiaos.Agente1", "/org/duiaos/Agente1")
 AJUDANTE_CONTA = "/usr/lib/duiaos/conta"
 AJUDANTE_PAPEL_ENTRADA = "/usr/lib/duiaos/papel-entrada"
 ARQUIVO_PEDIDO = Path(os.environ.get("XDG_RUNTIME_DIR", "/tmp")) / "duiaos-configuracoes.secao"
+# A página "Wi-Fi" virou "Rede e Internet" (ADR 069): pedidos antigos continuam chegando nela
+APELIDOS = {"wifi": "rede"}
 
 # Aplicativos padrão: categoria → (rótulo, tipos MIME)
 PADROES = {
@@ -255,7 +257,8 @@ class Ajustes(QObject):
 
     def __init__(self, secao):
         super().__init__()
-        self._secao = secao if secao in SECOES else "wifi"
+        secao = APELIDOS.get(secao, secao)
+        self._secao = secao if secao in SECOES else "rede"
         self._sobre, self._telas, self._padroes, self._fusos = {}, [], {}, []
         self._data = {"fuso": "", "automatica": True}
         self._apps_por_categoria = {}
@@ -355,6 +358,7 @@ class Ajustes(QObject):
             ARQUIVO_PEDIDO.unlink()
         except OSError:
             return
+        secao = APELIDOS.get(secao, secao)
         if secao in SECOES:
             self.irPara(secao)
         if secao == "atualizacoes":
@@ -371,6 +375,7 @@ class Ajustes(QObject):
     # -------------------------------------------------------------- seções
     @Slot(str)
     def irPara(self, secao):
+        secao = APELIDOS.get(secao, secao)
         if secao in SECOES and secao != self._secao:
             self._secao = secao
             self.secaoMudou.emit()
@@ -1468,7 +1473,7 @@ def argumento(nome, padrao=""):
 
 
 def main():
-    secao = argumento("--secao", "wifi")
+    secao = argumento("--secao", "rede")
     captura = argumento("--captura")
     if not DEMONSTRACAO:
         # Uma janela só: com ela aberta, só pede a seção e sai
@@ -1499,6 +1504,13 @@ def main():
     menu = menu_do_app.criar("configuracoes", [])          # guardado numa variável: sem isso o Python o descarta
     contexto.setContextProperty("menuDoApp", menu)
     contexto.setContextProperty("controles", estado)
+    import rede_interface
+    objeto_rede = rede_interface.Rede(demonstracao=DEMONSTRACAO)
+    objeto_rede.aviso.connect(ajustes.aviso)
+    contexto.setContextProperty("rede", objeto_rede)
+    contexto.setContextProperty("abaInicialRede", argumento("--aba-rede", ""))
+    if DEMONSTRACAO and "--detalhes-rede" in sys.argv:          # demonstração dos Detalhes de uma conexão
+        objeto_rede.abrirConexao("11111111-1111-1111-1111-111111111111")
     # Inteligência Artificial e Wise (ADR 063)
     from ia import InteligenciaArtificial
     ia = InteligenciaArtificial(DEMONSTRACAO)

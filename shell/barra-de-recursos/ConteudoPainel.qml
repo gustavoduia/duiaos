@@ -233,12 +233,14 @@ Item {
                     anchors { fill: parent; margins: 10 }
                     spacing: 4
                     LinhaDeControle {
-                        icone: controles.wifiLigado ? "wifi-3" : "wifi-desligado"
-                        titulo: "Wi-Fi"
-                        detalhe: !controles.wifiLigado ? "Desligado" : (controles.wifiRede !== "" ? controles.wifiRede : (controles.ethernet ? "Cabo conectado" : "Sem rede"))
-                        ligado: controles.wifiLigado
+                        // Sem placa Wi-Fi (máquina virtual, computador só com cabo): o quadro vira "Rede" (ADR 069)
+                        icone: !rede.temWifi && rede.temPlaca ? (rede.icone || "rede") : (controles.wifiLigado ? "wifi-3" : "wifi-desligado")
+                        titulo: !rede.temWifi && rede.temPlaca ? "Rede" : "Wi-Fi"
+                        detalhe: !rede.temWifi && rede.temPlaca ? rede.resumo.split(" · ")[0]
+                                 : (!controles.wifiLigado ? "Desligado" : (controles.wifiRede !== "" ? controles.wifiRede : (rede.temCabo ? "Cabo conectado" : "Sem rede")))
+                        ligado: rede.temWifi ? controles.wifiLigado : rede.icone === "rede"
                         abre: "wifi"
-                        onAlternado: controles.ligarWifi(!controles.wifiLigado)
+                        onAlternado: if (rede.temWifi) controles.ligarWifi(!controles.wifiLigado)
                     }
                     LinhaDeControle {
                         icone: "bluetooth"
@@ -359,11 +361,35 @@ Item {
     // ================================================================= Wi-Fi
     Balao {
         nome: "wifi"
-        Cabecalho { texto: "Wi-Fi"; comInterruptor: true; ligado: controles.wifiLigado; onAlternado: (v) => controles.ligarWifi(v) }
-        Subtitulo { visible: controles.wifiLigado; text: controles.buscandoRedes ? "Procurando redes…" : "Redes" }
+        // Rede e Internet (ADR 069): o estado em uma frase, o cabo e as VPNs, depois a Wi-Fi
+        Cabecalho { texto: rede.temWifi ? "Wi-Fi" : "Rede"; comInterruptor: rede.temWifi; ligado: controles.wifiLigado; onAlternado: (v) => controles.ligarWifi(v) }
+        Subtitulo { text: rede.resumo; wrapMode: Text.WordWrap }
+        Repeater {
+            model: rede.dispositivos.filter(function (d) { return d.tipo === "cabo" || d.tipo === "celular" || d.tipo === "bluetooth" })
+            LinhaDeLista {
+                required property var modelData
+                icone: modelData.tipo === "cabo" ? "rede" : (modelData.tipo === "celular" ? "celular" : "bluetooth")
+                texto: modelData.tipo === "cabo" ? "Cabo de rede" : (modelData.tipo === "celular" ? "Rede celular" : "Celular pelo Bluetooth")
+                marcada: modelData.estado === "conectado"
+                detalhe: ({ conectado: "Conectado", conectando: "Conectando…", desconectado: "Desconectado", indisponivel: "Sem cabo" })[modelData.estado] || ""
+                onClicada: modelData.estado === "conectado" ? rede.desconectarDispositivo(modelData.dispositivo) : rede.conectarDispositivo(modelData.dispositivo)
+            }
+        }
+        Repeater {
+            model: rede.conexoes.filter(function (c) { return c.tipo === "vpn" })
+            LinhaDeLista {
+                required property var modelData
+                icone: "vpn"
+                texto: modelData.nome
+                marcada: modelData.ativa
+                detalhe: modelData.ativa ? "VPN ligada" : "VPN"
+                onClicada: modelData.ativa ? rede.desativar(modelData.uuid) : rede.ativar(modelData.uuid)
+            }
+        }
+        Subtitulo { visible: rede.temWifi && controles.wifiLigado; text: controles.buscandoRedes ? "Procurando redes…" : "Redes Wi-Fi" }
         Column {
             width: parent.width
-            visible: controles.wifiLigado
+            visible: rede.temWifi && controles.wifiLigado
             Repeater {
                 model: controles.redes
                 Column {
@@ -404,7 +430,7 @@ Item {
             }
         }
         Separador {}
-        ItemDeMenu { texto: "Configurações de Wi-Fi…"; onClicado: sistema.abrir("configuracoes:wifi") }
+        ItemDeMenu { texto: "Configurações de rede…"; onClicado: sistema.abrir("configuracoes:rede") }
     }
 
     // =================================================================== Som

@@ -38,7 +38,7 @@ Window {
     }
 
     readonly property var secoes: [
-        { id: "wifi", nome: "Wi-Fi", icone: "wifi-3", cor: "azul", grupo: 0 },
+        { id: "rede", nome: "Rede e Internet", icone: "globo", cor: "azul", grupo: 0 },
         { id: "bluetooth", nome: "Bluetooth", icone: "bluetooth", cor: "azul", grupo: 0 },
         { id: "notificacoes", nome: "Notificações", icone: "sino", cor: "noite", grupo: 0 },
         { id: "som", nome: "Som", icone: "som-2", cor: "noite", grupo: 1 },
@@ -231,7 +231,7 @@ Window {
         }
         Loader {
             anchors { left: parent.left; right: parent.right; top: tituloPagina.bottom; bottom: parent.bottom; topMargin: 10 }
-            sourceComponent: ({ wifi: paginaWifi, bluetooth: paginaBluetooth, notificacoes: paginaNotificacoes, som: paginaSom,
+            sourceComponent: ({ rede: paginaRede, bluetooth: paginaBluetooth, notificacoes: paginaNotificacoes, som: paginaSom,
                                 tela: paginaTela, energia: paginaEnergia, aparencia: paginaAparencia, papel: paginaPapel,
                                 descanso: paginaDescanso, barra: paginaBarra, usuario: paginaUsuario, data: paginaData,
                                 teclado: paginaTeclado, padroes: paginaPadroes, armazenamento: paginaArmazenamento, atualizacoes: paginaAtualizacoes,
@@ -239,23 +239,90 @@ Window {
         }
     }
 
-    // ------------------------------------------------------------------ Wi-Fi
+    // --------------------------------------------------------- Rede e Internet (ADR 069)
+    // Visão geral (conexões, Wi-Fi, perfis salvos) e, ao clicar em Detalhes, a conexão em abas:
+    // Geral, Endereço, DNS, Informações e Privacidade. Mudanças de endereço pedem "Manter?" (rede_interface.py).
+    component CampoRede: Column {
+        property string rotulo: ""
+        property alias texto: campoInterno.texto
+        property alias dica: campoInterno.dica
+        property bool senha: false
+        width: 260
+        spacing: 4
+        Text { text: parent.rotulo; color: Tema.textoSecundario; font { family: Tema.fonteTexto; pixelSize: 12 } }
+        Campo { id: campoInterno; width: parent.width; senha: parent.senha }
+    }
     Component {
-        id: paginaWifi
+        id: paginaRede
         Pagina {
-            Component.onCompleted: controles.buscarRedes(true)
-            Grupo {
-                Linha {
-                    icone: "wifi-3"; titulo: "Wi-Fi"
-                    descricao: !controles.wifiLigado ? "Desligado" : (controles.wifiRede !== "" ? "Conectado a " + controles.wifiRede : "Ligado, sem conexão")
-                    ultima: !controles.ethernet
-                    Interruptor { ligado: controles.wifiLigado; onAlternado: (v) => controles.ligarWifi(v) }
-                }
-                Linha { visible: controles.ethernet; icone: "rede"; titulo: "Cabo de rede"; descricao: "Conectado"; ultima: true }
+            id: pr
+            readonly property string aberta: rede.conexaoAberta     // UUID da conexão com os Detalhes abertos
+            property string aba: abaInicialRede || "geral"
+            property bool oculta: false               // formulário "Conectar a uma rede oculta"
+            property bool novoPerfil: false           // formulário "Novo perfil de cabo"
+            property bool senhaVisivel: false
+            property string senhaWifi: ""
+            Component.onCompleted: { rede.atualizar(); controles.buscarRedes(true) }
+            function nomeDoTipo(t) { return ({ cabo: "Cabo de rede", wifi: "Wi-Fi", celular: "Rede celular", bluetooth: "Celular pelo Bluetooth",
+                                              vpn: "VPN", ponte: "Ponte", agregacao: "Agregação de placas", vlan: "VLAN" })[t] || t }
+            function iconeDoTipo(t) { return ({ cabo: "rede", wifi: "wifi-3", celular: "celular", bluetooth: "bluetooth", vpn: "vpn" })[t] || "rede" }
+            function textoDoEstado(d) {
+                var ip = rede.detalhesDe(d.dispositivo).ipv4 || []
+                var e = ({ conectado: "Conectado", conectando: "Conectando…", desconectado: "Desconectado",
+                           indisponivel: d.tipo === "cabo" ? "Cabo desconectado" : "Indisponível", desconectando: "Desconectando…" })[d.estado] || d.estado
+                return e + (d.estado === "conectado" && d.conexao ? " · " + d.conexao : "") + (ip.length ? " · " + ip[0].split("/")[0] : "")
+            }
+            function abrir(uuid) { pr.aba = "geral"; pr.senhaVisivel = false; pr.senhaWifi = ""; rede.abrirConexao(uuid) }
+            function fechar() { rede.abrirConexao("") }
+            Connections { target: rede; function onSenhaLida(uuid, senha) { if (uuid === pr.aberta) { pr.senhaWifi = senha; pr.senhaVisivel = true } } }
+
+            // ================================================== visão geral
+            Destaque {
+                visible: pr.aberta === ""
+                icone: rede.icone === "" ? "wifi-3" : (rede.icone || "rede"); estilo: rede.conectividade === "full" ? "azul" : "cinza"
+                titulo: rede.resumo
+                texto: rede.conectividade === "portal" ? "Abra o navegador para fazer o login desta rede." :
+                       (rede.vpnAtiva !== "" ? "O tráfego passa pela VPN " + rede.vpnAtiva + "." : "Cabo, Wi-Fi e as conexões salvas deste computador.")
+            }
+            Botao {
+                visible: pr.aberta === "" && rede.conectividade === "portal"
+                texto: "Fazer login na rede"; tipo: "primario"; icone: "globo"
+                onClicado: Qt.openUrlExternally("http://connectivity-check.debian.net/")
             }
             Grupo {
-                visible: controles.wifiLigado
-                titulo: controles.buscandoRedes ? "Procurando redes…" : "Redes disponíveis"
+                visible: pr.aberta === ""
+                titulo: "Conexões"
+                Linha { visible: !rede.temPlaca; titulo: "Nenhuma placa de rede encontrada"; descricao: "Confira se a placa está ligada (ou, numa máquina virtual, se ela tem uma placa de rede)."; ultima: true }
+                Repeater {
+                    model: rede.dispositivos.filter(function (d) { return d.tipo !== "vpn" })
+                    Linha {
+                        required property var modelData
+                        required property int index
+                        readonly property bool varios: rede.dispositivos.filter(function (d) { return d.tipo === modelData.tipo }).length > 1
+                        icone: pr.iconeDoTipo(modelData.tipo)
+                        titulo: pr.nomeDoTipo(modelData.tipo) + (varios ? " (" + modelData.dispositivo + ")" : "")
+                        descricao: modelData.tipo === "wifi" && !controles.wifiLigado ? "Desligado" : pr.textoDoEstado(modelData)
+                        ultima: index === rede.dispositivos.filter(function (d) { return d.tipo !== "vpn" }).length - 1
+                        Botao { visible: modelData.uuid !== "" && modelData.estado === "conectado"; texto: "Detalhes"; onClicado: pr.abrir(modelData.uuid) }
+                        Interruptor {
+                            visible: modelData.tipo === "wifi"
+                            ligado: controles.wifiLigado; onAlternado: (v) => controles.ligarWifi(v)
+                        }
+                        Interruptor {
+                            visible: modelData.tipo !== "wifi"
+                            ativo: modelData.estado !== "indisponivel"
+                            ligado: modelData.estado === "conectado" || modelData.estado === "conectando"
+                            onAlternado: (v) => v ? rede.conectarDispositivo(modelData.dispositivo) : rede.desconectarDispositivo(modelData.dispositivo)
+                        }
+                    }
+                }
+            }
+
+            // Wi-Fi: redes por perto (como antes) + rede oculta
+            Grupo {
+                visible: pr.aberta === "" && rede.temWifi && controles.wifiLigado
+                titulo: controles.buscandoRedes ? "Procurando redes Wi-Fi…" : "Redes Wi-Fi por perto"
+                Linha { visible: controles.redes.length === 0 && !controles.buscandoRedes; titulo: "Nenhuma rede encontrada"; ultima: true }
                 Repeater {
                     model: controles.redes
                     Column {
@@ -278,23 +345,287 @@ Window {
                                 }
                             }
                             Botao { visible: modelData.conectada; texto: "Desconectar"; onClicado: controles.desconectarWifi(modelData.ssid) }
-                            Botao { visible: controles.redeSalva(modelData.ssid); texto: "Esquecer"; onClicado: controles.esquecerWifi(modelData.ssid) }
                         }
                         Row {
                             visible: parent.pedindoSenha
                             spacing: 8; leftPadding: 46; bottomPadding: 10
-                            Campo { id: senhaWifi; width: 240; senha: true; dica: "Senha da rede"
+                            Campo { id: senhaPerto; width: 240; senha: true; dica: "Senha da rede"
                                     onConfirmado: { controles.conectarWifi(modelData.ssid, texto); parent.parent.pedindoSenha = false } }
-                            Botao { texto: "Conectar"; tipo: "primario"; onClicado: { controles.conectarWifi(modelData.ssid, senhaWifi.texto); parent.parent.pedindoSenha = false } }
+                            Botao { texto: "Conectar"; tipo: "primario"; onClicado: { controles.conectarWifi(modelData.ssid, senhaPerto.texto); parent.parent.pedindoSenha = false } }
                             Botao { texto: "Cancelar"; onClicado: parent.parent.pedindoSenha = false }
                         }
                     }
                 }
             }
-            Botao { visible: controles.wifiLigado; texto: "Procurar de novo"; icone: "reiniciar"; onClicado: controles.buscarRedes(true) }
+            Row {
+                visible: pr.aberta === "" && rede.temWifi && controles.wifiLigado
+                spacing: 8
+                Botao { texto: "Procurar de novo"; icone: "reiniciar"; onClicado: controles.buscarRedes(true) }
+                Botao { texto: "Conectar a uma rede oculta…"; onClicado: pr.oculta = !pr.oculta }
+            }
+            Grupo {
+                visible: pr.aberta === "" && pr.oculta
+                titulo: "Rede oculta (que não anuncia o nome)"
+                Column {
+                    width: parent.width; padding: 14; spacing: 10
+                    Row {
+                        spacing: 12
+                        CampoRede { id: ssidOculta; rotulo: "Nome da rede"; dica: "Ex.: Escritório" }
+                        CampoRede { id: senhaOculta; rotulo: "Senha (vazia se for aberta)"; senha: true }
+                    }
+                    Row {
+                        spacing: 8
+                        Botao { texto: "Conectar"; tipo: "primario"; ativo: ssidOculta.texto !== ""
+                                onClicado: { rede.conectarOculta(ssidOculta.texto, senhaOculta.texto); pr.oculta = false } }
+                        Botao { texto: "Cancelar"; onClicado: pr.oculta = false }
+                    }
+                }
+            }
+
+            // Perfis salvos (Wi-Fi e cabo), com Detalhes e Esquecer; perfil novo para o cabo (ex.: IP fixo)
+            Grupo {
+                visible: pr.aberta === "" && rede.conexoes.filter(function (c) { return c.tipo === "cabo" || c.tipo === "wifi" }).length > 0
+                titulo: "Conexões salvas"
+                Repeater {
+                    model: rede.conexoes.filter(function (c) { return c.tipo === "cabo" || c.tipo === "wifi" })
+                    Linha {
+                        required property var modelData
+                        required property int index
+                        icone: pr.iconeDoTipo(modelData.tipo)
+                        titulo: modelData.nome
+                        descricao: (modelData.ativa ? "Em uso" : (modelData.automatico ? "Conecta sozinha quando disponível" : "Só quando você escolher"))
+                                   + " · " + pr.nomeDoTipo(modelData.tipo)
+                        ultima: index === rede.conexoes.filter(function (c) { return c.tipo === "cabo" || c.tipo === "wifi" }).length - 1
+                        Botao { visible: !modelData.ativa && modelData.tipo === "cabo"; texto: "Usar"; onClicado: rede.ativar(modelData.uuid) }
+                        Botao { texto: "Detalhes"; onClicado: pr.abrir(modelData.uuid) }
+                    }
+                }
+            }
+            Botao { visible: pr.aberta === "" && rede.temCabo; texto: "Novo perfil para o cabo…"; icone: "mais"; onClicado: pr.novoPerfil = !pr.novoPerfil }
+            Grupo {
+                visible: pr.aberta === "" && pr.novoPerfil
+                titulo: "Novo perfil para o cabo de rede"
+                Column {
+                    width: parent.width; padding: 14; spacing: 10
+                    Rotulo { width: parent.width - 28; secundario: true
+                             text: "Use para redes que pedem endereço fixo (escritório, máquina virtual sem DHCP). Você troca de perfil em Conexões salvas › Usar." }
+                    Row {
+                        spacing: 12
+                        CampoRede { id: nomePerfil; rotulo: "Nome"; dica: "Ex.: Escritório"; width: 200 }
+                        Column {
+                            spacing: 4
+                            Text { text: "Endereço"; color: Tema.textoSecundario; font { family: Tema.fonteTexto; pixelSize: 12 } }
+                            Segmentos { id: metodoPerfil; valor: "manual"; opcoes: [{ valor: "auto", rotulo: "Automático (DHCP)" }, { valor: "manual", rotulo: "Fixo" }]
+                                        onEscolhido: (v) => valor = v }
+                        }
+                    }
+                    Row {
+                        visible: metodoPerfil.valor === "manual"
+                        spacing: 12
+                        CampoRede { id: ipPerfil; rotulo: "Endereço IP"; dica: "192.168.0.10"; width: 160 }
+                        CampoRede { id: mascaraPerfil; rotulo: "Máscara"; texto: "255.255.255.0"; width: 140 }
+                        CampoRede { id: gatewayPerfil; rotulo: "Gateway (roteador)"; dica: "192.168.0.1"; width: 160 }
+                        CampoRede { id: dnsPerfil; rotulo: "DNS"; dica: "1.1.1.1, 8.8.8.8"; width: 160 }
+                    }
+                    Row {
+                        spacing: 8
+                        Botao {
+                            texto: "Criar e usar"; tipo: "primario"; ativo: nomePerfil.texto !== ""
+                            onClicado: {
+                                var cabo = rede.dispositivos.filter(function (d) { return d.tipo === "cabo" })[0]
+                                var cfg = metodoPerfil.valor === "manual"
+                                    ? { ipv4: { metodo: "manual", enderecos: [{ endereco: ipPerfil.texto, prefixo: mascaraPerfil.texto }], gateway: gatewayPerfil.texto,
+                                                dns: dnsPerfil.texto.split(/[,\s]+/).filter(function (x) { return x !== "" }) } }
+                                    : { ipv4: { metodo: "auto", dns: [] } }
+                                var erros = rede.validar(cfg)
+                                if (erros.length) { aviso.mostrar(erros[0]); return }
+                                rede.novaConexaoCabo(cabo ? cabo.dispositivo : "", nomePerfil.texto, cfg)
+                                pr.novoPerfil = false
+                            }
+                        }
+                        Botao { texto: "Cancelar"; onClicado: pr.novoPerfil = false }
+                    }
+                }
+            }
+
+            // ======================================================= detalhes
+            Loader {
+                id: detalhes
+                width: parent.width
+                active: pr.aberta !== "" && rede.conexao.uuid === pr.aberta
+                visible: pr.aberta !== ""
+                sourceComponent: detalhesConexao
+                Connections { target: rede; function onConexaoMudou() { if (detalhes.active) { detalhes.active = false; detalhes.active = Qt.binding(function () { return pr.aberta !== "" && rede.conexao.uuid === pr.aberta }) } } }
+            }
+            Component {
+                id: detalhesConexao
+                Column {
+                    id: dc
+                    width: parent ? parent.width : 600
+                    spacing: 16
+                    readonly property var c: rede.conexao
+                    readonly property var info: rede.detalhesDe(c.dispositivo || "")
+                    function lista(texto) { return texto.split(/[,\s]+/).filter(function (x) { return x !== "" }) }
+                    function configuracao() {
+                        var cfg = { uuid: c.uuid, tipo: c.tipo, automatico: automatico.ligado, prioridade: preferir.ligado ? 10 : 0,
+                                    limitada: limitada.valor, mac: mac.valor, mtu: mtu.texto }
+                        cfg.ipv4 = metodo4.valor === "manual"
+                            ? { metodo: "manual", enderecos: [{ endereco: ip4.texto, prefixo: mascara4.texto }], gateway: gw4.texto,
+                                dns: dnsModo.valor === "manual" ? lista(dnsServidores.texto) : [], soDnsManual: true, rotas: rotas4.texto }
+                            : { metodo: metodo4.valor, enderecos: [], gateway: "", dns: dnsModo.valor === "manual" ? lista(dnsServidores.texto) : [],
+                                soDnsManual: true, rotas: rotas4.texto }
+                        cfg.ipv6 = metodo6.valor === "manual"
+                            ? { metodo: "manual", enderecos: [{ endereco: ip6.texto, prefixo: prefixo6.texto }], gateway: gw6.texto, dns: [], soDnsManual: false }
+                            : { metodo: metodo6.valor, enderecos: [], gateway: "", dns: [], soDnsManual: false }
+                        if (c.tipo === "wifi") cfg.oculta = c.oculta
+                        return cfg
+                    }
+                    Row {
+                        spacing: 10
+                        Botao { texto: "Rede e Internet"; icone: "seta-esquerda"; onClicado: pr.fechar() }
+                    }
+                    Destaque {
+                        icone: pr.iconeDoTipo(dc.c.tipo); estilo: "azul"
+                        titulo: dc.c.nome || ""
+                        texto: pr.nomeDoTipo(dc.c.tipo) + (dc.c.dispositivo ? " · " + dc.c.dispositivo : "") + (dc.c.todos ? " · para todos os usuários" : " · só para você")
+                    }
+                    Segmentos {
+                        valor: pr.aba
+                        opcoes: [{ valor: "geral", rotulo: "Geral" }, { valor: "endereco", rotulo: "Endereço" }, { valor: "dns", rotulo: "DNS" },
+                                 { valor: "informacoes", rotulo: "Informações" }, { valor: "privacidade", rotulo: "Privacidade" }]
+                        onEscolhido: (v) => pr.aba = v
+                    }
+
+                    // ----- Geral
+                    Grupo {
+                        visible: pr.aba === "geral"
+                        Linha { titulo: "Conectar automaticamente"; descricao: "Quando esta rede estiver disponível"
+                                Interruptor { id: automatico; ligado: dc.c.automatico === true; onAlternado: (v) => ligado = v } }
+                        Linha { titulo: "Preferir esta rede"; descricao: "Quando houver mais de uma disponível, esta vem primeiro"
+                                Interruptor { id: preferir; ligado: (dc.c.prioridade || 0) > 0; onAlternado: (v) => ligado = v } }
+                        Linha {
+                            titulo: "Rede limitada"; descricao: "Numa rede limitada (celular, plano com franquia), o DuiaOS não baixa atualizações sozinho"
+                            Seletor { id: limitada; width: 170; valor: dc.c.limitada || "auto"
+                                      opcoes: [{ valor: "auto", rotulo: "Automático" }, { valor: "sim", rotulo: "Sim" }, { valor: "nao", rotulo: "Não" }]
+                                      onEscolhido: (v) => valor = v }
+                        }
+                        Linha {
+                            visible: dc.c.tipo === "wifi"
+                            titulo: "Senha"; descricao: pr.senhaVisivel ? (pr.senhaWifi || "Sem senha") : "••••••••"
+                            Botao { texto: pr.senhaVisivel ? "Esconder" : "Mostrar"; icone: "olho"
+                                    onClicado: pr.senhaVisivel ? pr.senhaVisivel = false : rede.lerSenha(dc.c.uuid) }
+                        }
+                        Linha {
+                            titulo: "MTU"; descricao: "Tamanho máximo dos pacotes. Deixe vazio para automático (o comum é 1500)"; ultima: true
+                            Campo { id: mtu; width: 110; texto: dc.c.mtu || ""; dica: "Automático" }
+                        }
+                    }
+
+                    // ----- Endereço
+                    Grupo {
+                        visible: pr.aba === "endereco"
+                        titulo: "IPv4"
+                        Column {
+                            width: parent.width; padding: 14; spacing: 12
+                            Segmentos { id: metodo4; valor: (dc.c.ipv4 || {}).metodo === "manual" ? "manual" : ((dc.c.ipv4 || {}).metodo === "desligado" ? "desligado" : "auto")
+                                        opcoes: [{ valor: "auto", rotulo: "Automático (DHCP)" }, { valor: "manual", rotulo: "Manual" }, { valor: "desligado", rotulo: "Desligado" }]
+                                        onEscolhido: (v) => valor = v }
+                            Row {
+                                visible: metodo4.valor === "manual"
+                                spacing: 12
+                                CampoRede { id: ip4; rotulo: "Endereço IP"; dica: "192.168.0.10"; width: 170
+                                            texto: ((dc.c.ipv4 || {}).enderecos || [])[0] ? dc.c.ipv4.enderecos[0].endereco : "" }
+                                CampoRede { id: mascara4; rotulo: "Máscara"; width: 150
+                                            texto: ((dc.c.ipv4 || {}).enderecos || [])[0] ? dc.c.ipv4.enderecos[0].prefixo : "255.255.255.0" }
+                                CampoRede { id: gw4; rotulo: "Gateway (roteador)"; dica: "192.168.0.1"; width: 170; texto: (dc.c.ipv4 || {}).gateway || "" }
+                            }
+                            CampoRede { id: rotas4; rotulo: "Rotas extras (opcional; ex.: 10.0.0.0/8 192.168.0.254)"; width: 420; texto: (dc.c.ipv4 || {}).rotas || "" }
+                        }
+                    }
+                    Grupo {
+                        visible: pr.aba === "endereco"
+                        titulo: "IPv6"
+                        Column {
+                            width: parent.width; padding: 14; spacing: 12
+                            Segmentos { id: metodo6; valor: (dc.c.ipv6 || {}).metodo === "manual" ? "manual" : ((dc.c.ipv6 || {}).metodo === "desligado" ? "desligado" : "auto")
+                                        opcoes: [{ valor: "auto", rotulo: "Automático" }, { valor: "manual", rotulo: "Manual" }, { valor: "desligado", rotulo: "Desligado" }]
+                                        onEscolhido: (v) => valor = v }
+                            Row {
+                                visible: metodo6.valor === "manual"
+                                spacing: 12
+                                CampoRede { id: ip6; rotulo: "Endereço IPv6"; width: 220
+                                            texto: ((dc.c.ipv6 || {}).enderecos || [])[0] ? dc.c.ipv6.enderecos[0].endereco : "" }
+                                CampoRede { id: prefixo6; rotulo: "Prefixo"; width: 80
+                                            texto: ((dc.c.ipv6 || {}).enderecos || [])[0] ? dc.c.ipv6.enderecos[0].prefixo : "64" }
+                                CampoRede { id: gw6; rotulo: "Gateway"; width: 200; texto: (dc.c.ipv6 || {}).gateway || "" }
+                            }
+                        }
+                    }
+
+                    // ----- DNS
+                    Grupo {
+                        visible: pr.aba === "dns"
+                        titulo: "Servidores de nomes (DNS)"
+                        Column {
+                            width: parent.width; padding: 14; spacing: 12
+                            Rotulo { width: parent.width - 28; secundario: true
+                                     text: "O DNS traduz nomes de sites em endereços. Automático usa o do roteador; você pode escolher um mais rápido ou com filtro." }
+                            Segmentos { id: dnsModo; valor: ((dc.c.ipv4 || {}).dns || []).length ? "manual" : "auto"
+                                        opcoes: [{ valor: "auto", rotulo: "Automático" }, { valor: "manual", rotulo: "Escolher" }]
+                                        onEscolhido: (v) => valor = v }
+                            CampoRede { id: dnsServidores; visible: dnsModo.valor === "manual"; rotulo: "Servidores (separados por vírgula)"; width: 420
+                                        texto: ((dc.c.ipv4 || {}).dns || []).join(", ") }
+                            Row {
+                                visible: dnsModo.valor === "manual"
+                                spacing: 8
+                                Repeater {
+                                    model: Object.keys(rede.dnsConhecidos)
+                                    Botao { required property var modelData; texto: modelData; onClicado: dnsServidores.texto = rede.dnsConhecidos[modelData].join(", ") }
+                                }
+                            }
+                        }
+                    }
+
+                    // ----- Informações
+                    Grupo {
+                        visible: pr.aba === "informacoes"
+                        Linha { titulo: "Endereço IP"; descricao: (dc.info.ipv4 || []).join(", ") || "—" }
+                        Linha { titulo: "Gateway (roteador)"; descricao: dc.info.gateway4 || "—" }
+                        Linha { titulo: "DNS em uso"; descricao: (dc.info.dns4 || []).concat(dc.info.dns6 || []).join(", ") || "—" }
+                        Linha { titulo: "IPv6"; descricao: (dc.info.ipv6 || []).join(", ") || "—" }
+                        Linha { titulo: "Endereço físico (MAC)"; descricao: dc.info.mac || "—" }
+                        Linha { visible: (dc.info.velocidade || "") !== ""; titulo: "Velocidade do cabo"; descricao: dc.info.velocidade || "" }
+                        Linha { titulo: "Rede limitada agora"; descricao: dc.info.limitada ? "Sim" : "Não"; ultima: true }
+                    }
+
+                    // ----- Privacidade
+                    Grupo {
+                        visible: pr.aba === "privacidade"
+                        Linha {
+                            titulo: "Endereço físico (MAC)"
+                            descricao: "Um endereço diferente para cada rede dificulta que você seja rastreado entre redes (o iPhone e o Windows fazem assim)"
+                            ultima: true
+                            Seletor { id: mac; width: 250; valor: dc.c.mac || ""
+                                      opcoes: [{ valor: "", rotulo: "Padrão do sistema" }, { valor: "stable", rotulo: "Diferente para cada rede" },
+                                               { valor: "random", rotulo: "Novo a cada conexão" }, { valor: "permanent", rotulo: "O do equipamento" }]
+                                      onEscolhido: (v) => valor = v }
+                        }
+                    }
+
+                    Row {
+                        visible: pr.aba !== "informacoes"
+                        spacing: 8
+                        Botao { texto: "Salvar"; tipo: "primario"
+                                onClicado: { var cfg = dc.configuracao(); var e = rede.validar(cfg); if (e.length) aviso.mostrar(e[0]); else rede.aplicarConexao(cfg) } }
+                        Botao { texto: "Cancelar"; onClicado: pr.fechar() }
+                        Item { width: 24; height: 1 }
+                        Botao { texto: dc.c.tipo === "wifi" ? "Esquecer esta rede" : "Apagar esta conexão"; tipo: "perigo"
+                                onClicado: { rede.esquecer(dc.c.uuid); pr.fechar() } }
+                    }
+                }
+            }
         }
     }
-
     // -------------------------------------------------------------- Bluetooth
     Component {
         id: paginaBluetooth
@@ -2414,6 +2745,34 @@ Window {
     }
 
     Aviso { id: aviso; anchors { horizontalCenter: conteudo.horizontalCenter; bottom: parent.bottom; bottomMargin: 20 } z: 60 }
+
+    // "Manter estas configurações de rede?" — se ninguém responder, a anterior volta (rede_interface.py, ADR 069)
+    Rectangle {
+        anchors.fill: parent
+        z: 70
+        visible: rede.confirmando > 0
+        color: Qt.rgba(0.06, 0.09, 0.14, 0.28)
+        MouseArea { anchors.fill: parent }
+        Cartao {
+            anchors.centerIn: parent
+            width: 420; height: colunaConfirmar.implicitHeight + 40
+            raio: 18; cor: Tema.cartao
+            Column {
+                id: colunaConfirmar
+                anchors { left: parent.left; right: parent.right; top: parent.top; margins: 20 }
+                spacing: 10
+                Titulo { nivel: 2; width: parent.width; wrapMode: Text.WordWrap; text: "Manter estas configurações de rede?" }
+                Rotulo { width: parent.width; secundario: true
+                         text: "Se a conexão caiu, não faça nada: a configuração anterior volta em " + rede.confirmando + " segundos." }
+                Row {
+                    anchors.right: parent.right
+                    spacing: 8
+                    Botao { texto: "Voltar à anterior"; onClicado: rede.desfazer() }
+                    Botao { texto: "Manter"; tipo: "primario"; onClicado: rede.manter() }
+                }
+            }
+        }
+    }
     Connections { target: ajustes; function onAviso(m) { aviso.mostrar(m) } }
     Connections { target: controles; function onAviso(m) { aviso.mostrar(m) } }
 
