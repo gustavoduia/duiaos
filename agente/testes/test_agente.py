@@ -131,7 +131,7 @@ class TestArquivosDoPacote(unittest.TestCase):
         # e a da Lixeira de pastas do sistema (ADR 068)
         self.assertEqual(ids, {f"org.duiaos.agente.{acao}" for acao in pl.ACOES} | {
             "org.duiaos.agente.configurar_atualizacoes", "org.duiaos.agente.limpar_sistema", "org.duiaos.agente.mover_para_lixeira",
-            "org.duiaos.agente.configurar_proxy"})
+            "org.duiaos.agente.configurar_proxy", "org.duiaos.agente.configurar_firewall"})
         for acao in politica.findall("action"):
             self.assertNotEqual(acao.find("defaults/allow_any").text, "yes")
 

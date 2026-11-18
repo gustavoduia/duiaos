@@ -24,6 +24,8 @@ sistema, instalar e remover aplicativos pelo apt. Fala pelo D-Bus do sistema
       polkit: org.duiaos.agente.mover_para_lixeira
   ConfigurarProxy(json {"servidor", "porta"} ou {}) -> {}   proxy HTTP do apt do sistema (ADR 070);
       polkit: org.duiaos.agente.configurar_proxy
+  ConfigurarFirewall(json {"ligado": bool, "ssh": bool}) -> {}   liga/desliga o firewalld e o acesso remoto
+      (SSH) nas redes privadas (firewall.py, ADR 071); polkit: org.duiaos.agente.configurar_firewall
   Configuracao() -> {"modo"}   a atualização automática (automatica.py, ADR 058)
   Configurar(json)   muda o modo da atualização automática (polkit: org.duiaos.agente.configurar_atualizacoes)
   sinal Mudou(json)   o mesmo de Estado, no máximo 2 vezes por segundo
@@ -57,6 +59,7 @@ from gi.repository import Gio, GLib  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import automatica  # noqa: E402
+import firewall  # noqa: E402
 import lixeira  # noqa: E402
 import plano as pl  # noqa: E402
 from plano import Recusa  # noqa: E402
@@ -96,6 +99,7 @@ XML = """
       <arg name="json" type="s" direction="out"/>
     </method>
     <method name="ConfigurarProxy"><arg name="json" type="s" direction="in"/></method>
+    <method name="ConfigurarFirewall"><arg name="json" type="s" direction="in"/></method>
     <method name="Configuracao"><arg name="json" type="s" direction="out"/></method>
     <method name="Configurar"><arg name="json" type="s" direction="in"/></method>
     <signal name="Mudou"><arg name="json" type="s"/></signal>
@@ -679,6 +683,22 @@ class Agente:
             arquivo.unlink(missing_ok=True)
         self.registrar("proxy", uid=uid, ligado=bool(servidor))
 
+    def configurar_firewall(self, texto, uid, autorizado, rodar=None):
+        """Liga ou desliga o firewall e o acesso remoto (SSH) nas redes privadas."""
+        try:
+            pedido = json.loads(texto or "{}")
+        except ValueError as erro:
+            raise Recusa("Invalido", "Configuração inválida.") from erro
+        if not isinstance(pedido, dict) or not isinstance(pedido.get("ligado"), bool) or not isinstance(pedido.get("ssh", True), bool):
+            raise Recusa("Invalido", "Configuração inválida.")
+        if not autorizado("org.duiaos.agente.configurar_firewall"):
+            raise Recusa("NaoAutorizado", "Só um administrador deste computador muda o firewall.")
+        try:
+            firewall.configurar(pedido["ligado"], pedido.get("ssh", True), **({"rodar": rodar} if rodar else {}))
+        except RuntimeError as erro:
+            raise Recusa("Falhou", f"O firewall não respondeu: {erro}") from erro
+        self.registrar("firewall", uid=uid, ligado=pedido["ligado"], ssh=pedido.get("ssh", True))
+
     def configurar(self, texto, uid, autorizado):
         """Muda o modo da atualização automática (vale para o computador todo)."""
         try:
@@ -754,6 +774,9 @@ class Agente:
                                                             ensure_ascii=False),))
                 elif metodo == "ConfigurarProxy":
                     self.configurar_proxy(parametros.unpack()[0], uid, self._autorizador(remetente, uid))
+                    valor = None
+                elif metodo == "ConfigurarFirewall":
+                    self.configurar_firewall(parametros.unpack()[0], uid, self._autorizador(remetente, uid))
                     valor = None
                 elif metodo == "Configuracao":
                     valor = GLib.Variant("(s)", (json.dumps({"modo": automatica.ler_modo(self.conf_atualizacoes)}),))

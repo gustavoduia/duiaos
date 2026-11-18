@@ -4,7 +4,14 @@
 > commits, o que está instalado em cada máquina. Desde 13/10 é o estado de TODO o projeto (ADR 043): o Wise e o
 > site não têm mais arquivos de estado próprios.
 
-Atualizado em: 17/11/2026 · por: Claude (conta do Gustavo) · sessão session_017QRdLiNuMN3h9iSaFMGT25
+Atualizado em: 18/11/2026 · por: Claude (conta do Gustavo) · sessão session_017QRdLjWRKDXmQKV6vaZFDo
+**18/11: Rede e Internet, plano completo (ADRs 069–071, fichas DUIA-2026-0026 a 0028)** — a página Wi-Fi virou Rede e
+Internet: cabo, IP fixo, DNS, Detalhes em abas com "Manter?" (F1); agente de senhas, VPN (WireGuard, OpenVPN, OpenConnect),
+Wi-Fi corporativo, proxy, ponto de acesso e QR (F2); firewall com redes privada/pública (o postinst põe as redes que já
+existem como privadas para o SSH do Dell continuar), celular por USB/Bluetooth, modem 4G, VLAN/ponte/agregação,
+diagnóstico e ferramentas de rede do Wise (F3). Testado com NetworkManager e firewalld de verdade no laboratório
+(`ferramentas/laboratorio-rede.sh`). **Sem teste no Dell nem numa VM**; páginas da documentação no `duiaos-websites`
+pendentes (o acesso ao repositório foi negado neste chat).
 **17/11 (tarde): ADR 066, ficha DUIA-2026-0023, notas da 0.3.1** — instalador pelo Xwayland (teclado nos campos QML),
 revisão que relê as escolhas, sem bloqueio de tela no pendrive; **uma instalação completa numa VM UEFI (QEMU) funcionou**
 e o sistema instalado ligou. Balão do ícone de atualizações (um clique: balão; dois: Atualizações já com o resumo).

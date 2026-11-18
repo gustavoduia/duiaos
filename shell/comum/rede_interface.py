@@ -35,6 +35,8 @@ def _criar_classe():
         aviso = Signal(str)
         senhaLida = Signal(str, str)                  # uuid, senha
         proxyMudou = Signal()
+        firewallMudou = Signal()
+        diagnosticoMudou = Signal()
         qrPronto = Signal(str, str)                   # uuid, caminho da imagem
         _chegou = Signal(str, object)
 
@@ -47,6 +49,10 @@ def _criar_classe():
             self._confirmar = {"uuid": "", "volta": [], "restam": 0}
             self._lendo = False
             self._de_novo = False
+            self._zonas, self._usb, self._modens = {}, {}, []
+            self._firewall = {"instalado": False, "ligado": False, "padrao": "", "ssh": False}
+            self._diagnostico = []
+            self._diagnosticando = False
             self._proxy = {"modo": "desligado", "pac": "", "excecoes": proxy.EXCECOES_PADRAO,
                            "http": {"servidor": "", "porta": 0}, "https": {"servidor": "", "porta": 0}, "socks": {"servidor": "", "porta": 0}}
             self._chegou.connect(self._ao_chegar)
@@ -74,7 +80,14 @@ def _criar_classe():
             if nome == "estado":
                 self._lendo = False
                 if not isinstance(resultado, Exception):
-                    self._dispositivos, self._conexoes, self._geral, self._detalhes = resultado
+                    (self._dispositivos, self._conexoes, self._geral, self._detalhes,
+                     self._zonas, self._usb, self._modens, fw) = resultado
+                    if fw is not None and fw != self._firewall:
+                        self._firewall = fw
+                        self.firewallMudou.emit()
+                    for d in self._dispositivos:       # celular pelo cabo USB aparece como celular, não como cabo
+                        if self._usb.get(d["dispositivo"]):
+                            d["celularUsb"] = self._usb[d["dispositivo"]]
                     self.mudou.emit()
                 if self._de_novo:
                     self._de_novo = False
@@ -106,6 +119,18 @@ def _criar_classe():
                 if self._abrindo:
                     self.abrirConexao(self._abrindo)
                 self.atualizar()
+                return
+            if nome == "firewall":
+                if not isinstance(resultado, Exception):
+                    self._firewall = resultado
+                    self.firewallMudou.emit()
+                return
+            if nome == "diagnostico":
+                self._diagnosticando = False
+                self._diagnostico = [] if isinstance(resultado, Exception) else resultado
+                if isinstance(resultado, Exception):
+                    self.aviso.emit(str(resultado))
+                self.diagnosticoMudou.emit()
                 return
             if nome == "proxy-lido":
                 if not isinstance(resultado, Exception):
@@ -144,7 +169,13 @@ def _criar_classe():
                 dispositivos = rede.ler_dispositivos()
                 detalhes = {d["dispositivo"]: rede.ler_detalhes(d["dispositivo"]) for d in dispositivos
                             if d["estado"] in ("conectado", "conectando") and d["tipo"] != "vpn"}
-                return dispositivos, rede.ler_conexoes(), rede.ler_geral(), detalhes
+                conexoes = rede.ler_conexoes()
+                usb = {d["dispositivo"]: rede.celular_por_usb(d["dispositivo"]) for d in dispositivos if d["tipo"] == "cabo"}
+                modens = rede.ler_modens() if any(d["tipo"] == "celular" for d in dispositivos) else []
+                zonas = rede.ler_zonas(conexoes)
+                # Rede ainda sem tipo: confere o firewall agora (na entrada ele pode ter subido depois da Barra)
+                fw = rede.ler_firewall() if rede.sem_tipo_de_rede(conexoes, zonas) else None
+                return dispositivos, conexoes, rede.ler_geral(), detalhes, zonas, usb, modens, fw
             self._fundo("estado", ler)
 
         @Slot(str)
@@ -348,6 +379,75 @@ def _criar_classe():
                 return rede.gerar_qr(rede.texto_qr_wifi(ssid, senha, seguranca), destino)
             self._fundo("qr:" + uuid, gerar)
 
+        # ------------------------------------------------- Fase 3 (ADR 071)
+        @Slot()
+        def lerFirewall(self):
+            if not self._demo:
+                self._fundo("firewall", rede.ler_firewall)
+
+        @Slot(bool, bool)
+        def configurarFirewall(self, ligado, ssh):
+            if self._demo:
+                self._firewall = dict(self._firewall, ligado=ligado, ssh=ssh)
+                self.firewallMudou.emit()
+                return
+            import json
+            import interface
+            interface.chamar_agente(self, "ConfigurarFirewall", [json.dumps({"ligado": bool(ligado), "ssh": bool(ssh)})],
+                                    lambda _r: (self.aviso.emit("Firewall " + ("ligado." if ligado else "desligado.")), self.lerFirewall()),
+                                    lambda m: (self.aviso.emit(m), self.lerFirewall()))
+
+        @Slot(str, str)
+        def definirTipoDeRede(self, uuid, tipo):
+            if self._demo:
+                self._zonas[uuid] = tipo
+                self.mudou.emit()
+                return
+            self._acao(rede.definir_tipo_de_rede, uuid, tipo,
+                       mensagem="Rede marcada como " + ("privada." if tipo == "privada" else "pública."))
+
+        @Slot()
+        def diagnosticar(self):
+            if self._diagnosticando:
+                return
+            self._diagnosticando = True
+            self._diagnostico = []
+            self.diagnosticoMudou.emit()
+            if self._demo:
+                self._diagnostico = [rede._passo("Conexão", True, "Conectado: Conexão cabeada 1 (Cabo de rede)."),
+                                     rede._passo("Endereço", True, "O computador tem o endereço 192.168.0.23."),
+                                     rede._passo("Roteador", True, "O roteador (192.168.0.1) responde."),
+                                     rede._passo("Nomes (DNS)", False, "Os nomes de sites não estão sendo traduzidos (o DNS não responde).",
+                                                 "Em Detalhes › DNS, escolha Cloudflare ou Google e salve.")]
+                self._diagnosticando = False
+                self.diagnosticoMudou.emit()
+                return
+            self._fundo("diagnostico", rede.diagnosticar)
+
+        @Slot(str, str)
+        def conectarCelularBluetooth(self, endereco, nome):
+            self._acao(rede.conectar_celular_bluetooth, endereco, nome, mensagem=f"Usando a internet de {nome or 'celular'} pelo Bluetooth.")
+
+        @Slot("QVariantMap")
+        def novaCelular(self, d):
+            self._acao(rede.nova_celular, d.get("nome", ""), d.get("apn", ""), d.get("usuario", ""), d.get("senha", ""), d.get("pin", ""),
+                       mensagem="Conexão celular criada.")
+
+        @Slot("QVariantMap")
+        def novaAvancada(self, d):
+            tipo, nome, placas = d.get("tipo", ""), d.get("nome", ""), list(d.get("placas", []) or [])
+            if tipo == "vlan":
+                self._acao(rede.nova_vlan, d.get("placa", ""), d.get("numero", 0), nome, mensagem="VLAN criada.")
+            elif tipo == "ponte":
+                self._acao(rede.nova_ponte, nome, placas, mensagem=f"Ponte “{nome}” criada.")
+            elif tipo == "agregacao":
+                self._acao(rede.nova_agregacao, nome, placas, d.get("modo", "active-backup"), mensagem=f"Agregação “{nome}” criada.")
+
+        @Slot(str)
+        def apagarComMembros(self, uuid):
+            self._acao(rede.apagar_com_membros, uuid, mensagem="Conexão apagada.")
+            self.abrirConexao("")
+
         # ---------------------------------------------------- propriedades
         def _resumo(self):
             return rede.resumo(self._dispositivos, self._geral["conectividade"])
@@ -382,6 +482,14 @@ def _criar_classe():
         protocolosOpenconnect = Property("QVariantMap", lambda self: rede.PROTOCOLOS_OPENCONNECT, constant=True)
         metodosEap = Property("QVariantMap", lambda self: rede.METODOS_EAP, constant=True)
         proxyAtual = Property("QVariantMap", lambda self: self._proxy, notify=proxyMudou)
+        firewall = Property("QVariantMap", lambda self: self._firewall, notify=firewallMudou)
+        zonas = Property("QVariantMap", lambda self: self._zonas, notify=mudou)
+        semTipo = Property("QVariantList", lambda self: rede.sem_tipo_de_rede(self._conexoes, self._zonas), notify=mudou)
+        modens = Property("QVariantList", lambda self: self._modens, notify=mudou)
+        diagnostico = Property("QVariantList", lambda self: self._diagnostico, notify=diagnosticoMudou)
+        diagnosticando = Property(bool, lambda self: self._diagnosticando, notify=diagnosticoMudou)
+        operadoras = Property("QVariantMap", lambda self: rede.OPERADORAS, constant=True)
+        modosDeAgregacao = Property("QVariantMap", lambda self: rede.MODOS_DE_AGREGACAO, constant=True)
         pontoDeAcesso = Property(bool, lambda self: any(c["nome"] == rede.NOME_PONTO_DE_ACESSO and c["ativa"] for c in self._conexoes), notify=mudou)
 
         def _preencher_demonstracao(self):
@@ -407,6 +515,9 @@ def _criar_classe():
                            "ipv4": ["192.168.0.23/24"], "gateway4": "192.168.0.1", "dns4": ["192.168.0.1"], "ipv6": [], "gateway6": "", "dns6": []},
                 "wlp2s0": {"mac": "A4:C3:F0:11:22:33", "mtu": "1500", "limitada": False, "velocidade": "", "cabo": True,
                            "ipv4": ["192.168.0.41/24"], "gateway4": "192.168.0.1", "dns4": ["192.168.0.1"], "ipv6": [], "gateway6": "", "dns6": []}}
+            # A Wi-Fi ainda sem tipo de rede (mostra a pergunta "privada ou pública?")
+            self._zonas = {"11111111-1111-1111-1111-111111111111": "privada", "22222222-2222-2222-2222-222222222222": ""}
+            self._firewall = {"instalado": True, "ligado": True, "padrao": "duiaos-publica", "ssh": True}
 
     return _Rede
 

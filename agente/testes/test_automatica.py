@@ -153,6 +153,23 @@ class TesteAgente(unittest.TestCase):
             self.assertFalse(arquivo.exists())
 
 
+    def test_firewall(self):
+        """ConfigurarFirewall (ADR 071): valida o pedido e a autorização antes de mexer no serviço."""
+        with tempfile.TemporaryDirectory() as pasta:
+            agente = ag.Agente(ag.AptDeMentira(), usar_polkit=False, registro=Path(pasta) / "acoes.jsonl")
+            comandos = []
+            rodar = lambda c, tempo=30: (comandos.append(c), (0, "running\n", ""))[1]  # noqa: E731
+            sim = lambda acao: acao == "org.duiaos.agente.configurar_firewall"  # noqa: E731
+            for ruim in ('{"ligado": "sim"}', "[]", "x"):
+                with self.assertRaises(ag.Recusa):
+                    agente.configurar_firewall(ruim, 1000, sim, rodar)
+            with self.assertRaises(ag.Recusa):
+                agente.configurar_firewall('{"ligado": false}', 1000, lambda _a: False, rodar)
+            self.assertEqual(comandos, [])
+            agente.configurar_firewall('{"ligado": true, "ssh": false}', 1000, sim, rodar)
+            self.assertIn(["systemctl", "enable", "--now", "firewalld.service"], comandos)
+
+
 @unittest.skipUnless(TEM_GI, "sem python3-gi")
 class TesteLimpeza(unittest.TestCase):
     """Limpar pacotes baixados e registros antigos (ADR 060), com autorização."""

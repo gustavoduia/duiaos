@@ -252,6 +252,26 @@ def vigiar_portal(objeto_rede, mandar=None):
     return mudou
 
 
+def vigiar_tipo_de_rede(objeto_rede, mandar=None):
+    """Firewall (ADR 071): toda rede nova começa pública (nada entra). Na primeira vez que uma conexão
+    sem tipo escolhido fica ativa, pergunta uma vez por sessão se é de casa/trabalho ou pública."""
+    mandar = mandar or (lambda nome: notificar(f"A rede “{nome}” é de confiança?",
+                                               "Diga se é de casa ou do trabalho (privada) ou de um café, aeroporto ou hotel (pública).",
+                                               origem="Rede e Internet", destino="configuracoes:rede", botao="Escolher"))
+    perguntadas = set()
+
+    def mudou():
+        if not objeto_rede.property("firewall").get("ligado"):
+            return
+        for conexao in objeto_rede.property("semTipo"):
+            if conexao["uuid"] not in perguntadas:
+                perguntadas.add(conexao["uuid"])
+                mandar(conexao["nome"])
+    objeto_rede.mudou.connect(mudou)
+    objeto_rede.firewallMudou.connect(mudou)
+    return mudou
+
+
 ARQUIVO_ESPACO_AVISADO = AVISADOS.parent / "espaco-avisado.json"
 
 
@@ -711,6 +731,8 @@ def main():
     objeto_rede = rede_interface.Rede(demonstracao=DEMONSTRACAO)
     contexto.setContextProperty("rede", objeto_rede)
     vigiar_portal(objeto_rede)
+    vigiar_tipo_de_rede(objeto_rede)
+    objeto_rede.lerFirewall()
     # Agente de senhas (ADR 070): responde quando o NetworkManager pede uma senha (Wi-Fi, rede corporativa, VPN)
     global AGENTE_DE_SENHAS
     if not DEMONSTRACAO:

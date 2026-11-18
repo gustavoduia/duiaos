@@ -264,12 +264,15 @@ Window {
             property bool novaVpn: false              // formulário "Adicionar VPN"
             property bool compartilhando: false       // formulário "Compartilhar a internet"
             property string qr: ""                    // imagem do QR code da Wi-Fi aberta
+            property string formCelular: ""           // "bluetooth" ou "modem"
+            property bool avancada: false             // formulário de VLAN, ponte e agregação
             property bool senhaVisivel: false
             property string senhaWifi: ""
-            Component.onCompleted: { rede.atualizar(); controles.buscarRedes(true) }
+            Component.onCompleted: { rede.atualizar(); rede.lerFirewall(); controles.buscarRedes(true) }
             function nomeDoTipo(t) { return ({ cabo: "Cabo de rede", wifi: "Wi-Fi", celular: "Rede celular", bluetooth: "Celular pelo Bluetooth",
                                               vpn: "VPN", ponte: "Ponte", agregacao: "Agregação de placas", vlan: "VLAN" })[t] || t }
             function iconeDoTipo(t) { return ({ cabo: "rede", wifi: "wifi-3", celular: "celular", bluetooth: "bluetooth", vpn: "vpn" })[t] || "rede" }
+            function modemDe(d) { return rede.modens.length ? rede.modens[0] : null }
             function textoDoEstado(d) {
                 var ip = rede.detalhesDe(d.dispositivo).ipv4 || []
                 var e = ({ conectado: "Conectado", conectando: "Conectando…", desconectado: "Desconectado",
@@ -294,6 +297,23 @@ Window {
                 texto: "Fazer login na rede"; tipo: "primario"; icone: "globo"
                 onClicado: Qt.openUrlExternally("http://connectivity-check.debian.net/")
             }
+            // Firewall (ADR 071): toda rede começa pública; a pessoa diz se é de casa/trabalho
+            Grupo {
+                visible: pr.aberta === "" && rede.firewall.ligado && rede.semTipo.length > 0
+                titulo: "Esta rede é de confiança?"
+                Repeater {
+                    model: rede.semTipo
+                    Linha {
+                        required property var modelData
+                        required property int index
+                        icone: "escudo"; titulo: modelData.nome
+                        descricao: "Privada: casa ou trabalho (o computador aparece para os outros aparelhos). Pública: café, aeroporto, hotel (nada entra)."
+                        ultima: index === rede.semTipo.length - 1
+                        Botao { texto: "Privada"; tipo: "primario"; onClicado: rede.definirTipoDeRede(modelData.uuid, "privada") }
+                        Botao { texto: "Pública"; onClicado: rede.definirTipoDeRede(modelData.uuid, "publica") }
+                    }
+                }
+            }
             Grupo {
                 visible: pr.aberta === ""
                 titulo: "Conexões"
@@ -304,9 +324,13 @@ Window {
                         required property var modelData
                         required property int index
                         readonly property bool varios: rede.dispositivos.filter(function (d) { return d.tipo === modelData.tipo }).length > 1
-                        icone: pr.iconeDoTipo(modelData.tipo)
-                        titulo: pr.nomeDoTipo(modelData.tipo) + (varios ? " (" + modelData.dispositivo + ")" : "")
-                        descricao: modelData.tipo === "wifi" && !controles.wifiLigado ? "Desligado" : pr.textoDoEstado(modelData)
+                        icone: modelData.celularUsb ? "celular" : pr.iconeDoTipo(modelData.tipo)
+                        titulo: modelData.celularUsb ? "Celular pelo cabo USB (" + modelData.celularUsb + ")"
+                                                     : pr.nomeDoTipo(modelData.tipo) + (varios ? " (" + modelData.dispositivo + ")" : "")
+                        descricao: modelData.tipo === "wifi" && !controles.wifiLigado ? "Desligado"
+                                   : pr.textoDoEstado(modelData) + (modelData.tipo === "celular" && pr.modemDe(modelData)
+                                        ? " · " + [pr.modemDe(modelData).operadora, pr.modemDe(modelData).tecnologia, pr.modemDe(modelData).sinal + "% de sinal"].filter(function (x) { return x }).join(" · ")
+                                        : "")
                         ultima: index === rede.dispositivos.filter(function (d) { return d.tipo !== "vpn" }).length - 1
                         Botao { visible: modelData.uuid !== "" && modelData.estado === "conectado"; texto: "Detalhes"; onClicado: pr.abrir(modelData.uuid) }
                         Interruptor {
@@ -711,6 +735,188 @@ Window {
                         onClicado: rede.gravarProxy({ modo: "desligado", excecoes: gp.p.excecoes || [] }) }
             }
 
+            // ==================================== Celular (USB, Bluetooth, modem) — ADR 071
+            Grupo {
+                visible: pr.aberta === ""
+                titulo: "Internet do celular"
+                Linha {
+                    icone: "celular"; titulo: "Pelo cabo USB"
+                    descricao: "No celular, ligue Ancoragem USB (Android) ou Acesso Pessoal (iPhone) e ele aparece sozinho em Conexões."
+                }
+                Linha {
+                    icone: "bluetooth"; titulo: "Pelo Bluetooth"
+                    descricao: controles.bluetoothPareados.length ? "Ligue Ancoragem Bluetooth no celular e escolha qual é." : "Primeiro pareie o celular em Configurações › Bluetooth."
+                    ultima: pr.formCelular !== "bluetooth" && !rede.dispositivos.some(function (d) { return d.tipo === "celular" })
+                    Botao { visible: controles.bluetoothPareados.length > 0; texto: "Escolher celular…"; onClicado: pr.formCelular = pr.formCelular === "bluetooth" ? "" : "bluetooth" }
+                }
+                Repeater {
+                    model: pr.formCelular === "bluetooth" ? controles.bluetoothPareados : []
+                    Linha {
+                        required property var modelData
+                        icone: "celular"; titulo: modelData.nome; descricao: modelData.endereco
+                        Botao { texto: "Usar a internet"; tipo: "primario"; onClicado: { rede.conectarCelularBluetooth(modelData.endereco, modelData.nome); pr.formCelular = "" } }
+                    }
+                }
+                Linha {
+                    visible: rede.dispositivos.some(function (d) { return d.tipo === "celular" })
+                    icone: "celular"; titulo: "Modem 4G/5G (chip)"
+                    descricao: rede.modens.length && rede.modens[0].bloqueado ? "O chip pede o PIN" : "Configure o APN da operadora para conectar"
+                    ultima: pr.formCelular !== "modem"
+                    Botao { texto: "Configurar…"; onClicado: pr.formCelular = pr.formCelular === "modem" ? "" : "modem" }
+                }
+                Column {
+                    visible: pr.formCelular === "modem"
+                    width: parent.width; padding: 14; spacing: 10
+                    Row {
+                        spacing: 12
+                        Column {
+                            spacing: 4
+                            Text { text: "Operadora"; color: Tema.textoSecundario; font { family: Tema.fonteTexto; pixelSize: 12 } }
+                            Seletor { id: operadora; width: 170; valor: ""; vazio: "Outra"
+                                      opcoes: Object.keys(rede.operadoras).map(function (k) { return { valor: k, rotulo: k } })
+                                      onEscolhido: (v) => { valor = v; var o = rede.operadoras[v]; apn.texto = o.apn; usuarioApn.texto = o.usuario; senhaApn.texto = o.senha } }
+                        }
+                        CampoRede { id: apn; rotulo: "APN"; dica: "zap.vivo.com.br"; width: 200 }
+                        CampoRede { id: pin; rotulo: "PIN do chip (se tiver)"; senha: true; width: 140 }
+                    }
+                    Row {
+                        spacing: 12
+                        CampoRede { id: usuarioApn; rotulo: "Usuário (se a operadora pedir)"; width: 200 }
+                        CampoRede { id: senhaApn; rotulo: "Senha"; senha: true; width: 160 }
+                    }
+                    Row {
+                        spacing: 8
+                        Botao { texto: "Conectar"; tipo: "primario"; ativo: apn.texto !== ""
+                                onClicado: { rede.novaCelular({ nome: operadora.valor || "Rede celular", apn: apn.texto, usuario: usuarioApn.texto,
+                                                                senha: senhaApn.texto, pin: pin.texto }); pr.formCelular = ""; pin.texto = "" } }
+                        Botao { texto: "Cancelar"; onClicado: pr.formCelular = "" }
+                    }
+                }
+            }
+
+            // ============================================ Firewall — ADR 071
+            Grupo {
+                visible: pr.aberta === "" && rede.firewall.instalado
+                titulo: "Firewall"
+                Linha {
+                    icone: "escudo"; titulo: "Firewall"
+                    descricao: rede.firewall.ligado ? "Ligado — bloqueia conexões vindas de fora; nas redes públicas, nada entra" : "Desligado — qualquer aparelho da rede pode tentar se conectar ao computador"
+                    Interruptor { ligado: rede.firewall.ligado; onAlternado: (v) => rede.configurarFirewall(v, rede.firewall.ssh) }
+                }
+                Linha {
+                    visible: rede.firewall.ligado
+                    icone: "terminal"; titulo: "Acesso remoto (SSH) nas redes privadas"
+                    descricao: "Permite entrar neste computador pelo terminal de outro, na mesma rede de casa ou do trabalho"
+                    ultima: true
+                    Interruptor { ligado: rede.firewall.ssh; onAlternado: (v) => rede.configurarFirewall(true, v) }
+                }
+            }
+
+            // ============================================ Diagnóstico — ADR 071
+            Grupo {
+                visible: pr.aberta === ""
+                titulo: "Problemas com a internet?"
+                Linha {
+                    icone: "info"; titulo: "Diagnosticar a rede"
+                    descricao: rede.diagnosticando ? "Conferindo…" : "Confere a conexão passo a passo e diz onde está o problema"
+                    ultima: rede.diagnostico.length === 0
+                    Botao { texto: rede.diagnostico.length ? "De novo" : "Diagnosticar"; ativo: !rede.diagnosticando; onClicado: rede.diagnosticar() }
+                }
+                Repeater {
+                    model: rede.diagnostico
+                    Linha {
+                        required property var modelData
+                        required property int index
+                        icone: modelData.ok ? "check" : "rede-alerta"
+                        titulo: modelData.nome + (modelData.ok ? "" : " — aqui está o problema")
+                        descricao: modelData.explicacao + (modelData.dica ? " " + modelData.dica : "")
+                        ultima: index === rede.diagnostico.length - 1
+                    }
+                }
+            }
+
+            // ================================ Avançado: VLAN, ponte, agregação — ADR 071
+            Grupo {
+                visible: pr.aberta === "" && rede.conexoes.some(function (c) { return ["ponte", "agregacao", "vlan"].indexOf(c.tipo) >= 0 })
+                titulo: "Conexões avançadas"
+                Repeater {
+                    model: rede.conexoes.filter(function (c) { return ["ponte", "agregacao", "vlan"].indexOf(c.tipo) >= 0 })
+                    Linha {
+                        required property var modelData
+                        required property int index
+                        icone: "rede"; titulo: modelData.nome
+                        descricao: pr.nomeDoTipo(modelData.tipo) + (modelData.ativa ? " · em uso" : "")
+                        ultima: index === rede.conexoes.filter(function (c) { return ["ponte", "agregacao", "vlan"].indexOf(c.tipo) >= 0 }).length - 1
+                        Botao { texto: "Detalhes"; onClicado: pr.abrir(modelData.uuid) }
+                    }
+                }
+            }
+            Botao { visible: pr.aberta === "" && rede.temCabo; texto: "VLAN, ponte ou agregação…"; icone: "mais"; onClicado: pr.avancada = !pr.avancada }
+            Grupo {
+                visible: pr.aberta === "" && pr.avancada
+                titulo: "Nova conexão avançada"
+                Column {
+                    width: parent.width; padding: 14; spacing: 10
+                    readonly property var placas: rede.dispositivos.filter(function (d) { return d.tipo === "cabo" }).map(function (d) { return d.dispositivo })
+                    property var escolhidas: []
+                    id: fa
+                    Segmentos { id: tipoAvancada; valor: "vlan"; onEscolhido: (v) => valor = v
+                                opcoes: [{ valor: "vlan", rotulo: "VLAN" }, { valor: "ponte", rotulo: "Ponte" }, { valor: "agregacao", rotulo: "Agregação" }] }
+                    Rotulo { width: parent.width - 28; secundario: true
+                             text: tipoAvancada.valor === "vlan" ? "Rede virtual com etiqueta (802.1Q) sobre uma placa, para redes de empresa separadas por VLAN."
+                                   : tipoAvancada.valor === "ponte" ? "Junta placas numa só rede, como um switch. Útil para máquinas virtuais aparecerem na rede da casa."
+                                   : "Usa duas ou mais placas como uma: se uma cair, a outra segura (ou somam velocidade, com o switch certo)." }
+                    CampoRede { id: nomeAvancada; rotulo: "Nome"; dica: tipoAvancada.valor === "vlan" ? "Ex.: VLAN da empresa" : "Ex.: Ponte das VMs"; width: 220 }
+                    Row {
+                        visible: tipoAvancada.valor === "vlan"
+                        spacing: 12
+                        Column {
+                            spacing: 4
+                            Text { text: "Placa"; color: Tema.textoSecundario; font { family: Tema.fonteTexto; pixelSize: 12 } }
+                            Seletor { id: placaVlan; width: 170; valor: fa.placas[0] || ""; onEscolhido: (v) => valor = v
+                                      opcoes: fa.placas.map(function (p) { return { valor: p, rotulo: p } }) }
+                        }
+                        CampoRede { id: numeroVlan; rotulo: "Número da VLAN (1 a 4094)"; dica: "10"; width: 180 }
+                    }
+                    Column {
+                        visible: tipoAvancada.valor !== "vlan"
+                        spacing: 6
+                        Text { text: "Placas"; color: Tema.textoSecundario; font { family: Tema.fonteTexto; pixelSize: 12 } }
+                        Repeater {
+                            model: fa.placas
+                            Row {
+                                required property string modelData
+                                spacing: 8
+                                Interruptor { ligado: fa.escolhidas.indexOf(modelData) >= 0
+                                              onAlternado: (v) => { var l = fa.escolhidas.filter(function (x) { return x !== modelData }); if (v) l.push(modelData); fa.escolhidas = l } }
+                                Rotulo { anchors.verticalCenter: parent.verticalCenter; text: modelData }
+                            }
+                        }
+                        Rotulo { secundario: true; text: "A placa escolhida deixa de ter conexão própria e passa a fazer parte desta." }
+                    }
+                    Column {
+                        visible: tipoAvancada.valor === "agregacao"
+                        spacing: 4
+                        Text { text: "Modo"; color: Tema.textoSecundario; font { family: Tema.fonteTexto; pixelSize: 12 } }
+                        Seletor { id: modoAgregacao; width: 300; valor: "active-backup"; onEscolhido: (v) => valor = v
+                                  opcoes: Object.keys(rede.modosDeAgregacao).map(function (k) { return { valor: k, rotulo: rede.modosDeAgregacao[k] } }) }
+                    }
+                    Row {
+                        spacing: 8
+                        Botao {
+                            texto: "Criar"; tipo: "primario"
+                            ativo: tipoAvancada.valor === "vlan" ? numeroVlan.texto !== "" : (nomeAvancada.texto !== "" && fa.escolhidas.length > 0)
+                            onClicado: {
+                                rede.novaAvancada({ tipo: tipoAvancada.valor, nome: nomeAvancada.texto, placa: placaVlan.valor, numero: parseInt(numeroVlan.texto) || 0,
+                                                    placas: fa.escolhidas, modo: modoAgregacao.valor })
+                                pr.avancada = false; fa.escolhidas = []
+                            }
+                        }
+                        Botao { texto: "Cancelar"; onClicado: pr.avancada = false }
+                    }
+                }
+            }
+
             // ======================================================= detalhes
             Loader {
                 id: detalhes
@@ -766,6 +972,12 @@ Window {
                                 Interruptor { id: automatico; ligado: dc.c.automatico === true; onAlternado: (v) => ligado = v } }
                         Linha { titulo: "Preferir esta rede"; descricao: "Quando houver mais de uma disponível, esta vem primeiro"
                                 Interruptor { id: preferir; ligado: (dc.c.prioridade || 0) > 0; onAlternado: (v) => ligado = v } }
+                        Linha {
+                            visible: ["cabo", "wifi", "celular", "bluetooth"].indexOf(dc.c.tipo) >= 0
+                            titulo: "Tipo de rede"; descricao: "Privada: casa ou trabalho. Pública: café, aeroporto (nada entra no computador)"
+                            Segmentos { valor: rede.zonas[dc.c.uuid] || dc.c.zona || "publica"; onEscolhido: (v) => { valor = v; rede.definirTipoDeRede(dc.c.uuid, v) }
+                                        opcoes: [{ valor: "privada", rotulo: "Privada" }, { valor: "publica", rotulo: "Pública" }] }
+                        }
                         Linha {
                             titulo: "Rede limitada"; descricao: "Numa rede limitada (celular, plano com franquia), o DuiaOS não baixa atualizações sozinho"
                             Seletor { id: limitada; width: 170; valor: dc.c.limitada || "auto"
@@ -893,7 +1105,7 @@ Window {
                         Botao { texto: "Cancelar"; onClicado: pr.fechar() }
                         Item { width: 24; height: 1 }
                         Botao { texto: dc.c.tipo === "wifi" ? "Esquecer esta rede" : "Apagar esta conexão"; tipo: "perigo"
-                                onClicado: { rede.esquecer(dc.c.uuid); pr.fechar() } }
+                                onClicado: { if (dc.c.tipo === "ponte" || dc.c.tipo === "agregacao") rede.apagarComMembros(dc.c.uuid); else rede.esquecer(dc.c.uuid); pr.fechar() } }
                     }
                 }
             }

@@ -10,4 +10,10 @@ if [ "$1" = "configure" ] && [ -d /run/systemd/system ]; then
   # sistema pela Central de Atualizações) e parar o serviço no meio derrubava a atualização. A versão
   # antiga percebe que foi trocada e sai sozinha quando termina; o D-Bus abre a nova no próximo pedido.
 fi
+if [ "$1" = "configure" ]; then
+  # Firewall (ADR 071), uma vez: as conexões que já existem ficam privadas (o SSH em uso continua) e só
+  # depois a zona padrão vira a pública; na construção da ISO (chroot, firewalld parado) grava só a zona
+  # padrão. Falhar aqui não pode quebrar a atualização.
+  python3 /usr/share/duiaos/agente/firewall.py preparar || true
+fi
 exit 0

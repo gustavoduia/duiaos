@@ -76,6 +76,8 @@ network-manager-openvpn
 network-manager-openconnect
 qrencode
 python3-cryptography
+# Rede e Internet, Fase 3 (ADR 071): modem 4G/5G (o firewalld vem como dependência do duiaos-agente)
+modemmanager
 # Descompactar .7z e .rar (o .zip e o .tar.* usam o próprio Python; ADR 067)
 7zip
 

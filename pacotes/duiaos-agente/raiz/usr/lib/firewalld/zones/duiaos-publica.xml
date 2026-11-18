@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- DuiaOS — rede pública (café, aeroporto, hotel): não aceita nenhuma conexão de fora (ADR 071).
+     É a zona padrão: toda rede começa pública até a pessoa dizer que é privada. -->
+<zone>
+  <short>Rede pública (DuiaOS)</short>
+  <description>Café, aeroporto, hotel: o computador não aceita conexões vindas de outros aparelhos.</description>
+  <service name="dhcpv6-client"/>
+</zone>

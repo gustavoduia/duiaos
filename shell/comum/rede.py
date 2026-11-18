@@ -30,6 +30,11 @@ TIPOS = {
     "bt": "bluetooth", "bluetooth": "bluetooth",
     "bridge": "ponte", "bond": "agregacao", "vlan": "vlan",
 }
+# Firewall (ADR 071): o tipo de rede escolhido pela pessoa → zona do firewalld (arquivos do duiaos-agente)
+ZONAS = {"privada": "duiaos-privada", "publica": "duiaos-publica", "": ""}
+TIPO_DA_ZONA = {"duiaos-privada": "privada", "duiaos-publica": "publica", "home": "privada", "work": "privada",
+                "trusted": "privada", "internal": "privada", "public": "publica", "external": "publica", "drop": "publica",
+                "block": "publica", "dmz": "publica"}
 IGNORAR = {"loopback", "wifi-p2p", "tun", "ifb", "dummy", "veth-peer"}
 ESTADOS = {"connected": "conectado", "connecting": "conectando", "disconnected": "desconectado",
            "unavailable": "indisponivel", "unmanaged": "fora", "deactivating": "desconectando", "disconnecting": "desconectando"}
@@ -196,7 +201,7 @@ def interpretar_conexao(texto):
         "automatico": c.get("connection.autoconnect", "yes") == "yes", "prioridade": prioridade,
         "limitada": {"yes": "sim", "no": "nao"}.get(c.get("connection.metered", "unknown"), "auto"),
         "todos": c.get("connection.permissions", "") == "",
-        "zona": c.get("connection.zone", ""),
+        "zona": TIPO_DA_ZONA.get(c.get("connection.zone", ""), ""),
         "ipv4": {"metodo": _metodo(c.get("ipv4.method", "auto")), "enderecos": _enderecos(c.get("ipv4.addresses", "")),
                  "gateway": c.get("ipv4.gateway", ""), "dns": _lista(c.get("ipv4.dns", "")),
                  "soDnsManual": c.get("ipv4.ignore-auto-dns", "no") == "yes", "rotas": c.get("ipv4.routes", "")},
@@ -324,6 +329,8 @@ def argumentos(config):
         args += [f"{secao}.cloned-mac-address", config.get("mac") or ""]
     if secao and "mtu" in config:
         args += [f"{secao}.mtu", str(config.get("mtu") or "auto")]
+    if "zona" in config:
+        args += ["connection.zone", ZONAS.get(config["zona"], "")]
     if config.get("tipo") == "wifi" and "oculta" in config:
         args += ["802-11-wireless.hidden", "yes" if config["oculta"] else "no"]
     return args
@@ -750,3 +757,295 @@ def gerar_qr(texto, destino, rodar=None):
     if getattr(r, "returncode", 1) != 0:
         raise ErroDeRede("Não foi possível gerar o código.")
     return str(destino)
+
+
+# ================================================================== Fase 3 (ADR 071)
+
+# ------------------------------------------------------------------ firewall e tipo de rede
+
+FIREWALL_CMD = ["firewall-cmd"]
+
+
+def interpretar_firewall(estado, padrao, ssh):
+    """Saídas do firewall-cmd (--state, --get-default-zone, --query-service=ssh) → o que a página mostra."""
+    return {"instalado": estado != "ausente", "ligado": estado.strip() == "running",
+            "padrao": padrao.strip(), "ssh": ssh.strip() == "yes"}
+
+
+def ler_firewall(rodar=None):
+    """Estado do firewall lido como a pessoa (o firewalld libera a leitura sem senha)."""
+    rodar = rodar or _rodar
+
+    def cmd(*args):
+        codigo, saida, _ = rodar([*FIREWALL_CMD, *args], tempo=5)
+        return codigo, saida
+    codigo, estado = cmd("--state")
+    if codigo == 127:
+        return interpretar_firewall("ausente", "", "")
+    if estado.strip() != "running":
+        return interpretar_firewall("not running", "", "")
+    _, padrao = cmd("--get-default-zone")
+    _, ssh = cmd("--permanent", f"--zone={ZONAS['privada']}", "--query-service=ssh")
+    return interpretar_firewall(estado, padrao, ssh)
+
+
+def definir_tipo_de_rede(uuid, tipo, rodar=None):
+    """Privada (casa, trabalho: o computador aparece para os outros e aceita o acesso remoto, se ligado) ou
+    pública (café, aeroporto: não aceita nenhuma conexão de fora). Vale na hora, sem derrubar a conexão."""
+    if tipo not in ("privada", "publica"):
+        raise ErroDeRede("Escolha rede privada ou pública.")
+    codigo, _, erro = nmcli("connection", "modify", uuid, "connection.zone", ZONAS[tipo], rodar=rodar)
+    if codigo != 0:
+        raise ErroDeRede(_erro(erro, "Não foi possível mudar o tipo de rede."))
+    dispositivo = next((c["dispositivo"] for c in ler_conexoes(rodar=rodar) if c["uuid"] == uuid and c["ativa"]), "")
+    if dispositivo:
+        codigo, _, _ = nmcli("device", "reapply", dispositivo, rodar=rodar, tempo=20)
+        if codigo != 0:                        # algumas placas não aceitam reaplicar: reativa
+            ativar(uuid, rodar=rodar)
+
+
+def sem_tipo_de_rede(conexoes, zonas):
+    """Conexões ativas de cabo, Wi-Fi ou celular sem tipo de rede escolhido (para a pergunta da Barra)."""
+    return [c for c in conexoes if c["ativa"] and c["tipo"] in ("cabo", "wifi", "celular", "bluetooth")
+            and not zonas.get(c["uuid"])]
+
+
+def ler_zonas(conexoes, rodar=None):
+    """{uuid: tipo de rede} das conexões ativas."""
+    zonas = {}
+    for c in conexoes:
+        if c["ativa"]:
+            codigo, saida, _ = nmcli("-t", "-g", "connection.zone", "connection", "show", c["uuid"], rodar=rodar)
+            zonas[c["uuid"]] = TIPO_DA_ZONA.get(saida.strip(), "") if codigo == 0 else ""
+    return zonas
+
+
+# ------------------------------------------------------------------ celular (USB, Bluetooth, modem)
+
+DRIVERS_DE_CELULAR = {"rndis_host": "Android", "cdc_ncm": "Android", "cdc_ether": "Celular", "ipheth": "iPhone"}
+
+
+def celular_por_usb(dispositivo, pasta="/sys/class/net"):
+    """'Android'/'iPhone'/'Celular' se a placa é um celular compartilhando a internet pelo cabo USB, senão ''."""
+    import os
+    try:
+        driver = os.path.basename(os.readlink(f"{pasta}/{dispositivo}/device/driver"))
+    except OSError:
+        return ""
+    return DRIVERS_DE_CELULAR.get(driver, "")
+
+
+def conectar_celular_bluetooth(endereco, nome="", rodar=None):
+    """Internet do celular pelo Bluetooth (PAN: o 'Ponto de acesso Bluetooth' do Android/iPhone). O celular
+    precisa estar pareado (Configurações › Bluetooth). Devolve o UUID."""
+    if not re.match(r"^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$", endereco or ""):
+        raise ErroDeRede("Endereço Bluetooth inválido.")
+    codigo, saida, erro = nmcli("connection", "add", "type", "bluetooth", "con-name", (nome or "Celular") + " (Bluetooth)",
+                                "bluetooth.bdaddr", endereco.upper(), "bluetooth.type", "panu", rodar=rodar)
+    if codigo != 0:
+        raise ErroDeRede(_erro(erro, "Não foi possível criar a conexão pelo Bluetooth."))
+    m = re.search(r"\(([0-9a-f-]{36})\)", saida)
+    uuid = m.group(1) if m else ""
+    if uuid:
+        ativar(uuid, rodar=rodar)
+    return uuid
+
+
+# APN das operadoras do Brasil (usuário e senha quando a operadora pede)
+OPERADORAS = {
+    "Vivo": {"apn": "zap.vivo.com.br", "usuario": "vivo", "senha": "vivo"},
+    "Claro": {"apn": "claro.com.br", "usuario": "claro", "senha": "claro"},
+    "TIM": {"apn": "timbrasil.br", "usuario": "tim", "senha": "tim"},
+    "Oi": {"apn": "gprs.oi.com.br", "usuario": "oi", "senha": "oi"},
+}
+
+
+def nova_celular(nome, apn, usuario="", senha="", pin="", rodar=None):
+    """Modem 4G/5G (pelo ModemManager): cria a conexão com o APN da operadora e conecta. Devolve o UUID."""
+    apn = (apn or "").strip()
+    if not apn or not re.match(r"^[A-Za-z0-9.\-]{1,100}$", apn):
+        raise ErroDeRede("Informe o APN da operadora (ex.: zap.vivo.com.br).")
+    if pin and not re.match(r"^\d{4,8}$", pin):
+        raise ErroDeRede("O PIN tem de 4 a 8 números.")
+    args = ["connection", "add", "type", "gsm", "ifname", "*", "con-name", (nome or "Rede celular").strip(), "gsm.apn", apn]
+    if usuario:
+        args += ["gsm.username", usuario]
+    if senha:
+        args += ["gsm.password", senha]
+    if pin:
+        args += ["gsm.pin", pin]
+    codigo, saida, erro = nmcli(*args, rodar=rodar)
+    if codigo != 0:
+        raise ErroDeRede(_erro(erro, "Não foi possível criar a conexão celular."))
+    m = re.search(r"\(([0-9a-f-]{36})\)", saida)
+    return m.group(1) if m else ""
+
+
+def interpretar_modem(texto):
+    """'mmcli -m N -K' → {operadora, sinal, tecnologia, estado} (só o que a página mostra)."""
+    c = {}
+    for linha in texto.splitlines():
+        if ":" in linha:
+            chave, valor = linha.split(":", 1)
+            c[chave.strip()] = valor.strip()
+    try:
+        sinal = int(c.get("modem.generic.signal-quality.value", "0"))
+    except ValueError:
+        sinal = 0
+    tecnologia = c.get("modem.generic.access-technologies.value[1]", "") or c.get("modem.generic.access-technologies.value", "")
+    return {"operadora": c.get("modem.3gpp.operator-name", "--").replace("--", ""), "sinal": sinal,
+            "tecnologia": {"lte": "4G", "5gnr": "5G", "umts": "3G", "hsdpa": "3G", "hspa": "3G", "edge": "2G", "gsm": "2G"}.get(tecnologia, tecnologia.upper()),
+            "estado": c.get("modem.generic.state", ""), "bloqueado": c.get("modem.generic.unlock-required", "--") not in ("--", "sim-pin2", "")}
+
+
+def ler_modens(rodar=None):
+    """Modens do ModemManager (mmcli), com operadora e sinal. Sem ModemManager, lista vazia."""
+    rodar = rodar or _rodar
+    codigo, saida, _ = rodar(["mmcli", "-L", "-K"], tempo=5)
+    if codigo != 0:
+        return []
+    modens = []
+    for caminho in re.findall(r"/org/freedesktop/ModemManager1/Modem/(\d+)", saida):
+        c2, info, _ = rodar(["mmcli", "-m", caminho, "-K"], tempo=5)
+        if c2 == 0:
+            modens.append({"numero": caminho, **interpretar_modem(info)})
+    return modens
+
+
+# ------------------------------------------------------------------ avançado: VLAN, ponte, agregação
+
+MODOS_DE_AGREGACAO = {"active-backup": "Reserva (uma placa por vez)", "802.3ad": "LACP (802.3ad, precisa do switch)",
+                      "balance-rr": "Alternar (todas juntas)", "balance-alb": "Equilibrar (sem configurar o switch)"}
+
+
+def _nome_de_placa(nome, padrao):
+    limpo = re.sub(r"[^a-z0-9]", "", (nome or "").lower())[:12]
+    return limpo or padrao
+
+
+def nova_vlan(placa, numero, nome="", rodar=None):
+    """VLAN (rede virtual com etiqueta 802.1Q) sobre uma placa. Devolve o UUID."""
+    try:
+        numero = int(numero)
+    except (TypeError, ValueError):
+        numero = 0
+    if not 1 <= numero <= 4094:
+        raise ErroDeRede("O número da VLAN vai de 1 a 4094.")
+    if not placa:
+        raise ErroDeRede("Escolha a placa da VLAN.")
+    interface = f"{placa[:10]}.{numero}"[:15]
+    codigo, saida, erro = nmcli("connection", "add", "type", "vlan", "con-name", nome or f"VLAN {numero}", "ifname", interface,
+                                "vlan.parent", placa, "vlan.id", str(numero), rodar=rodar)
+    if codigo != 0:
+        raise ErroDeRede(_erro(erro, "Não foi possível criar a VLAN."))
+    m = re.search(r"\(([0-9a-f-]{36})\)", saida)
+    return m.group(1) if m else ""
+
+
+def _nova_com_membros(tipo, nome, placas, extras, rodar):
+    if not placas:
+        raise ErroDeRede("Escolha ao menos uma placa.")
+    interface = _nome_de_placa(nome, "br0" if tipo == "bridge" else "bond0")
+    codigo, saida, erro = nmcli("connection", "add", "type", tipo, "con-name", nome, "ifname", interface, *extras, rodar=rodar)
+    if codigo != 0:
+        raise ErroDeRede(_erro(erro, "Não foi possível criar a conexão."))
+    m = re.search(r"\(([0-9a-f-]{36})\)", saida)
+    uuid = m.group(1) if m else ""
+    porta = "bridge" if tipo == "bridge" else "bond"
+    for placa in placas:
+        codigo, _, erro = nmcli("connection", "add", "type", "ethernet", "con-name", f"{nome} · {placa}", "ifname", placa,
+                                "connection.port-type", porta, "connection.controller", interface, rodar=rodar)
+        if codigo != 0:
+            raise ErroDeRede(_erro(erro, f"Não foi possível pôr {placa} em {nome}."))
+    return uuid
+
+
+def nova_ponte(nome, placas, rodar=None):
+    """Ponte (bridge): junta placas numa só rede, como um switch (máquinas virtuais na rede da casa). Devolve o UUID."""
+    if not (nome or "").strip():
+        raise ErroDeRede("Dê um nome à ponte.")
+    return _nova_com_membros("bridge", nome.strip(), list(placas), ["bridge.stp", "no"], rodar)
+
+
+def nova_agregacao(nome, placas, modo="active-backup", rodar=None):
+    """Agregação (bond): duas ou mais placas como uma (reserva ou mais velocidade). Devolve o UUID."""
+    if not (nome or "").strip():
+        raise ErroDeRede("Dê um nome à agregação.")
+    if modo not in MODOS_DE_AGREGACAO:
+        raise ErroDeRede("Modo de agregação desconhecido.")
+    return _nova_com_membros("bond", nome.strip(), list(placas), ["bond.options", f"mode={modo},miimon=100"], rodar)
+
+
+def apagar_com_membros(uuid, rodar=None):
+    """Apaga uma ponte ou agregação e as placas que estavam nela (que voltam ao normal)."""
+    codigo, saida, _ = nmcli("-t", "-g", "connection.interface-name", "connection", "show", uuid, rodar=rodar)
+    interface = saida.strip() if codigo == 0 else ""
+    if interface:
+        codigo, lista, _ = nmcli("-t", "-f", "UUID", "connection", "show", rodar=rodar)
+        for outro in lista.split():
+            c2, controlador, _ = nmcli("-t", "-g", "connection.controller", "connection", "show", outro, rodar=rodar)
+            if c2 == 0 and controlador.strip() == interface:
+                nmcli("connection", "delete", outro, rodar=rodar)
+    esquecer(uuid, rodar=rodar)
+
+
+# ------------------------------------------------------------------ diagnóstico
+
+def _passo(nome, ok, explicacao, dica=""):
+    return {"nome": nome, "ok": bool(ok), "explicacao": explicacao, "dica": "" if ok else dica}
+
+
+def diagnosticar(rodar=None, resolver=None, pingar=None):
+    """Confere a rede do começo ao fim e explica em português onde parou: placa, endereço, roteador, nomes
+    (DNS) e internet. Para no primeiro passo que falhar (os seguintes dependem dele)."""
+    import socket
+    rodar = rodar or _rodar
+    resolver = resolver or (lambda nome: socket.getaddrinfo(nome, 443, proto=socket.IPPROTO_TCP))
+    pingar = pingar or (lambda ip: rodar(["ping", "-c", "1", "-W", "2", ip], tempo=5)[0] == 0)
+    passos = []
+    dispositivos = ler_dispositivos(rodar=rodar)
+    conectados = [d for d in dispositivos if d["estado"] == "conectado" and d["tipo"] != "vpn"]
+    if not dispositivos:
+        passos.append(_passo("Placa de rede", False, "Nenhuma placa de rede foi encontrada.",
+                             "Numa máquina virtual, confira se ela tem uma placa de rede; num computador, se o Wi-Fi não está desligado por uma tecla."))
+        return passos
+    if not conectados:
+        cabo_solto = any(d["tipo"] == "cabo" and d["estado"] == "indisponivel" for d in dispositivos)
+        passos.append(_passo("Conexão", False, "O computador não está conectado a nenhuma rede.",
+                             "Confira se o cabo está bem encaixado nas duas pontas." if cabo_solto else "Escolha uma Wi-Fi ou ligue o cabo de rede."))
+        return passos
+    principal = conectados[0]
+    passos.append(_passo("Conexão", True, f"Conectado: {principal['conexao']} ({NOMES_TIPO.get(principal['tipo'], principal['tipo'])})."))
+    detalhes = ler_detalhes(principal["dispositivo"], rodar=rodar)
+    ipv4 = [e for e in detalhes.get("ipv4", []) if not e.startswith("169.254.")]
+    if not ipv4 and not detalhes.get("ipv6"):
+        passos.append(_passo("Endereço", False, "O roteador não deu um endereço (IP) ao computador.",
+                             "Desligue e ligue o roteador, ou ponha um endereço fixo em Detalhes › Endereço."))
+        return passos
+    passos.append(_passo("Endereço", True, "O computador tem o endereço " + (ipv4[0].split("/")[0] if ipv4 else detalhes["ipv6"][0].split("/")[0]) + "."))
+    gateway = detalhes.get("gateway4") or detalhes.get("gateway6") or ""
+    if not gateway:
+        passos.append(_passo("Roteador", False, "A rede não informou o roteador (gateway), então não há caminho para a internet.",
+                             "Se o endereço é fixo, preencha o gateway em Detalhes › Endereço."))
+        return passos
+    if pingar(gateway):
+        passos.append(_passo("Roteador", True, f"O roteador ({gateway}) responde."))
+    else:
+        passos.append(_passo("Roteador", True, f"O roteador ({gateway}) não respondeu ao teste, mas muitos roteadores ignoram esse teste; seguindo."))
+    try:
+        resolver("deb.debian.org")
+        passos.append(_passo("Nomes (DNS)", True, "Os nomes de sites são traduzidos em endereços."))
+    except OSError:
+        passos.append(_passo("Nomes (DNS)", False, "Os nomes de sites não estão sendo traduzidos (o DNS não responde).",
+                             "Em Detalhes › DNS, escolha Cloudflare ou Google e salve."))
+        return passos
+    conectividade = verificar_conectividade(rodar=rodar)
+    if conectividade == "full":
+        passos.append(_passo("Internet", True, "A internet está funcionando."))
+    elif conectividade == "portal":
+        passos.append(_passo("Internet", False, "Esta rede pede login numa página antes de liberar a internet.",
+                             "Use o botão Fazer login na rede, no topo da página."))
+    else:
+        passos.append(_passo("Internet", False, "A rede local funciona, mas a internet não chega.",
+                             "O problema deve estar no roteador ou na operadora: reinicie o roteador e, se continuar, ligue para a operadora."))
+    return passos

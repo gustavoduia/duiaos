@@ -38,6 +38,7 @@ linha nova ou atualizada no mesmo envio.
 | Recurso | Onde | Conferência | Desde | Situação |
 | --- | --- | --- | --- | --- |
 | Consultas do computador (uso, programas mais pesados com consumo real, rede, atualizações, pastas) | `wise/ferramentas/sistema.py` | `wise/ferramentas/sistema.py::def programas_mais_pesados` | W1/W12 | main |
+| Diagnóstico da rede e ligar/desligar VPN pelo módulo de rede das Configurações | `wise/ferramentas/conexoes.py` | `wise/ferramentas/conexoes.py::def diagnosticar_rede`, `wise/ferramentas/conexoes.py::def ligar_vpn`, `testes/test_desempenho_e_aplicativos.py::class TestRede` | ADR 071 | main |
 | Ações N2 com cartão de aprovação (preparar → aprovar → executar) | `wise/orquestrador.py`, `wise/interface/Wise.qml` | `wise/orquestrador.py::def _com_aprovacao`, `wise/interface/Wise.qml::component CartaoAprovacao` | W16 | main |
 | Instalar, remover e atualizar pelo duiaos-agente | `wise/ferramentas/aplicativos.py`, `wise/agente_do_sistema.py` | `wise/agente_do_sistema.py::org.duiaos.Agente1` | W2 | main |
 | Previsão do tempo (MET Norway) e cidade escolhida | `wise/ferramentas/clima.py` | `wise/ferramentas/clima.py::api.met.no`, `wise/ferramentas/clima.py::def definir_cidade` | W13 | main |

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- DuiaOS — rede privada (casa, trabalho): o computador aparece para os outros aparelhos (mDNS) e aceita
+     o acesso remoto (SSH), que a pessoa pode desligar em Configurações › Rede e Internet › Firewall (ADR 071). -->
+<zone>
+  <short>Rede privada (DuiaOS)</short>
+  <description>Casa ou trabalho: o computador aparece para os outros aparelhos e aceita o acesso remoto (SSH).</description>
+  <service name="ssh"/>
+  <service name="mdns"/>
+  <service name="dhcpv6-client"/>
+</zone>

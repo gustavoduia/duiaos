@@ -72,4 +72,13 @@
       <allow_active>auth_admin_keep</allow_active>
     </defaults>
   </action>
+  <action id="org.duiaos.agente.configurar_firewall">
+    <description>Mudar o firewall</description>
+    <message>É preciso autorização para mudar o firewall deste computador</message>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+  </action>
 </policyconfig>

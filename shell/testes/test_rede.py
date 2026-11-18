@@ -93,7 +93,7 @@ class TesteLeitura(unittest.TestCase):
         self.assertEqual(c["ipv4"]["dns"], ["1.1.1.1", "9.9.9.9"])
         self.assertTrue(c["ipv4"]["soDnsManual"])
         self.assertEqual(c["mac"], "stable")
-        self.assertEqual(c["zona"], "home")
+        self.assertEqual(c["zona"], "privada")          # zona "home" do firewalld = rede privada (ADR 071)
 
     def test_resumo(self):
         lista = rede.interpretar_dispositivos(DISPOSITIVOS)
@@ -290,3 +290,35 @@ class TesteAvisoDePortal(unittest.TestCase):
             falsa._c = estado
             falsa.mudou.emit()
         self.assertEqual(len(avisos), 2)
+
+    def test_pergunta_o_tipo_de_rede_uma_vez(self):
+        """Firewall (ADR 071): rede sem tipo escolhido → uma pergunta por conexão, só com o firewall ligado."""
+        import importlib.util
+        import os
+        os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+        from PySide6.QtCore import QObject, Property, Signal
+        sys.argv = [sys.argv[0], "--demonstracao"]
+        espec = importlib.util.spec_from_file_location("barra_main", RAIZ / "shell/barra-de-recursos/main.py")
+        barra = importlib.util.module_from_spec(espec)
+        espec.loader.exec_module(barra)
+
+        class Falsa(QObject):
+            mudou = Signal()
+            firewallMudou = Signal()
+
+            def __init__(self):
+                super().__init__()
+                self._fw, self._sem = {"ligado": False}, [{"uuid": "u1", "nome": "Café"}]
+            firewall = Property("QVariantMap", lambda self: self._fw, notify=firewallMudou)
+            semTipo = Property("QVariantList", lambda self: self._sem, notify=mudou)
+
+        falsa, perguntas = Falsa(), []
+        barra.vigiar_tipo_de_rede(falsa, mandar=perguntas.append)
+        falsa.mudou.emit()
+        self.assertEqual(perguntas, [])                      # firewall desligado: não pergunta
+        falsa._fw = {"ligado": True}
+        falsa.firewallMudou.emit()
+        falsa.mudou.emit()
+        falsa._sem = [{"uuid": "u1", "nome": "Café"}, {"uuid": "u2", "nome": "Hotel"}]
+        falsa.mudou.emit()
+        self.assertEqual(perguntas, ["Café", "Hotel"])
