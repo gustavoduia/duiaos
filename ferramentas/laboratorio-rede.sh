@@ -65,9 +65,7 @@ fi
 udevadm trigger --action=add --subsystem-match=net
 udevadm settle
 
-if pgrep -x NetworkManager >/dev/null; then
-  nmcli general reload
-else
+if ! { pgrep -x NetworkManager >/dev/null && nmcli general reload 2>/dev/null; }; then
   NetworkManager
 fi
 for _ in $(seq 1 30); do

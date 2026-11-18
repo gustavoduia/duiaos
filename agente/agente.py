@@ -22,6 +22,8 @@ sistema, instalar e remover aplicativos pelo apt. Fala pelo D-Bus do sistema
   MoverParaLixeira(json [caminhos]) -> {"movidos", "recusados"}   o que está numa pasta que a pessoa não pode
       mudar (ex.: criada como root) vai para a Lixeira DELA, que passa a ser dona (lixeira.py, ADR 068);
       polkit: org.duiaos.agente.mover_para_lixeira
+  ConfigurarProxy(json {"servidor", "porta"} ou {}) -> {}   proxy HTTP do apt do sistema (ADR 070);
+      polkit: org.duiaos.agente.configurar_proxy
   Configuracao() -> {"modo"}   a atualização automática (automatica.py, ADR 058)
   Configurar(json)   muda o modo da atualização automática (polkit: org.duiaos.agente.configurar_atualizacoes)
   sinal Mudou(json)   o mesmo de Estado, no máximo 2 vezes por segundo
@@ -93,6 +95,7 @@ XML = """
       <arg name="caminhos" type="s" direction="in"/>
       <arg name="json" type="s" direction="out"/>
     </method>
+    <method name="ConfigurarProxy"><arg name="json" type="s" direction="in"/></method>
     <method name="Configuracao"><arg name="json" type="s" direction="out"/></method>
     <method name="Configurar"><arg name="json" type="s" direction="in"/></method>
     <signal name="Mudou"><arg name="json" type="s"/></signal>
@@ -653,6 +656,29 @@ class Agente:
         self.registrar("lixeira", uid=uid, movidos=len(resultado["movidos"]), recusados=len(resultado["recusados"]))
         return resultado
 
+    ARQUIVO_PROXY_APT = Path("/etc/apt/apt.conf.d/95duiaos-proxy")
+
+    def configurar_proxy(self, texto, uid, autorizado, arquivo=None):
+        """Proxy HTTP do apt (o mesmo do modo Manual das Configurações); {} tira."""
+        import re
+        try:
+            pedido = json.loads(texto or "{}")
+        except ValueError as erro:
+            raise Recusa("Invalido", "Configuração inválida.") from erro
+        servidor = str(pedido.get("servidor", "") or "").strip()
+        porta = pedido.get("porta", 0)
+        if servidor and (not re.match(r"^[A-Za-z0-9.\-]{1,253}$", servidor) or not isinstance(porta, int) or not 0 < porta < 65536):
+            raise Recusa("Invalido", "Servidor ou porta do proxy inválidos.")
+        if not autorizado("org.duiaos.agente.configurar_proxy"):
+            raise Recusa("NaoAutorizado", "Só um administrador deste computador muda o proxy do sistema.")
+        arquivo = Path(arquivo or self.ARQUIVO_PROXY_APT)
+        if servidor:
+            arquivo.write_text(f'// DuiaOS — proxy do sistema (Configurações › Rede e Internet)\n'
+                               f'Acquire::http::Proxy "http://{servidor}:{porta}/";\nAcquire::https::Proxy "http://{servidor}:{porta}/";\n')
+        else:
+            arquivo.unlink(missing_ok=True)
+        self.registrar("proxy", uid=uid, ligado=bool(servidor))
+
     def configurar(self, texto, uid, autorizado):
         """Muda o modo da atualização automática (vale para o computador todo)."""
         try:
@@ -726,6 +752,9 @@ class Agente:
                     valor = GLib.Variant("(s)", (json.dumps(self.mover_para_lixeira(parametros.unpack()[0], uid,
                                                                                      self._autorizador(remetente, uid)),
                                                             ensure_ascii=False),))
+                elif metodo == "ConfigurarProxy":
+                    self.configurar_proxy(parametros.unpack()[0], uid, self._autorizador(remetente, uid))
+                    valor = None
                 elif metodo == "Configuracao":
                     valor = GLib.Variant("(s)", (json.dumps({"modo": automatica.ler_modo(self.conf_atualizacoes)}),))
                 elif metodo == "Configurar":

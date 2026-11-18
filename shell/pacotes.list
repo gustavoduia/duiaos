@@ -70,6 +70,12 @@ xdg-utils
 udisks2
 # Rede e Internet (ADR 069): o teste de internet do NetworkManager (avisa quando a rede pede login)
 network-manager-config-connectivity-debian
+# Rede e Internet, Fase 2 (ADR 070): VPNs OpenVPN e de empresa (OpenConnect: AnyConnect, GlobalProtect,
+# Fortinet, Pulse), QR code da Wi-Fi e chaves do WireGuard (o WireGuard já vem no NetworkManager e no kernel)
+network-manager-openvpn
+network-manager-openconnect
+qrencode
+python3-cryptography
 # Descompactar .7z e .rar (o .zip e o .tar.* usam o próprio Python; ADR 067)
 7zip
 

@@ -260,6 +260,10 @@ Window {
             property string aba: abaInicialRede || "geral"
             property bool oculta: false               // formulário "Conectar a uma rede oculta"
             property bool novoPerfil: false           // formulário "Novo perfil de cabo"
+            property string empresa: ""               // SSID do Wi-Fi corporativo (802.1X) sendo conectado
+            property bool novaVpn: false              // formulário "Adicionar VPN"
+            property bool compartilhando: false       // formulário "Compartilhar a internet"
+            property string qr: ""                    // imagem do QR code da Wi-Fi aberta
             property bool senhaVisivel: false
             property string senhaWifi: ""
             Component.onCompleted: { rede.atualizar(); controles.buscarRedes(true) }
@@ -272,9 +276,10 @@ Window {
                            indisponivel: d.tipo === "cabo" ? "Cabo desconectado" : "Indisponível", desconectando: "Desconectando…" })[d.estado] || d.estado
                 return e + (d.estado === "conectado" && d.conexao ? " · " + d.conexao : "") + (ip.length ? " · " + ip[0].split("/")[0] : "")
             }
-            function abrir(uuid) { pr.aba = "geral"; pr.senhaVisivel = false; pr.senhaWifi = ""; rede.abrirConexao(uuid) }
+            function abrir(uuid) { pr.aba = "geral"; pr.senhaVisivel = false; pr.senhaWifi = ""; pr.qr = ""; rede.abrirConexao(uuid) }
             function fechar() { rede.abrirConexao("") }
-            Connections { target: rede; function onSenhaLida(uuid, senha) { if (uuid === pr.aberta) { pr.senhaWifi = senha; pr.senhaVisivel = true } } }
+            Connections { target: rede; function onSenhaLida(uuid, senha) { if (uuid === pr.aberta) { pr.senhaWifi = senha; pr.senhaVisivel = true } }
+                                        function onQrPronto(uuid, caminho) { if (uuid === pr.aberta) pr.qr = "file://" + caminho + "?" + Date.now() } }
 
             // ================================================== visão geral
             Destaque {
@@ -341,6 +346,7 @@ Window {
                                 texto: "Conectar"
                                 onClicado: {
                                     if (!modelData.segura || controles.redeSalva(modelData.ssid)) controles.conectarWifi(modelData.ssid, "")
+                                    else if (modelData.empresa) pr.empresa = modelData.ssid
                                     else parent.parent.parent.pedindoSenha = true
                                 }
                             }
@@ -378,6 +384,82 @@ Window {
                         Botao { texto: "Conectar"; tipo: "primario"; ativo: ssidOculta.texto !== ""
                                 onClicado: { rede.conectarOculta(ssidOculta.texto, senhaOculta.texto); pr.oculta = false } }
                         Botao { texto: "Cancelar"; onClicado: pr.oculta = false }
+                    }
+                }
+            }
+
+            // Wi-Fi corporativo ou de faculdade (WPA2/WPA3-Enterprise, 802.1X; ex.: eduroam) — ADR 070
+            Grupo {
+                visible: pr.aberta === "" && pr.empresa !== ""
+                titulo: "Entrar na rede " + pr.empresa
+                Column {
+                    width: parent.width; padding: 14; spacing: 10
+                    Rotulo { width: parent.width - 28; secundario: true
+                             text: "Esta rede pede usuário e senha (rede de empresa ou faculdade). Os dados vêm do setor de TI; na dúvida, deixe as opções avançadas como estão." }
+                    Column {
+                        spacing: 4
+                        Text { text: "Método"; color: Tema.textoSecundario; font { family: Tema.fonteTexto; pixelSize: 12 } }
+                        Segmentos { id: metodoEap; valor: "peap"; onEscolhido: (v) => valor = v
+                                    opcoes: Object.keys(rede.metodosEap).map(function (k) { return { valor: k, rotulo: rede.metodosEap[k] } }) }
+                    }
+                    Row {
+                        spacing: 12
+                        CampoRede { id: usuarioEap; rotulo: metodoEap.valor === "tls" ? "Identidade" : "Usuário"; dica: "nome@empresa.com.br"; width: 230 }
+                        CampoRede { id: senhaEap; visible: metodoEap.valor !== "tls"; rotulo: "Senha"; senha: true; width: 200 }
+                    }
+                    Row {
+                        visible: metodoEap.valor === "tls"
+                        spacing: 8
+                        Botao { texto: certificadoEap.arquivo ? "Certificado: " + certificadoEap.arquivo.split("/").pop() : "Escolher certificado…"
+                                onClicado: { certificadoEap.alvo = "certificado"; certificadoEap.open() } }
+                        Botao { texto: certificadoEap.chave ? "Chave: " + certificadoEap.chave.split("/").pop() : "Escolher chave…"
+                                onClicado: { certificadoEap.alvo = "chave"; certificadoEap.open() } }
+                        CampoRede { id: senhaChaveEap; rotulo: "Senha da chave"; senha: true; width: 160 }
+                    }
+                    Row {
+                        spacing: 8
+                        Interruptor { id: avancadoEap; ligado: false; onAlternado: (v) => ligado = v }
+                        Rotulo { anchors.verticalCenter: parent.verticalCenter; secundario: true; text: "Opções avançadas (certificado do servidor, identidade anônima)" }
+                    }
+                    Column {
+                        visible: avancadoEap.ligado
+                        spacing: 10
+                        Row {
+                            spacing: 12
+                            CampoRede { id: anonimaEap; rotulo: "Identidade anônima"; dica: "anonymous@empresa.com.br"; width: 230 }
+                            CampoRede { id: dominioEap; rotulo: "Domínio do servidor"; dica: "radius.empresa.com.br"; width: 230 }
+                        }
+                        Row {
+                            spacing: 8
+                            Botao { texto: certificadoEap.ca ? "Certificado da rede: " + certificadoEap.ca.split("/").pop() : "Certificado da rede (CA)…"
+                                    onClicado: { certificadoEap.alvo = "ca"; certificadoEap.open() } }
+                            Interruptor { id: semVerificarEap; ligado: false; onAlternado: (v) => ligado = v }
+                            Rotulo { anchors.verticalCenter: parent.verticalCenter; secundario: true; text: "Não verificar o servidor (menos seguro)" }
+                        }
+                    }
+                    Row {
+                        spacing: 8
+                        Botao {
+                            texto: "Conectar"; tipo: "primario"; ativo: usuarioEap.texto !== ""
+                            onClicado: {
+                                rede.conectarEmpresa({ ssid: pr.empresa, metodo: metodoEap.valor, usuario: usuarioEap.texto, senha: senhaEap.texto,
+                                                       anonima: anonimaEap.texto, dominio: dominioEap.texto, ca: certificadoEap.ca,
+                                                       certificado: certificadoEap.arquivo, chave: certificadoEap.chave, senhaChave: senhaChaveEap.texto,
+                                                       semVerificar: semVerificarEap.ligado })
+                                pr.empresa = ""; senhaEap.texto = ""
+                            }
+                        }
+                        Botao { texto: "Cancelar"; onClicado: pr.empresa = "" }
+                    }
+                    FileDialog {
+                        id: certificadoEap
+                        property string alvo: "ca"
+                        property string ca: ""
+                        property string arquivo: ""
+                        property string chave: ""
+                        title: alvo === "chave" ? "Escolher a chave particular" : "Escolher certificado"
+                        nameFilters: ["Certificados e chaves (*.pem *.crt *.cer *.der *.p12 *.pfx *.key)", "Todos os arquivos (*)"]
+                        onAccepted: { var f = selectedFile.toString(); if (alvo === "ca") ca = f; else if (alvo === "chave") chave = f; else arquivo = f }
                     }
                 }
             }
@@ -448,6 +530,187 @@ Window {
                 }
             }
 
+            // ============================================ VPN (ADR 070)
+            Grupo {
+                visible: pr.aberta === ""
+                titulo: "VPN"
+                Linha { visible: rede.conexoes.filter(function (c) { return c.tipo === "vpn" }).length === 0
+                        icone: "vpn"; titulo: "Nenhuma VPN"; descricao: "Importe o arquivo que a empresa ou o serviço de VPN mandou (.conf, .ovpn) ou adicione à mão."; ultima: true }
+                Repeater {
+                    model: rede.conexoes.filter(function (c) { return c.tipo === "vpn" })
+                    Linha {
+                        required property var modelData
+                        required property int index
+                        icone: "vpn"; titulo: modelData.nome
+                        descricao: modelData.ativa ? "Conectada — o tráfego passa por ela" : "Desligada"
+                        ultima: index === rede.conexoes.filter(function (c) { return c.tipo === "vpn" }).length - 1
+                        Botao { texto: "Detalhes"; onClicado: pr.abrir(modelData.uuid) }
+                        Interruptor { ligado: modelData.ativa; onAlternado: (v) => v ? rede.ativar(modelData.uuid) : rede.desativar(modelData.uuid) }
+                    }
+                }
+            }
+            Row {
+                visible: pr.aberta === ""
+                spacing: 8
+                Botao { texto: "Importar arquivo de VPN…"; icone: "pasta"; onClicado: escolherVpn.open() }
+                Botao { texto: "Adicionar VPN…"; icone: "mais"; onClicado: pr.novaVpn = !pr.novaVpn }
+            }
+            FileDialog {
+                id: escolherVpn
+                title: "Importar arquivo de VPN"
+                nameFilters: ["Arquivos de VPN (*.conf *.ovpn)"]
+                onAccepted: rede.importarVpn(selectedFile.toString())
+            }
+            Grupo {
+                visible: pr.aberta === "" && pr.novaVpn
+                titulo: "Adicionar VPN"
+                Column {
+                    id: fv
+                    width: parent.width; padding: 14; spacing: 10
+                    property string publica: ""
+                    Segmentos { id: tipoVpn; valor: "wireguard"; onEscolhido: (v) => valor = v
+                                opcoes: [{ valor: "wireguard", rotulo: "WireGuard" }, { valor: "openconnect", rotulo: "VPN de empresa (OpenConnect)" }] }
+                    Rotulo { width: parent.width - 28; secundario: true
+                             text: tipoVpn.valor === "wireguard"
+                                   ? "Preencha com os dados do servidor WireGuard. Sem chave? Gere uma aqui e mande a chave pública para quem cuida do servidor."
+                                   : "Para VPNs Cisco AnyConnect, GlobalProtect, Fortinet, Pulse e Ivanti. O usuário e a senha são pedidos na hora de conectar. Login pelo navegador (SSO) ainda não é aceito." }
+                    CampoRede { id: nomeVpn; rotulo: "Nome"; dica: tipoVpn.valor === "wireguard" ? "Ex.: Casa" : "Ex.: Empresa"; width: 220 }
+                    // WireGuard
+                    Column {
+                        visible: tipoVpn.valor === "wireguard"
+                        spacing: 10
+                        Row {
+                            spacing: 12
+                            CampoRede { id: wgEndereco; rotulo: "Endereço na VPN"; dica: "10.0.0.2/32"; width: 170 }
+                            CampoRede { id: wgServidor; rotulo: "Servidor (endereço:porta)"; dica: "vpn.exemplo.com.br:51820"; width: 240 }
+                            CampoRede { id: wgDns; rotulo: "DNS (opcional)"; dica: "10.0.0.1"; width: 150 }
+                        }
+                        Row {
+                            spacing: 12
+                            CampoRede { id: wgChaveServidor; rotulo: "Chave pública do servidor"; width: 330 }
+                            CampoRede { id: wgPermitidos; rotulo: "Redes pela VPN"; dica: "Tudo (0.0.0.0/0, ::/0)"; width: 230 }
+                        }
+                        Row {
+                            spacing: 12
+                            CampoRede { id: wgPrivada; rotulo: "Sua chave privada"; senha: true; width: 330 }
+                            Botao { anchors.bottom: parent.bottom; texto: "Gerar chaves"; icone: "cadeado"
+                                    onClicado: { var k = rede.gerarChavesWireguard(); if (k.privada) { wgPrivada.texto = k.privada; fv.publica = k.publica } } }
+                        }
+                        Linha { visible: fv.publica !== ""; titulo: "Sua chave pública (mande para o servidor)"; descricao: fv.publica; ultima: true
+                                Botao { texto: "Copiar"; onClicado: { area.text = fv.publica; area.selectAll(); area.copy(); aviso.mostrar("Chave copiada.") } } }
+                        TextEdit { id: area; visible: false }
+                    }
+                    // OpenConnect
+                    Row {
+                        visible: tipoVpn.valor === "openconnect"
+                        spacing: 12
+                        CampoRede { id: ocServidor; rotulo: "Servidor"; dica: "vpn.empresa.com.br"; width: 240 }
+                        Column {
+                            spacing: 4
+                            Text { text: "Tipo"; color: Tema.textoSecundario; font { family: Tema.fonteTexto; pixelSize: 12 } }
+                            Seletor { id: ocProtocolo; width: 230; valor: "anyconnect"; onEscolhido: (v) => valor = v
+                                      opcoes: Object.keys(rede.protocolosOpenconnect).map(function (k) { return { valor: k, rotulo: rede.protocolosOpenconnect[k] } }) }
+                        }
+                    }
+                    Row {
+                        spacing: 8
+                        Botao {
+                            texto: "Adicionar"; tipo: "primario"
+                            ativo: nomeVpn.texto !== "" && (tipoVpn.valor === "wireguard" ? (wgEndereco.texto !== "" && wgServidor.texto !== "" && wgChaveServidor.texto !== "" && wgPrivada.texto !== "") : ocServidor.texto !== "")
+                            onClicado: {
+                                if (tipoVpn.valor === "wireguard")
+                                    rede.novaWireguard({ nome: nomeVpn.texto, endereco: wgEndereco.texto, servidor: wgServidor.texto, dns: wgDns.texto,
+                                                         chaveServidor: wgChaveServidor.texto, permitidos: wgPermitidos.texto, privada: wgPrivada.texto })
+                                else
+                                    rede.novaOpenConnect(nomeVpn.texto, ocServidor.texto, ocProtocolo.valor)
+                                pr.novaVpn = false; wgPrivada.texto = ""; fv.publica = ""
+                            }
+                        }
+                        Botao { texto: "Cancelar"; onClicado: pr.novaVpn = false }
+                    }
+                }
+            }
+
+            // ============================== Compartilhar a internet (ponto de acesso)
+            Grupo {
+                visible: pr.aberta === "" && rede.temWifi
+                titulo: "Compartilhar a internet"
+                Linha {
+                    icone: "ponto-de-acesso"; titulo: "Ponto de acesso Wi-Fi"
+                    descricao: rede.pontoDeAcesso ? "Ligado — outros aparelhos podem entrar na rede do computador"
+                                                  : "Transforma a Wi-Fi do computador numa rede para o celular e outros aparelhos (use com a internet pelo cabo)"
+                    ultima: !pr.compartilhando || rede.pontoDeAcesso
+                    Interruptor { ligado: rede.pontoDeAcesso || pr.compartilhando
+                                  onAlternado: (v) => { if (!v) { pr.compartilhando = false; if (rede.pontoDeAcesso) rede.desligarPontoDeAcesso() } else pr.compartilhando = true } }
+                }
+                Column {
+                    visible: pr.compartilhando && !rede.pontoDeAcesso
+                    width: parent.width; padding: 14; spacing: 10
+                    Row {
+                        spacing: 12
+                        CampoRede { id: nomePonto; rotulo: "Nome da rede"; texto: "DuiaOS"; width: 200 }
+                        CampoRede { id: senhaPonto; rotulo: "Senha (8 caracteres ou mais)"; senha: true; width: 200 }
+                    }
+                    Row {
+                        spacing: 8
+                        Botao { texto: "Ligar"; tipo: "primario"; ativo: nomePonto.texto !== "" && senhaPonto.texto.length >= 8
+                                onClicado: { rede.ligarPontoDeAcesso(nomePonto.texto, senhaPonto.texto); pr.compartilhando = false } }
+                        Botao { texto: "Cancelar"; onClicado: pr.compartilhando = false }
+                    }
+                }
+            }
+
+            // ======================================================== Proxy
+            Grupo {
+                id: gp
+                visible: pr.aberta === ""
+                titulo: "Proxy"
+                property var p: rede.proxyAtual
+                property string modo: p.modo || "desligado"
+                Connections { target: rede; function onProxyMudou() { gp.modo = rede.proxyAtual.modo || "desligado" } }
+                Linha {
+                    titulo: "Usar proxy"; descricao: "Só se a rede da empresa ou da escola exigir"
+                    ultima: gp.modo === "desligado"
+                    Segmentos { valor: gp.modo; onEscolhido: (v) => gp.modo = v
+                                opcoes: [{ valor: "desligado", rotulo: "Não" }, { valor: "manual", rotulo: "Manual" }, { valor: "automatico", rotulo: "Automático" }] }
+                }
+                Column {
+                    visible: gp.modo !== "desligado"
+                    width: parent.width; padding: 14; spacing: 10
+                    CampoRede { id: pacProxy; visible: gp.modo === "automatico"; rotulo: "Endereço da configuração automática (PAC)"; dica: "http://proxy.empresa.com.br/proxy.pac"
+                                width: 420; texto: gp.p.pac || "" }
+                    Row {
+                        visible: gp.modo === "manual"; spacing: 12
+                        CampoRede { id: httpProxy; rotulo: "Proxy HTTP"; dica: "proxy.empresa.com.br"; width: 240; texto: (gp.p.http || {}).servidor || "" }
+                        CampoRede { id: httpPorta; rotulo: "Porta"; dica: "3128"; width: 80; texto: (gp.p.http || {}).porta ? String(gp.p.http.porta) : "" }
+                    }
+                    Row {
+                        visible: gp.modo === "manual"; spacing: 12
+                        CampoRede { id: httpsProxy; rotulo: "Proxy HTTPS (vazio = o mesmo)"; width: 240; texto: (gp.p.https || {}).servidor || "" }
+                        CampoRede { id: httpsPorta; rotulo: "Porta"; width: 80; texto: (gp.p.https || {}).porta ? String(gp.p.https.porta) : "" }
+                    }
+                    Row {
+                        visible: gp.modo === "manual"; spacing: 12
+                        CampoRede { id: socksProxy; rotulo: "Proxy SOCKS (opcional)"; width: 240; texto: (gp.p.socks || {}).servidor || "" }
+                        CampoRede { id: socksPorta; rotulo: "Porta"; width: 80; texto: (gp.p.socks || {}).porta ? String(gp.p.socks.porta) : "" }
+                    }
+                    CampoRede { id: excecoesProxy; rotulo: "Sem proxy para (separados por vírgula)"; width: 420; texto: (gp.p.excecoes || []).join(", ") }
+                    Botao {
+                        texto: "Salvar"; tipo: "primario"
+                        onClicado: {
+                            var hs = httpsProxy.texto || httpProxy.texto, hp = httpsProxy.texto ? httpsPorta.texto : httpPorta.texto
+                            rede.gravarProxy({ modo: gp.modo, pac: pacProxy.texto,
+                                               http: { servidor: httpProxy.texto, porta: parseInt(httpPorta.texto) || 0 },
+                                               https: { servidor: hs, porta: parseInt(hp) || 0 },
+                                               socks: { servidor: socksProxy.texto, porta: parseInt(socksPorta.texto) || 0 },
+                                               excecoes: excecoesProxy.texto.split(/[,\s]+/).filter(function (x) { return x !== "" }) })
+                        }
+                    }
+                }
+                Botao { visible: gp.modo === "desligado" && (gp.p.modo || "desligado") !== "desligado"; texto: "Desligar o proxy"
+                        onClicado: rede.gravarProxy({ modo: "desligado", excecoes: gp.p.excecoes || [] }) }
+            }
+
             // ======================================================= detalhes
             Loader {
                 id: detalhes
@@ -514,6 +777,16 @@ Window {
                             titulo: "Senha"; descricao: pr.senhaVisivel ? (pr.senhaWifi || "Sem senha") : "••••••••"
                             Botao { texto: pr.senhaVisivel ? "Esconder" : "Mostrar"; icone: "olho"
                                     onClicado: pr.senhaVisivel ? pr.senhaVisivel = false : rede.lerSenha(dc.c.uuid) }
+                        }
+                        Linha {
+                            visible: dc.c.tipo === "wifi" && dc.c.ssid !== ""
+                            icone: "qr"; titulo: "Compartilhar esta Wi-Fi"; descricao: "Aponte a câmera do celular para o código e ele entra na rede sem digitar a senha"
+                            Botao { texto: pr.qr ? "Esconder" : "Mostrar código"; onClicado: pr.qr ? pr.qr = "" : rede.qrWifi(dc.c.uuid, dc.c.ssid, dc.c.seguranca || "") }
+                        }
+                        Item {
+                            visible: pr.qr !== ""; width: parent.width; height: visible ? 220 : 0
+                            Rectangle { anchors.centerIn: parent; width: 200; height: 200; radius: 10; color: "white"
+                                        Image { anchors.fill: parent; anchors.margins: 10; source: pr.qr; smooth: false; fillMode: Image.PreserveAspectFit } }
                         }
                         Linha {
                             titulo: "MTU"; descricao: "Tamanho máximo dos pacotes. Deixe vazio para automático (o comum é 1500)"; ultima: true

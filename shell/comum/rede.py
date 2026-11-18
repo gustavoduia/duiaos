@@ -544,3 +544,209 @@ def criar_vigia(dono, ao_mudar, atraso_ms=400):
     processo.errorOccurred.connect(lambda *_: None)
     processo.start()
     return processo
+
+
+# ------------------------------------------------------------------ VPN (Fase 2, ADR 070)
+
+def _nome_de_interface(nome):
+    """Nome de placa válido (até 15 letras, sem espaço) a partir do nome da conexão: 'Trabalho SP' → 'wg-trabalho-sp'."""
+    import unicodedata
+    base = "".join(c for c in unicodedata.normalize("NFD", nome.lower()) if not unicodedata.combining(c))
+    base = re.sub(r"[^a-z0-9]+", "-", base).strip("-") or "vpn"
+    return ("wg-" + base)[:15].rstrip("-")
+
+
+def importar_vpn(caminho, rodar=None):
+    """Importa o arquivo que o provedor entrega: .conf (WireGuard) ou .ovpn (OpenVPN). Devolve o nome da conexão."""
+    import os
+    import shutil
+    import tempfile
+    caminho = str(caminho)
+    extensao = os.path.splitext(caminho)[1].lower()
+    if extensao == ".ovpn":
+        tipo, arquivo = "openvpn", caminho
+    elif extensao == ".conf":
+        # O NetworkManager usa o nome do arquivo como nome da placa (até 15 letras, sem espaços)
+        tipo = "wireguard"
+        pasta = tempfile.mkdtemp(prefix="duiaos-vpn-")
+        arquivo = os.path.join(pasta, _nome_de_interface(os.path.splitext(os.path.basename(caminho))[0]) + ".conf")
+        shutil.copyfile(caminho, arquivo)
+    else:
+        raise ErroDeRede("Escolha um arquivo .conf (WireGuard) ou .ovpn (OpenVPN).")
+    codigo, saida, erro = nmcli("connection", "import", "type", tipo, "file", arquivo, rodar=rodar)
+    if codigo != 0:
+        if tipo == "openvpn" and "unknown VPN plugin" in (erro or "") + (saida or ""):
+            raise ErroDeRede("Falta o suporte a OpenVPN (pacote network-manager-openvpn).")
+        raise ErroDeRede(_erro(erro, "O arquivo de VPN não foi aceito."))
+    m = re.search(r"Connection '(.+)' \(([0-9a-f-]{36})\)", saida)
+    return m.group(1) if m else os.path.splitext(os.path.basename(arquivo))[0]
+
+
+def gerar_chaves_wireguard():
+    """Par de chaves do WireGuard (X25519, em base64): (privada, pública)."""
+    import base64
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey
+    privada = X25519PrivateKey.generate()
+    bruta = privada.private_bytes(serialization.Encoding.Raw, serialization.PrivateFormat.Raw, serialization.NoEncryption())
+    publica = privada.public_key().public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw)
+    return base64.b64encode(bruta).decode(), base64.b64encode(publica).decode()
+
+
+def _chave_wireguard(texto, nome):
+    import base64
+    try:
+        if len(base64.b64decode(texto.strip(), validate=True)) == 32:
+            return texto.strip()
+    except ValueError:
+        pass
+    raise ErroDeRede(f"{nome} do WireGuard inválida (são 44 letras terminando em =).")
+
+
+def configuracao_wireguard(endereco, chave_privada, chave_servidor, servidor, permitidos="0.0.0.0/0, ::/0", dns="",
+                           chave_compartilhada=""):
+    """Texto do arquivo .conf do WireGuard (o formato que os provedores entregam), conferido."""
+    erros = []
+    for item in _lista(endereco):
+        try:
+            ipaddress.ip_interface(item)
+        except ValueError:
+            erros.append(f"Endereço da VPN inválido: {item} (ex.: 10.0.0.2/32).")
+    if not _lista(endereco):
+        erros.append("Falta o endereço da VPN (ex.: 10.0.0.2/32).")
+    if not re.match(r"^[\w.\-\[\]:]+:\d{1,5}$", (servidor or "").strip()):
+        erros.append("Servidor no formato endereço:porta (ex.: vpn.exemplo.com:51820).")
+    for item in _lista(dns):
+        try:
+            ipaddress.ip_address(item)
+        except ValueError:
+            erros.append(f"Servidor DNS inválido: {item}.")
+    if erros:
+        raise ErroDeRede(" ".join(erros))
+    linhas = ["[Interface]", f"PrivateKey = {_chave_wireguard(chave_privada, 'Chave privada')}", f"Address = {', '.join(_lista(endereco))}"]
+    if _lista(dns):
+        linhas.append(f"DNS = {', '.join(_lista(dns))}")
+    linhas += ["", "[Peer]", f"PublicKey = {_chave_wireguard(chave_servidor, 'Chave do servidor')}", f"Endpoint = {servidor.strip()}",
+               f"AllowedIPs = {', '.join(_lista(permitidos)) or '0.0.0.0/0, ::/0'}", "PersistentKeepalive = 25"]
+    if chave_compartilhada.strip():
+        linhas.append(f"PresharedKey = {_chave_wireguard(chave_compartilhada, 'Chave compartilhada')}")
+    return "\n".join(linhas) + "\n"
+
+
+def nova_wireguard(nome, configuracao_texto, rodar=None):
+    """Cria a VPN WireGuard a partir do texto do .conf (configuracao_wireguard). Devolve o nome."""
+    import os
+    import tempfile
+    pasta = tempfile.mkdtemp(prefix="duiaos-vpn-")
+    arquivo = os.path.join(pasta, _nome_de_interface(nome) + ".conf")
+    with open(arquivo, "w", encoding="utf-8") as saida:
+        saida.write(configuracao_texto)
+    os.chmod(arquivo, 0o600)
+    try:
+        importado = importar_vpn(arquivo, rodar=rodar)
+        if nome and importado != nome:
+            nmcli("connection", "modify", importado, "connection.id", nome, rodar=rodar)
+        return nome or importado
+    finally:
+        os.unlink(arquivo)
+        os.rmdir(pasta)
+
+
+PROTOCOLOS_OPENCONNECT = {"anyconnect": "Cisco AnyConnect", "gp": "Palo Alto GlobalProtect", "fortinet": "Fortinet",
+                          "nc": "Juniper / Pulse Secure", "pulse": "Ivanti Connect Secure"}
+
+
+def nova_openconnect(nome, servidor, protocolo="anyconnect", rodar=None):
+    """VPN de empresa pelo OpenConnect: o login (usuário e senha) é pedido ao conectar."""
+    if not (nome or "").strip() or not (servidor or "").strip():
+        raise ErroDeRede("Dê um nome e o endereço do servidor da VPN.")
+    if protocolo not in PROTOCOLOS_OPENCONNECT:
+        raise ErroDeRede("Escolha o tipo de VPN da empresa.")
+    codigo, _, erro = nmcli("connection", "add", "type", "vpn", "con-name", nome.strip(), "vpn-type", "openconnect",
+                            "vpn.data", f"gateway={servidor.strip()},protocol={protocolo},cookie-flags=2,gateway-flags=2,gwcert-flags=2",
+                            "connection.autoconnect", "no", rodar=rodar)
+    if codigo != 0:
+        if "openconnect" in (erro or "").lower() and "plugin" in (erro or "").lower():
+            raise ErroDeRede("Falta o suporte a VPN de empresa (pacote network-manager-openconnect).")
+        raise ErroDeRede(_erro(erro, "Não foi possível criar a VPN."))
+
+
+# ------------------------------------------------------------------ Wi-Fi corporativo (802.1X)
+
+METODOS_EAP = {"peap": "PEAP", "ttls": "TTLS", "tls": "TLS (certificado)"}
+
+
+def conectar_empresa(ssid, metodo="peap", usuario="", senha="", interna="mschapv2", identidade_anonima="",
+                     certificado_ca="", dominio="", certificado="", chave="", senha_chave="", sem_verificar=False, rodar=None):
+    """Wi-Fi corporativo ou da faculdade (WPA2/WPA3-Enterprise, ex.: eduroam). Cria a conexão e conecta."""
+    if not ssid or metodo not in METODOS_EAP:
+        raise ErroDeRede("Escolha a rede e o método de autenticação.")
+    if not usuario:
+        raise ErroDeRede("Falta o usuário (ex.: nome@faculdade.edu.br).")
+    if metodo != "tls" and not senha:
+        raise ErroDeRede("Falta a senha.")
+    if metodo == "tls" and not (certificado and chave):
+        raise ErroDeRede("Escolha o seu certificado e a chave.")
+    if not certificado_ca and not sem_verificar:
+        raise ErroDeRede("Escolha o certificado da instituição (CA) ou marque que não quer verificar.")
+    args = ["connection", "add", "type", "wifi", "con-name", ssid, "ssid", ssid, "wifi-sec.key-mgmt", "wpa-eap",
+            "802-1x.eap", metodo, "802-1x.identity", usuario]
+    if metodo in ("peap", "ttls"):
+        args += ["802-1x.phase2-auth", interna or "mschapv2", "802-1x.password", senha]
+    if identidade_anonima:
+        args += ["802-1x.anonymous-identity", identidade_anonima]
+    if certificado_ca:
+        args += ["802-1x.ca-cert", certificado_ca]
+    if dominio:
+        args += ["802-1x.domain-suffix-match", dominio]
+    if metodo == "tls":
+        args += ["802-1x.client-cert", certificado, "802-1x.private-key", chave, "802-1x.private-key-password", senha_chave]
+    codigo, saida, erro = nmcli(*args, rodar=rodar)
+    if codigo != 0:
+        raise ErroDeRede(_erro(erro, "Não foi possível criar a conexão."))
+    m = re.search(r"\(([0-9a-f-]{36})\)", saida)
+    if m:
+        ativar(m.group(1), rodar=rodar, tempo=60)
+
+
+# ------------------------------------------------------------------ compartilhar a internet
+
+NOME_PONTO_DE_ACESSO = "Ponto de acesso do DuiaOS"
+
+
+def ligar_ponto_de_acesso(dispositivo, nome, senha, rodar=None):
+    """Transforma a Wi-Fi do computador numa rede para outros aparelhos (o NetworkManager faz o roteamento)."""
+    if not (nome or "").strip():
+        raise ErroDeRede("Dê um nome à rede.")
+    if len(senha or "") < 8:
+        raise ErroDeRede("A senha precisa ter pelo menos 8 letras ou números.")
+    args = ["device", "wifi", "hotspot", "con-name", NOME_PONTO_DE_ACESSO, "ssid", nome.strip(), "password", senha]
+    if dispositivo:
+        args[3:3] = ["ifname", dispositivo]
+    codigo, _, erro = nmcli(*args, rodar=rodar, tempo=30)
+    if codigo != 0:
+        raise ErroDeRede(_erro(erro, "Não foi possível ligar o ponto de acesso (a placa Wi-Fi precisa aceitar esse modo)."))
+
+
+def desligar_ponto_de_acesso(rodar=None):
+    nmcli("connection", "down", NOME_PONTO_DE_ACESSO, rodar=rodar, tempo=20)
+
+
+def texto_qr_wifi(ssid, senha, seguranca="WPA"):
+    """O texto do QR code de Wi-Fi que os celulares entendem: WIFI:T:WPA;S:nome;P:senha;;"""
+    def escapar(t):
+        return re.sub(r'([\;,:"])', r"\\\1", t or "")
+    tipo = "nopass" if not senha else ("WEP" if seguranca == "none" else "WPA")
+    return f"WIFI:T:{tipo};S:{escapar(ssid)};" + (f"P:{escapar(senha)};" if senha else "") + ";"
+
+
+def gerar_qr(texto, destino, rodar=None):
+    """Imagem PNG do QR code (pelo qrencode). Devolve o caminho."""
+    rodar = rodar or (lambda c: subprocess.run(c, capture_output=True, timeout=10, check=False))
+    try:
+        r = rodar(["qrencode", "-t", "PNG", "-s", "8", "-m", "2", "-o", str(destino), texto])
+    except FileNotFoundError:
+        raise ErroDeRede("Falta o qrencode para gerar o código.")
+    if getattr(r, "returncode", 1) != 0:
+        raise ErroDeRede("Não foi possível gerar o código.")
+    return str(destino)

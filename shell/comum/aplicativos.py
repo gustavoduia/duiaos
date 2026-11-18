@@ -126,12 +126,21 @@ def aplicativos_para_tipo(tipo):
 
 
 def iniciar(comando):
-    """Abre um programa sem esperar e sem prendê-lo a quem abriu."""
+    """Abre um programa sem esperar e sem prendê-lo a quem abriu. Com o proxy manual ligado (Configurações ›
+    Rede e Internet), o programa já abre com as variáveis http_proxy etc. (proxy.py, ADR 070)."""
     if not comando:
         return False
+    ambiente = None
+    try:
+        import proxy
+        variaveis = proxy.ambiente_salvo()
+        if variaveis:
+            ambiente = {**os.environ, **variaveis}
+    except Exception:                       # noqa: BLE001 — um arquivo de proxy estranho não impede abrir o programa
+        ambiente = None
     try:
         subprocess.Popen(comando, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                         start_new_session=True)
+                         start_new_session=True, env=ambiente)
         return True
     except OSError:
         return False

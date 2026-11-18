@@ -136,6 +136,23 @@ class TesteAgente(unittest.TestCase):
             self.assertEqual(au.ler_modo(Path(pasta) / "atualizacoes.conf"), "instalar")
 
 
+    def test_proxy_do_apt(self):
+        """ConfigurarProxy (ADR 070): grava o proxy HTTP do apt, recusa dados ruins e sem autorização, e tira com {}."""
+        with tempfile.TemporaryDirectory() as pasta:
+            agente = ag.Agente(ag.AptDeMentira(), usar_polkit=False, registro=Path(pasta) / "acoes.jsonl")
+            arquivo = Path(pasta) / "95duiaos-proxy"
+            sim = lambda acao: acao == "org.duiaos.agente.configurar_proxy"  # noqa: E731
+            for ruim in ('{"servidor": "proxy;rm -rf /", "porta": 3128}', '{"servidor": "proxy", "porta": 70000}', "não é json"):
+                with self.assertRaises(ag.Recusa):
+                    agente.configurar_proxy(ruim, 1000, sim, arquivo)
+            with self.assertRaises(ag.Recusa):
+                agente.configurar_proxy('{"servidor": "proxy.exemplo.com", "porta": 3128}', 1000, lambda _a: False, arquivo)
+            agente.configurar_proxy('{"servidor": "proxy.exemplo.com", "porta": 3128}', 1000, sim, arquivo)
+            self.assertIn('Acquire::http::Proxy "http://proxy.exemplo.com:3128/";', arquivo.read_text())
+            agente.configurar_proxy("{}", 1000, sim, arquivo)
+            self.assertFalse(arquivo.exists())
+
+
 @unittest.skipUnless(TEM_GI, "sem python3-gi")
 class TesteLimpeza(unittest.TestCase):
     """Limpar pacotes baixados e registros antigos (ADR 060), com autorização."""

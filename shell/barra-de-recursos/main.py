@@ -233,6 +233,9 @@ def notificar(titulo, texto, origem="Atualizações", destino="configuracoes:atu
         print("Barra: aviso não enviado:", erro, file=sys.stderr, flush=True)
 
 
+AGENTE_DE_SENHAS = None
+
+
 def vigiar_portal(objeto_rede, mandar=None):
     """Rede com página de login (hotel, aeroporto, café): avisa uma vez quando a conexão cai nesse estado.
     O NetworkManager descobre testando um endereço do Debian (network-manager-config-connectivity-debian)."""
@@ -708,6 +711,12 @@ def main():
     objeto_rede = rede_interface.Rede(demonstracao=DEMONSTRACAO)
     contexto.setContextProperty("rede", objeto_rede)
     vigiar_portal(objeto_rede)
+    # Agente de senhas (ADR 070): responde quando o NetworkManager pede uma senha (Wi-Fi, rede corporativa, VPN)
+    global AGENTE_DE_SENHAS
+    if not DEMONSTRACAO:
+        import agente_de_senhas
+        AGENTE_DE_SENHAS = agente_de_senhas.Agente()
+        AGENTE_DE_SENHAS.iniciar()
     contexto.setContextProperty("papelDeParede", comum.papel_de_parede())
     contexto.setContextProperty("capturaArquivo", argumento("--captura"))
     contexto.setContextProperty("painelInicial", argumento("--painel"))

@@ -90,6 +90,8 @@ def interpretar_redes(saida):
                 "ssid": ssid,
                 "sinal": max(sinal, atual["sinal"]) if atual else sinal,
                 "segura": seguranca.strip() not in ("", "--"),
+                # Wi-Fi corporativo ou de faculdade (802.1X): pede usuário e senha, não só a senha (ADR 070)
+                "empresa": "802.1X" in seguranca,
                 "conectada": conectada or bool(atual and atual["conectada"]),
             }
     lista = list(redes.values())

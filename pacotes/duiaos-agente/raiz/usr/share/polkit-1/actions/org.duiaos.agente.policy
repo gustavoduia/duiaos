@@ -63,4 +63,13 @@
       <allow_active>auth_admin_keep</allow_active>
     </defaults>
   </action>
+  <action id="org.duiaos.agente.configurar_proxy">
+    <description>Mudar o proxy do sistema</description>
+    <message>É preciso autorização para mudar o proxy usado nas atualizações do sistema</message>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+  </action>
 </policyconfig>

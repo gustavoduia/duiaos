@@ -130,7 +130,8 @@ class TestArquivosDoPacote(unittest.TestCase):
         # Uma por ação do apt, mais a da atualização automática (ADR 058), a da limpeza do sistema (ADR 060)
         # e a da Lixeira de pastas do sistema (ADR 068)
         self.assertEqual(ids, {f"org.duiaos.agente.{acao}" for acao in pl.ACOES} | {
-            "org.duiaos.agente.configurar_atualizacoes", "org.duiaos.agente.limpar_sistema", "org.duiaos.agente.mover_para_lixeira"})
+            "org.duiaos.agente.configurar_atualizacoes", "org.duiaos.agente.limpar_sistema", "org.duiaos.agente.mover_para_lixeira",
+            "org.duiaos.agente.configurar_proxy"})
         for acao in politica.findall("action"):
             self.assertNotEqual(acao.find("defaults/allow_any").text, "yes")
 

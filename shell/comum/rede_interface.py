@@ -5,8 +5,11 @@ Lê o estado pelo shell/comum/rede.py fora da linha da interface e atualiza quan
 confirmação: se a pessoa não disser "Manter" em 20 segundos (a conexão pode ter caído com um IP errado,
 e ela nem consegue clicar), a configuração anterior volta sozinha — como a troca de resolução de tela.
 """
+import os
 import threading
+from pathlib import Path
 
+import proxy
 import rede
 
 TEMPO_CONFIRMAR = 20
@@ -31,6 +34,8 @@ def _criar_classe():
         confirmacaoMudou = Signal()
         aviso = Signal(str)
         senhaLida = Signal(str, str)                  # uuid, senha
+        proxyMudou = Signal()
+        qrPronto = Signal(str, str)                   # uuid, caminho da imagem
         _chegou = Signal(str, object)
 
         def __init__(self, demonstracao):
@@ -42,6 +47,8 @@ def _criar_classe():
             self._confirmar = {"uuid": "", "volta": [], "restam": 0}
             self._lendo = False
             self._de_novo = False
+            self._proxy = {"modo": "desligado", "pac": "", "excecoes": proxy.EXCECOES_PADRAO,
+                           "http": {"servidor": "", "porta": 0}, "https": {"servidor": "", "porta": 0}, "socks": {"servidor": "", "porta": 0}}
             self._chegou.connect(self._ao_chegar)
             self._relogio = QTimer(self, interval=1000, timeout=self._contar)
             if demonstracao:
@@ -49,6 +56,7 @@ def _criar_classe():
                 return
             self._vigia = rede.criar_vigia(self, self.atualizar)
             self.atualizar()
+            self._fundo("proxy-lido", proxy.ler)
 
         # ---------------------------------------------------------- fundo
         def _fundo(self, nome, funcao, *args):
@@ -98,6 +106,17 @@ def _criar_classe():
                 if self._abrindo:
                     self.abrirConexao(self._abrindo)
                 self.atualizar()
+                return
+            if nome == "proxy-lido":
+                if not isinstance(resultado, Exception):
+                    self._proxy = resultado
+                    self.proxyMudou.emit()
+                return
+            if nome.startswith("qr:"):
+                if isinstance(resultado, Exception):
+                    self.aviso.emit(str(resultado))
+                else:
+                    self.qrPronto.emit(nome[3:], resultado)
                 return
             if nome.startswith("senha:"):
                 if isinstance(resultado, Exception):
@@ -242,6 +261,93 @@ def _criar_classe():
                 return
             self._fundo("senha:" + uuid, rede.senha_salva, uuid)
 
+        # ------------------------------------------------- Fase 2 (ADR 070)
+        @Slot(str)
+        def importarVpn(self, endereco):
+            caminho = endereco[7:] if endereco.startswith("file://") else endereco
+            from urllib.parse import unquote
+            caminho = unquote(caminho)
+            if self._demo:
+                return
+            self._fundo("acao", lambda: f"VPN “{rede.importar_vpn(caminho)}” adicionada. Ligue-a na lista de VPNs.")
+
+        @Slot(result="QVariantMap")
+        def gerarChavesWireguard(self):
+            try:
+                privada, publica = rede.gerar_chaves_wireguard()
+            except ImportError:
+                self.aviso.emit("Falta o python3-cryptography para gerar as chaves.")
+                return {}
+            return {"privada": privada, "publica": publica}
+
+        @Slot("QVariantMap")
+        def novaWireguard(self, dados):
+            try:
+                texto = rede.configuracao_wireguard(dados.get("endereco", ""), dados.get("privada", ""), dados.get("chaveServidor", ""),
+                                                    dados.get("servidor", ""), dados.get("permitidos", "") or "0.0.0.0/0, ::/0",
+                                                    dados.get("dns", ""), dados.get("compartilhada", ""))
+            except rede.ErroDeRede as erro:
+                self.aviso.emit(str(erro))
+                return
+            if not self._demo:
+                self._fundo("acao", lambda: f"VPN “{rede.nova_wireguard(dados.get('nome', '') or 'WireGuard', texto)}” adicionada.")
+
+        @Slot(str, str, str)
+        def novaOpenConnect(self, nome, servidor, protocolo):
+            if not self._demo:
+                self._acao(rede.nova_openconnect, nome, servidor, protocolo, mensagem=f"VPN “{nome}” adicionada.")
+
+        @Slot("QVariantMap")
+        def conectarEmpresa(self, d):
+            if self._demo:
+                return
+            self._acao(rede.conectar_empresa, d.get("ssid", ""), d.get("metodo", "peap"), d.get("usuario", ""), d.get("senha", ""),
+                       d.get("interna", "mschapv2"), d.get("anonima", ""), d.get("ca", "").replace("file://", ""), d.get("dominio", ""),
+                       d.get("certificado", "").replace("file://", ""), d.get("chave", "").replace("file://", ""), d.get("senhaChave", ""),
+                       bool(d.get("semVerificar")), mensagem=f"Conectado a {d.get('ssid', '')}.")
+
+        @Slot("QVariantMap")
+        def gravarProxy(self, config):
+            config = {k: (dict(v) if hasattr(v, "keys") else v) for k, v in dict(config).items()}
+            erros = proxy.validar(config)
+            if erros:
+                self.aviso.emit(erros[0])
+                return
+            if self._demo:
+                self.aviso.emit("Demonstração: nada foi mudado.")
+                return
+            proxy.gravar(config)
+            self._proxy = config
+            self.proxyMudou.emit()
+            # O apt do sistema (atualizações) usa o mesmo proxy HTTP: pelo duiaos-agente, com autorização
+            import json
+            import interface
+            http = config.get("http", {}) if config.get("modo") == "manual" else {}
+            pedido = {"servidor": http.get("servidor", ""), "porta": int(http.get("porta") or 0)} if http.get("servidor") else {}
+            interface.chamar_agente(self, "ConfigurarProxy", [json.dumps(pedido)],
+                                    lambda _r: self.aviso.emit("Proxy salvo. Programas abertos agora já usam; os que estavam abertos, ao reabrir."),
+                                    lambda m: self.aviso.emit("Proxy salvo para os programas, mas não para as atualizações do sistema: " + m))
+
+        @Slot(str, str)
+        def ligarPontoDeAcesso(self, nome, senha):
+            wifi = next((d["dispositivo"] for d in self._dispositivos if d["tipo"] == "wifi"), "")
+            self._acao(rede.ligar_ponto_de_acesso, wifi, nome, senha, mensagem=f"Ponto de acesso “{nome}” ligado.")
+
+        @Slot()
+        def desligarPontoDeAcesso(self):
+            self._acao(rede.desligar_ponto_de_acesso, mensagem="Ponto de acesso desligado.")
+
+        @Slot(str, str, str)
+        def qrWifi(self, uuid, ssid, seguranca):
+            destino = Path(os.environ.get("XDG_RUNTIME_DIR") or "/tmp") / f"duiaos-qr-{uuid[:8]}.png"
+            if self._demo:
+                return
+
+            def gerar():
+                senha = rede.senha_salva(uuid) if seguranca else ""
+                return rede.gerar_qr(rede.texto_qr_wifi(ssid, senha, seguranca), destino)
+            self._fundo("qr:" + uuid, gerar)
+
         # ---------------------------------------------------- propriedades
         def _resumo(self):
             return rede.resumo(self._dispositivos, self._geral["conectividade"])
@@ -273,6 +379,10 @@ def _criar_classe():
         conexaoAberta = Property(str, lambda self: self._abrindo, notify=conexaoMudou)
         confirmando = Property(int, lambda self: self._confirmar["restam"], notify=confirmacaoMudou)
         dnsConhecidos = Property("QVariantMap", lambda self: rede.DNS_CONHECIDOS, constant=True)
+        protocolosOpenconnect = Property("QVariantMap", lambda self: rede.PROTOCOLOS_OPENCONNECT, constant=True)
+        metodosEap = Property("QVariantMap", lambda self: rede.METODOS_EAP, constant=True)
+        proxyAtual = Property("QVariantMap", lambda self: self._proxy, notify=proxyMudou)
+        pontoDeAcesso = Property(bool, lambda self: any(c["nome"] == rede.NOME_PONTO_DE_ACESSO and c["ativa"] for c in self._conexoes), notify=mudou)
 
         def _preencher_demonstracao(self):
             self._dispositivos = [
