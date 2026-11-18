@@ -108,6 +108,8 @@ fi
 # oficial sem CUDA. O modelo padrão não vai na ISO: é baixado no 1º login.
 bash "${ROOT}/pacotes/duiaos-ollama/construir.sh" "${ARCH}" config/packages.chroot \
   "${OLLAMA_CACHE:-${ROOT}/.cache/ollama}"
+# Motor web do Ora e do Mail Box (ADR 072): Qt WebEngine recente, da arquitetura da ISO.
+bash "${ROOT}/pacotes/duiaos-motor-web/construir.sh" "${ARCH}" config/packages.chroot "${ROOT}/.cache"
 # Voz do sistema (ADR 063): duiaos-voz da arquitetura da ISO. As vozes não vão na ISO: a pessoa as
 # baixa ao ligar a voz em Configurações › Wise.
 bash "${ROOT}/pacotes/duiaos-voz/construir.sh" "${ARCH}" config/packages.chroot "${ROOT}/.cache"

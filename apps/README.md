@@ -9,4 +9,6 @@ módulos de `shell/comum/` (ADR 044).
 | `explorador-de-arquivos/` | **Explorador de Arquivos**: pastas, aplicativos, discos e Lixeira; ícones ou lista; copiar, mover, renomear, busca, Abrir com (ADR 044) | `duiaos-shell` |
 | `loja/` | **Duia App Store**: Descobrir, categorias, busca, página do aplicativo, Instalados e Atualizações; aplicativos do Flathub (flatpak --user) e do Debian (pelo duiaos-agente) (ADR 049) | `duiaos-shell` |
 | `configuracoes/` | **Configurações**: Wi-Fi, Bluetooth, Som, Tela, Energia, Papel de parede, Barra e Ilha, Usuário e senha, Data e hora, Teclado, Aplicativos padrão, Privacidade, IA, Sobre (ADR 044) | `duiaos-shell` |
+| `ora/` | **Ora**, o navegador: abas, endereço com sugestões, favoritos, histórico, downloads, configurações, janela privada; motor Chromium do Qt WebEngine pelo pacote `duiaos-motor-web` (ADR 072) | `duiaos-shell` |
+| `mailbox/` | **Mail Box**, o e-mail: wizard que descobre os servidores, IMAP, POP3 e SMTP, leitura segura, escrever/responder/encaminhar (ADR 072) | `duiaos-shell` |
 | `ajude-a-melhorar/` | **Ajude a melhorar o DuiaOS** (ADR 041) | `duiaos-relatorios` |

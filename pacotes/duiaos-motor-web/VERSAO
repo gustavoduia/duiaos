@@ -1,0 +1,22 @@
+# Motor web do DuiaOS (ADR 072): o Qt WebEngine (Chromium) dos pacotes oficiais do PySide6, fixado aqui.
+# Licença LGPL-3 (Qt e PySide6), usada como biblioteca, sem modificações. Não usamos o Qt WebEngine do
+# Debian 13: ele tem suporte de segurança limitado (só para conteúdo confiável), o que não serve a um navegador.
+# Desde o 6.12 o motor vem em rodas próprias (PySide6-WebEngine e PySide6-Pdf), com a versão do Chromium
+# no fim do número (6.12.0.140 = Chromium 140).
+# Para atualizar (a cada versão de correção do Qt): troque PYSIDE e WEBENGINE, as dez somas (sha256 das
+# rodas do PyPI) e aumente a REVISAO. O Ora mostra a versão do Chromium em Configurações › Sobre o Ora.
+PYSIDE=6.12.0
+WEBENGINE=6.12.0.140
+REVISAO=1
+PLATAFORMA_AMD64=manylinux_2_34_x86_64
+PLATAFORMA_ARM64=manylinux_2_39_aarch64
+SHA256_AMD64_pyside6_essentials=16f4b5e41daf49235ae048458243da9efe5f3d8040f9cc5aa454ce69893d3bd9
+SHA256_AMD64_pyside6_addons=4ab38c0017f0453671a9313d3a53ca1c0e378924f54b07e596bcea94a9642391
+SHA256_AMD64_shiboken6=3bde565bb0890044b5c7f63808adddede5abc241e9395a2bfed61919884d6240
+SHA256_AMD64_pyside6_webengine=c041c9921d7c91c9e51a2c027f434d05c3c59baa2c8f17b71dc8194e77791f06
+SHA256_AMD64_pyside6_pdf=0c94370b6b9d65fbfe54f9d6d25df0677db0cdcfd0a842a63958a3603a42007c
+SHA256_ARM64_pyside6_essentials=08c5841063fc1df69b7fa1ee405f539e66576a83fc48004be3e2c5e35ccbfa69
+SHA256_ARM64_pyside6_addons=48cd0b639c06c9f79685f340ccae4319614b66d6efcdf06c2ce3836790d8c46e
+SHA256_ARM64_shiboken6=ff72a72b3277b418902d562b987b33a6f6818bed9fe40a49d634d09bc67f620e
+SHA256_ARM64_pyside6_webengine=66a842ccb7f06fa7e357f6d4d63bc2739e3cbc1f93583f314e38c43024fe5f74
+SHA256_ARM64_pyside6_pdf=2b63ee1f8ce3d3b2b648be2ebda483dd0fbca8d44c92a6c6f924033ac7fbde8c

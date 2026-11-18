@@ -9,8 +9,9 @@ Homepage: https://github.com/gustavoduia/duiaos-fontes-abertas
 Description: DuiaOS — interface gráfica
  Tela de Entrada e Tela de Bloqueio, Barra de Recursos (Menu do DuiaOS e
  Central de Controle), Ilha de Aplicativos, Central de Aplicativos, Menu de
- Energia, Explorador de Arquivos, Configurações e a sessão gráfica do DuiaOS
- (labwc + Qt6/QML + Python).
+ Energia, Explorador de Arquivos, Configurações, Duia App Store, o navegador
+ Ora, o Mail Box (e-mail) e a sessão gráfica do DuiaOS (labwc + Qt6/QML +
+ Python).
  .
  Software proprietário. Uso regido pelo EULA:
  /usr/share/duiaos/licenca/EULA.md

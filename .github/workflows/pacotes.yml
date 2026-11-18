@@ -86,6 +86,9 @@ jobs:
           # publicar.sh mantém a cópia já publicada da mesma versão.
           bash pacotes/duiaos-ollama/construir.sh amd64 saida
           bash pacotes/duiaos-ollama/construir.sh arm64 saida
+          # Motor web do Ora e do Mail Box (ADR 072): Qt WebEngine fixado em pacotes/duiaos-motor-web/VERSAO
+          bash pacotes/duiaos-motor-web/construir.sh amd64 saida
+          bash pacotes/duiaos-motor-web/construir.sh arm64 saida
           # Voz do sistema (ADR 063): o duiaos-voz (GPL-3, do duiaos-fontes-abertas) e o motor sherpa-onnx,
           # um pacote por arquitetura; a versão só muda com pacotes/duiaos-voz/VERSAO
           bash pacotes/duiaos-voz/construir.sh amd64 saida

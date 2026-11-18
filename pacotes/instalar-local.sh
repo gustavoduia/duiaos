@@ -38,6 +38,11 @@ if ! command -v zstd >/dev/null || ! command -v curl >/dev/null; then
   sudo apt-get install -y -qq zstd curl
 fi
 bash pacotes/duiaos-ollama/construir.sh "$(dpkg --print-architecture)" "${TEMP}/debs"
+# Motor web do Ora e do Mail Box (ADR 072): rodas do PySide6 (~260 MB), guardadas em ~/.cache/duiaos
+if ! command -v unzip >/dev/null || ! python3 -m pip --version >/dev/null 2>&1; then
+  sudo apt-get install -y -qq unzip python3-pip
+fi
+bash pacotes/duiaos-motor-web/construir.sh "$(dpkg --print-architecture)" "${TEMP}/debs"
 
 chmod 755 "${TEMP}" "${TEMP}/debs"
 chmod 644 "${TEMP}"/debs/*.deb

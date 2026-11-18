@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Mail Box
+GenericName=E-mail
+Comment=Leia e envie e-mails do Gmail, Outlook, iCloud e outros provedores
+Exec=duiaos-mailbox %U
+Icon=duiaos-mailbox
+StartupWMClass=duiaos-mailbox
+Terminal=false
+Categories=Network;Email;
+MimeType=x-scheme-handler/mailto;
+Keywords=email;e-mail;correio;mensagens;gmail;outlook;imap;mailbox;

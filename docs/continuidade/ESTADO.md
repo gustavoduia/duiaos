@@ -5,6 +5,13 @@
 > site não têm mais arquivos de estado próprios.
 
 Atualizado em: 18/11/2026 · por: Claude (conta do Gustavo) · sessão session_017QRdLjWRKDXmQKV6vaZFDo
+**18/11 (tarde): Ora e Mail Box 0.1 (ADR 072, ficha DUIA-2026-0029)** — estratégia aprovada pelo Gustavo (plano no doc
+"Ora e Mail Box — Estratégia e plano de desenvolvimento"): Ora = interface própria sobre o Qt WebEngine (Chromium 140), com o
+motor no pacote novo `duiaos-motor-web` (rodas oficiais do PySide6 fixadas pelo sha256, sem o Qt WebEngine do Debian); Mail Box
+100% próprio (IMAP, POP3, SMTP, wizard com descoberta, leitura segura, senhas no gnome-keyring). Testado aqui com o motor de
+verdade e contra um Dovecot e um SMTP de laboratório (`shell/testes/laboratorio_email.py`). **Sem teste no Dell.** Pendentes:
+login da Microsoft (registro no Entra), OAuth do Google (verificação/CASA), codecs H.264/AAC, onde fica o código (público ou
+privado), página da documentação no `duiaos-websites` (acesso negado neste chat).
 **18/11: Rede e Internet, plano completo (ADRs 069–071, fichas DUIA-2026-0026 a 0028)** — a página Wi-Fi virou Rede e
 Internet: cabo, IP fixo, DNS, Detalhes em abas com "Manter?" (F1); agente de senhas, VPN (WireGuard, OpenVPN, OpenConnect),
 Wi-Fi corporativo, proxy, ponto de acesso e QR (F2); firewall com redes privada/pública (o postinst põe as redes que já

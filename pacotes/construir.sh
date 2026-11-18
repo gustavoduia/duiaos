@@ -3,12 +3,13 @@
 # DuiaOS — gera os pacotes .deb do código próprio (ADR 023).
 #
 #   duiaos-identidade  identidade, padrões do sistema, scripts, repositório apt
-#   duiaos-shell       interface gráfica (pasta shell/), Tela de Entrada, Explorador de Arquivos e Configurações
+#   duiaos-shell       interface gráfica (pasta shell/), Tela de Entrada, Explorador de Arquivos, Configurações,
+#                      Duia App Store, Ora (navegador) e Mail Box (e-mail); o motor web é o duiaos-motor-web
 #   duiaos-ia          IA do sistema: serviço org.duiaos.IA1 e comando duiaos-ia (as telas ficam nas Configurações)
 #   duiaos-agente      agente do sistema: ações aprovadas (org.duiaos.Agente1, ADR 034)
 #   duiaos-relatorios  registros do sistema e "Ajude a melhorar o DuiaOS" (ADR 040)
 #   duiaos-desktop     metapacote: instala e mantém todos os acima
-#   (o duiaos-ollama, por arquitetura, tem o próprio duiaos-ollama/construir.sh)
+#   (o duiaos-ollama e o duiaos-motor-web, por arquitetura, têm o próprio construir.sh)
 #
 # Uso: bash pacotes/construir.sh PASTA_DE_SAIDA
 #
@@ -140,11 +141,12 @@ install -m 0644 "${RAIZ}/shell/sessao/autostart" "${RAIZ}/shell/sessao/environme
   "${RAIZ}/shell/sessao/rc.xml" "${SH}/etc/xdg/labwc/"
 install -m 0644 "${RAIZ}/shell/sessao/duiaos.desktop" "${SH}/usr/share/wayland-sessions/"
 # Aplicativos da interface: Explorador de Arquivos, Configurações e Duia App Store
-for APP in explorador-de-arquivos configuracoes loja; do
+for APP in explorador-de-arquivos configuracoes loja ora mailbox; do
   install -d "${SH}/usr/share/duiaos/${APP}"
   install -m 0644 "${RAIZ}/apps/${APP}"/*.py "${RAIZ}/apps/${APP}"/*.qml "${SH}/usr/share/duiaos/${APP}/"
 done
 install -m 0644 "${RAIZ}/apps/loja/destaques.json" "${SH}/usr/share/duiaos/loja/"
+install -m 0644 "${RAIZ}/apps/ora/demonstracao.html" "${SH}/usr/share/duiaos/ora/"
 fechar duiaos-shell
 
 # ------------------------------------------------------------------ duiaos-ia
