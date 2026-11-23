@@ -7,7 +7,7 @@
 # rodas do PyPI) e aumente a REVISAO. O Ora mostra a versão do Chromium em Configurações › Sobre o Ora.
 PYSIDE=6.12.0
 WEBENGINE=6.12.0.140
-REVISAO=1
+REVISAO=2
 PLATAFORMA_AMD64=manylinux_2_34_x86_64
 PLATAFORMA_ARM64=manylinux_2_39_aarch64
 SHA256_AMD64_pyside6_essentials=16f4b5e41daf49235ae048458243da9efe5f3d8040f9cc5aa454ce69893d3bd9

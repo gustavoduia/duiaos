@@ -10,7 +10,8 @@
 #   DUIAOS_VERSION  versão que aparece no sistema (padrão: 0.0.0-dev)
 #   WORK_DIR        pasta de trabalho do live-build (padrão: /tmp/duiaos-build-ARCH)
 #   VERSAO_DEB      versão dos pacotes do DuiaOS (pacotes/versao.sh; padrão: 0.0.0+local)
-#   SUITE           canal do repositório apt gravado no sistema: estavel ou teste
+#   SUITE           canal do repositório apt gravado no sistema (estavel; ADR 074)
+#   LANCAMENTO      sim numa versão lançada (exige o Wise, o Ora e o Mail Box)
 #
 # Resultado: out/duiaos-VERSÃO-ARCH.iso, o .sha256 e a lista de pacotes (.packages).
 # =============================================================================
@@ -92,13 +93,13 @@ fi
 log "Gerando os pacotes do DuiaOS"
 CHAVE="${ROOT}/pacotes/chave.gpg"
 [ -s "${CHAVE}" ] || CHAVE=""
-VERSAO_DEB="${VERSAO_DEB:-0.0.0+local}" VERSAO_SISTEMA="${VERSION}" SUITE="${SUITE:-teste}" \
+VERSAO_DEB="${VERSAO_DEB:-0.0.0+local}" VERSAO_SISTEMA="${VERSION}" SUITE="${SUITE:-estavel}" \
   CHAVE_PUBLICA="${CHAVE}" bash "${ROOT}/pacotes/construir.sh" config/packages.chroot
 # Wise (ADR 042): o assistente vem instalado com o sistema. O .deb é gerado
 # antes, fora do container (pacotes/trazer-wise.sh, repositório privado).
 if compgen -G "${ROOT}/pacotes/externos/duiaos-wise_*.deb" >/dev/null; then
   cp "${ROOT}"/pacotes/externos/duiaos-wise_*.deb config/packages.chroot/
-elif [ "${SUITE:-teste}" = "estavel" ]; then
+elif [ "${LANCAMENTO:-nao}" = "sim" ]; then
   echo "Lançamento sem o pacote do Wise (pacotes/externos). Veja o passo 'Wise' do workflow." >&2
   exit 1
 else
@@ -108,11 +109,10 @@ fi
 # (pacotes/trazer-apps.sh, repositórios privados), como o Wise.
 if compgen -G "${ROOT}/pacotes/externos/duiaos-ora_*.deb" >/dev/null; then
   cp "${ROOT}"/pacotes/externos/duiaos-ora_*.deb "${ROOT}"/pacotes/externos/duiaos-mailbox_*.deb config/packages.chroot/
-elif [ "${SUITE:-teste}" = "estavel" ]; then
-  echo "Lançamento sem o Ora e o Mail Box (pacotes/externos). Veja o passo 'Ora e Mail Box' do workflow." >&2
-  exit 1
 else
-  echo "AVISO: ISO de teste sem o Ora e o Mail Box (sem pacotes/externos/duiaos-ora_*.deb)." >&2
+  # O duiaos-desktop depende dos dois (ADR 074): sem eles a ISO nem instala.
+  echo "ISO sem o Ora e o Mail Box (pacotes/externos). Veja o passo 'Ora e Mail Box' do workflow." >&2
+  exit 1
 fi
 # Ollama (IA local, ADR 030): pacote da arquitetura da ISO, feito do release
 # oficial sem CUDA. O modelo padrão não vai na ISO: é baixado no 1º login.

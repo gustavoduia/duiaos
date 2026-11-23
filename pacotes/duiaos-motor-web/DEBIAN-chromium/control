@@ -1,0 +1,17 @@
+Package: duiaos-motor-web-chromium
+Version: @VERSAO_DEB@
+Architecture: @ARQUITETURA@
+Maintainer: DuiaOS <53358870+gustavoduia@users.noreply.github.com>
+Section: web
+Priority: optional
+Depends: libnss3, libxkbfile1, libxcomposite1, libxdamage1, libxrandr2, libxtst6, libxshmfence1, libgbm1, libasound2t64 | libasound2
+Breaks: duiaos-motor-web (<< 6.12.0-duiaos2)
+Replaces: duiaos-motor-web (<< 6.12.0-duiaos2)
+Homepage: https://doc.qt.io/qtforpython-6/
+Description: DuiaOS — Chromium do motor web do Ora e do Mail Box
+ Biblioteca QtWebEngineCore (o Chromium), os recursos e o processo auxiliar
+ do Qt WebEngine. Parte do duiaos-motor-web, em pacote separado só por causa
+ do tamanho (limite de 100 MB por arquivo do repositório de atualizações).
+ .
+ Qt sob a licença LGPL-3, sem modificações
+ (/usr/share/doc/duiaos-motor-web-chromium/copyright).

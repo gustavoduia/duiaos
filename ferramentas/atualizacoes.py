@@ -23,7 +23,7 @@ IMPORTANCIAS = {"recomendada": "Recomendada", "importante": "Importante", "criti
 REINICIAR = {"nao": "Não é preciso reiniciar", "sessao": "Saia e entre de novo na sessão",
              "computador": "Reinicie o computador"}
 PACOTES = {"duiaos-identidade", "duiaos-shell", "duiaos-ia", "duiaos-agente", "duiaos-relatorios", "duiaos-desktop",
-           "duiaos-ollama", "duiaos-wise", "duiaos-voz", "duiaos-motor-web",
+           "duiaos-ollama", "duiaos-wise", "duiaos-voz", "duiaos-motor-web", "duiaos-motor-web-chromium",
            "duiaos-ora", "duiaos-mailbox"}
 OBRIGATORIOS = ("codigo", "titulo", "data", "tipo", "importancia", "pacotes", "reiniciar", "resumo")
 SECOES = ("O que muda", "Detalhes", "Observações")

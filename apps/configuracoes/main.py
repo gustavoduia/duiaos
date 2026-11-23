@@ -1448,7 +1448,14 @@ class Ajustes(QObject):
             return _catalogo_do_repositorio()["atualizacoes"]
         return at.ler_catalogo_instalado()
 
+    def _nivel(self):
+        import atualizacoes_sistema as at
+        if DEMONSTRACAO:
+            return at.nivel_de_atualizacao(_catalogo_do_repositorio()["atualizacoes"], "0.3.1+git20261123120000.abc1234")
+        return at.nivel_de_atualizacao(at.ler_catalogo_instalado(), at.versao_instalada())
+
     atualizacao = Property("QVariantMap", lambda self: getattr(self, "_atualizacao", {"etapa": "inicio"}), notify=atualizacaoMudou)
+    nivelAtualizacao = Property("QVariantMap", _nivel, notify=atualizacaoMudou)
     registroDeMudancas = Property("QVariantMap", lambda self: getattr(self, "_registro", {}) or {}, notify=atualizacaoMudou)
     historicoAtualizacoes = Property("QVariantList", _historico, notify=atualizacaoMudou)
 

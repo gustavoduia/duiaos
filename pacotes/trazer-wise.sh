@@ -9,9 +9,9 @@
 # Variáveis:
 #   DUIAOS_TOKEN_WISE  token só de LEITURA do duiaos-wise (segredo do GitHub).
 #                      Fica só neste passo: não vai para a ISO nem para o log.
-#   SUITE              estavel (lançamento: exige a tag do Wise igual à do
-#                      sistema) ou teste (main do Wise).
-#   VERSAO_SISTEMA     versão lançada (ex.: 0.3.0), usada com SUITE=estavel.
+#   LANCAMENTO         sim (tag do sistema: exige a tag do Wise igual à do
+#                      sistema) ou nao (main do Wise).
+#   VERSAO_SISTEMA     versão lançada (ex.: 0.3.0), usada com LANCAMENTO=sim.
 #   WISE_REF           (opcional) branch ou tag do Wise a usar.
 #
 # Sem o token: num lançamento, falha (o sistema não sai sem o Wise); fora
@@ -21,10 +21,10 @@ set -euo pipefail
 
 SAIDA="${1:?Uso: bash pacotes/trazer-wise.sh PASTA_DE_SAIDA}"
 REPO="gustavoduia/duiaos-wise"
-SUITE="${SUITE:-teste}"
+LANCAMENTO="${LANCAMENTO:-nao}"
 
 if [ -z "${DUIAOS_TOKEN_WISE:-}" ]; then
-  if [ "${SUITE}" = "estavel" ]; then
+  if [ "${LANCAMENTO}" = "sim" ]; then
     echo "Falta o segredo DUIAOS_TOKEN_WISE: um lançamento não sai sem o Wise." >&2
     exit 1
   fi
@@ -32,7 +32,7 @@ if [ -z "${DUIAOS_TOKEN_WISE:-}" ]; then
   exit 0
 fi
 
-if [ "${SUITE}" = "estavel" ]; then
+if [ "${LANCAMENTO}" = "sim" ]; then
   REF="${WISE_REF:-v${VERSAO_SISTEMA:?VERSAO_SISTEMA é obrigatória num lançamento}}"
 else
   REF="${WISE_REF:-main}"
@@ -51,7 +51,7 @@ git -C "${TRABALHO}/wise" -c "http.https://github.com/.extraheader=AUTHORIZATION
   fetch -q --tags origin
 
 mkdir -p "${SAIDA}"
-if [ "${SUITE}" = "estavel" ]; then
+if [ "${LANCAMENTO}" = "sim" ]; then
   DEB="$(VERSAO_DEB="${VERSAO_SISTEMA//-/\~}" bash "${TRABALHO}/wise/pacote/construir.sh" "${SAIDA}")"
 else
   DEB="$(bash "${TRABALHO}/wise/pacote/construir.sh" "${SAIDA}")"

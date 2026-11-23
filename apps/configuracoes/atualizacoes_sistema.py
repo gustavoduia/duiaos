@@ -133,6 +133,32 @@ def fichas_pendentes(publicado, instalado, mudancas_duiaos):
     return pendentes
 
 
+def versao_instalada(pacote="duiaos-desktop"):
+    saida = _rodar("dpkg-query", "-W", "-f=${Version}", pacote, tempo=10)
+    return saida.strip() if isinstance(saida, str) else ""
+
+
+def nivel_de_atualizacao(instalado, compilacao):
+    """Até onde este computador está atualizado (ADR 074): a ficha mais nova instalada e a compilação.
+
+    instalado: catálogo de fichas instalado; compilacao: versão do duiaos-desktop (ex.: 0.3.1+git20261123….abc1234).
+    A Central compara com o catálogo publicado: tudo o que saiu depois vem numa atualização acumulada."""
+    nivel = {"codigo": "", "titulo": "", "data": "", "compilacao": compilacao or "", "texto": ""}
+    if instalado:
+        ultima = max(instalado, key=lambda f: (f.get("publicada", ""), f.get("codigo", "")))
+        nivel.update(codigo=ultima.get("codigo", ""), titulo=ultima.get("titulo", ""))
+        nivel["data"] = "/".join(reversed((ultima.get("data") or "").split("-")))
+    quando = data_da_versao(compilacao)
+    data_compilacao = f"{quando[6:8]}/{quando[4:6]}/{quando[:4]}" if quando else ""
+    partes = []
+    if nivel["codigo"]:
+        partes.append(f"Atualizado até {nivel['codigo']}" + (f" ({nivel['data']})" if nivel["data"] else ""))
+    if compilacao:
+        partes.append(f"compilação {compilacao}" + (f" de {data_compilacao}" if data_compilacao else ""))
+    nivel["texto"] = " · ".join(partes) or "Nível de atualização desconhecido (sistema gerado sem o histórico)."
+    return nivel
+
+
 def maior_reinicio(fichas):
     ordem = ["nao", "sessao", "computador"]
     return max((f.get("reiniciar", "nao") for f in fichas), key=lambda r: ordem.index(r) if r in ordem else 0, default="nao")

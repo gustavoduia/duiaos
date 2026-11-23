@@ -29,7 +29,7 @@ if [ -r /etc/apt/sources.list.d/duiaos.sources ]; then
   SUITE="$(sed -n 's/^Suites:[[:space:]]*//p' /etc/apt/sources.list.d/duiaos.sources | head -n 1)"
 fi
 
-VERSAO_DEB="${VERSAO_DEB}" VERSAO_SISTEMA="${VERSAO_SISTEMA}" SUITE="${SUITE:-teste}" \
+VERSAO_DEB="${VERSAO_DEB}" VERSAO_SISTEMA="${VERSAO_SISTEMA}" SUITE="${SUITE:-estavel}" \
   CHAVE_PUBLICA="${CHAVE}" bash pacotes/construir.sh "${TEMP}/debs"
 
 # Ollama (IA local) da arquitetura deste computador; o download (~1,5 GB) fica

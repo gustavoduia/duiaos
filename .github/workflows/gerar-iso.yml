@@ -276,6 +276,7 @@ jobs:
             -e DUIAOS_VERSION="${DUIAOS_VERSION}" \
             -e VERSAO_DEB="${VERSAO_DEB}" \
             -e SUITE="${SUITE}" \
+            -e LANCAMENTO="${LANCAMENTO}" \
             debian:trixie \
             bash build/build.sh
 

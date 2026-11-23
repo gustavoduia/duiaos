@@ -3,8 +3,11 @@
 #
 # Repositório apt: branch gh-pages do repositório público, pasta apt/,
 # servido pelo GitHub Pages em https://gustavoduia.github.io/duiaos-fontes-abertas/apt
-#   - envio para a main  -> canal "teste"   (versão X.Y.Z+gitDATA.SHA)
-#   - tag vX.Y.Z         -> canais "estavel" e "teste" (versão X.Y.Z)
+# Fluxo único de atualizações (ADR 074): todo envio à main e toda tag publicam
+# para TODOS os computadores, de qualquer ISO (canais "estavel" e "teste" com o
+# mesmo índice):
+#   - envio para a main  -> versão X.Y.Z+gitDATA.SHA
+#   - tag vX.Y.Z         -> versão X.Y.Z (só no commit mais novo da main)
 #
 # Segredos: DUIAOS_APT_CHAVE (chave privada de assinatura, criada por
 # ferramentas/criar-chave-apt.sh) e DUIAOS_TOKEN_PUBLICO (escrita no
@@ -55,6 +58,17 @@ jobs:
 
       - name: Versão
         run: bash pacotes/versao.sh | tee -a "${GITHUB_ENV}"
+
+      - name: Lançamento só no commit mais novo da main (ADR 074)
+        if: startsWith(github.ref, 'refs/tags/v')
+        # A versão X.Y.Z é maior que todas as X.Y.(Z-1)+git...: numa tag de um commit
+        # antigo, os computadores voltariam para um código mais velho.
+        run: |
+          git fetch -q origin main
+          if [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]; then
+            echo "A tag ${GITHUB_REF_NAME} não está no commit mais novo da main. Lance a partir da main atual." >&2
+            exit 1
+          fi
 
       - name: Fichas de atualização (ADR 046)
         run: python3 ferramentas/atualizacoes.py conferir
@@ -125,10 +139,7 @@ jobs:
             git -C site remote add origin "${URL}"
           fi
           touch site/.nojekyll
-          bash pacotes/publicar.sh site/apt "${SUITE}" saida/*.deb
-          if [ "${SUITE}" = "estavel" ]; then
-            bash pacotes/publicar.sh site/apt teste saida/*.deb
-          fi
+          bash pacotes/publicar.sh site/apt saida/*.deb
           # Catálogo das atualizações (código, descrição e detalhes), lido pela Central de Atualizações
           python3 ferramentas/atualizacoes.py catalogo site/apt/atualizacoes.json
           cp pacotes/site/index.html site/index.html
@@ -137,6 +148,6 @@ jobs:
           git checkout -q --orphan publicacao
           git add -A
           git -c user.name="DuiaOS" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
-            commit -q -m "Repositório apt do DuiaOS: ${VERSAO_DEB} (${SUITE})"
+            commit -q -m "Repositório apt do DuiaOS: ${VERSAO_DEB}"
           git push -q -f origin publicacao:gh-pages
-          echo "Publicado: https://${REPO_PUBLICO%%/*}.github.io/${REPO_PUBLICO#*/}/apt (canal ${SUITE}, versão ${VERSAO_DEB})"
+          echo "Publicado: https://${REPO_PUBLICO%%/*}.github.io/${REPO_PUBLICO#*/}/apt (versão ${VERSAO_DEB}, para todos os computadores)"

@@ -4,7 +4,15 @@
 > commits, o que está instalado em cada máquina. Desde 13/10 é o estado de TODO o projeto (ADR 043): o Wise e o
 > site não têm mais arquivos de estado próprios.
 
-Atualizado em: 18/11/2026 · por: Claude (conta do Gustavo) · sessão session_017QRdLjWRKDXmQKV6vaZFDo
+Atualizado em: 23/11/2026 · por: Claude (conta do Gustavo) · sessão session_017QRdLgczrqbghVfTpAkjAr
+**23/11: ADR 074, ficha DUIA-2026-0031 — fluxo único de atualizações.** Causa de a VM 0.3.1 não receber nada: ISOs lançadas
+gravavam o canal `estavel`, que só mudava em tags; e os envios de 18/11 (bbc557b, 7b2e3fb, 7af88ae) nem publicaram (motor web
+de 141 MB > limite de 100 MB do GitHub; depois, 403 no `duiaos-ora` sem o `DUIAOS_TOKEN_APPS`). Agora: canais `estavel` e
+`teste` com o mesmo índice e pasta única; lançamento só no commit mais novo da main (`lancar-versao.sh` marca Wise, Ora e
+Mail Box); motor web dividido (`duiaos-motor-web` + `duiaos-motor-web-chromium`, 6.12.0-duiaos2); Ora e Mail Box viraram
+Depends do `duiaos-desktop`; "Nível de atualização" em Configurações › Atualizações; instalador sem Thunderbird.
+**Nada publica até o Gustavo criar o segredo `DUIAOS_TOKEN_APPS`** (`docs/continuidade/TOKEN-DOS-APLICATIVOS.md`).
+**Sem teste no Dell nem na VM.**
 **18/11 (noite): ADR 073, ficha DUIA-2026-0030** — Ora e Mail Box nos repositórios privados `duiaos-ora` e `duiaos-mailbox`
 (código, testes e `pacote/construir.sh`; `pacotes/trazer-apps.sh` com o segredo `DUIAOS_TOKEN_APPS`, que o Gustavo precisa
 criar); Ora navegador padrão e Mail Box e-mail padrão (mimeapps, alternativas, uma vez para quem já usava, Ilha); instalador

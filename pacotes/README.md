@@ -22,8 +22,8 @@ código próprio são `Architecture: all` (servem para x86_64 e ARM64); o
 | `NOME/DEBIAN/` | `control` e scripts de instalação (`postinst`, `postrm`); `@VERSAO_DEB@`, `@VERSAO_SISTEMA@` e `@DEPENDENCIAS_SHELL@` são trocados na geração |
 | `construir.sh` | Gera os `.deb` de código próprio (usado pela ISO e pelo workflow `pacotes.yml`) |
 | `duiaos-ollama/construir.sh ARQ SAIDA` | Gera o `duiaos-ollama` de uma arquitetura. A versão (`0.40.3-duiaos1`) vem de `duiaos-ollama/VERSAO`: para atualizar o Ollama, troque a versão e as duas somas sha256 do release |
-| `versao.sh` | Versão e canal: tag `vX.Y.Z` → `X.Y.Z` no canal `estavel`; commit → `X.Y.Z+gitDATA.SHA` no canal `teste` |
-| `publicar.sh` | Monta o repositório apt assinado (mantém as 5 versões mais novas de cada pacote em cada arquitetura; não sobrescreve uma versão já publicada) |
+| `versao.sh` | Versão: tag `vX.Y.Z` → `X.Y.Z` (`LANCAMENTO=sim`); commit → `X.Y.Z+gitDATA.SHA`. Canal gravado sempre `estavel` (ADR 074) |
+| `publicar.sh` | Monta o repositório apt assinado: pasta única `pool/main`, canais `estavel` e `teste` com o mesmo índice; guarda 3 versões de cada pacote (2 dos grandes); não sobrescreve uma versão já publicada; recusa arquivo acima de 95 MB e site acima de 950 MB (ADR 074) |
 | `instalar-local.sh` | Gera e instala os pacotes desta pasta no próprio computador (testar uma branch no Dell) |
 | `site/index.html` | Página inicial do site do repositório |
 
@@ -31,7 +31,8 @@ código próprio são `Architecture: all` (servem para x86_64 e ARM64); o
 
 - Endereço: `https://gustavoduia.github.io/duiaos-fontes-abertas/apt`
   (branch `gh-pages` do repositório público, servida pelo GitHub Pages).
-- Canais: `estavel` (versões lançadas) e `teste` (cada envio para a `main`).
+- Fluxo único (ADR 074): todo envio para a `main` e toda tag chegam a todos os computadores. Os canais
+  `estavel` (gravado nas ISOs) e `teste` (ISOs antigas de desenvolvimento) têm o mesmo índice.
 - Assinado com a chave do segredo `DUIAOS_APT_CHAVE`
   (`ferramentas/criar-chave-apt.sh`). A chave pública vai dentro do
   `duiaos-identidade` (`/usr/share/keyrings/duiaos.gpg`) e no site

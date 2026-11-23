@@ -24,7 +24,7 @@ oficial do projeto (ADR 043).
 - Fluxo (ADR 043, substitui a 022): **só a branch `main`** em todos os repositórios; nada de branches nem PRs.
   `git pull --rebase origin main` antes e `git push origin main` depois. Se o ambiente pedir aprovação para
   enviar à `main`, o Gustavo aprova.
-- Atualizar o Dell: `sudo apt update && sudo apt full-upgrade` (canal teste) ou, para testar a `main` na hora,
+- Atualizar o Dell: `sudo apt update && sudo apt full-upgrade` (fluxo único, ADR 074) ou, para testar a `main` na hora,
   `bash pacotes/instalar-local.sh` (duiaos) e `bash pacote/instalar-local.sh` (Wise).
 - SSH Mac→Dell por chave. `gh` no ambiente do Claude só via REST (GraphQL bloqueado).
 - Termos da IA (sempre assim): **motor** = Ollama; **modelo** = Qwen3.5 4B etc.; **modelo ativo** = o único em uso

@@ -16,7 +16,7 @@
 # Variáveis de ambiente (as três primeiras saem de pacotes/versao.sh):
 #   VERSAO_DEB      versão dos pacotes (padrão: 0.0.0+local)
 #   VERSAO_SISTEMA  versão mostrada no sistema, ex.: 0.2.0 ou dev-abc1234
-#   SUITE           canal do repositório apt: estavel ou teste (padrão: teste)
+#   SUITE           canal do repositório apt gravado no sistema (padrão: estavel; ADR 074)
 #   CHAVE_PUBLICA   chave pública do repositório apt (formato binário .gpg).
 #                   Sem ela, os pacotes saem sem o repositório de atualizações.
 #   APT_URL         endereço do repositório apt
@@ -31,7 +31,7 @@ RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PACOTES="${RAIZ}/pacotes"
 VERSAO_DEB="${VERSAO_DEB:-0.0.0+local}"
 VERSAO_SISTEMA="${VERSAO_SISTEMA:-dev-local}"
-SUITE="${SUITE:-teste}"
+SUITE="${SUITE:-estavel}"
 CHAVE_PUBLICA="${CHAVE_PUBLICA:-}"
 APT_URL="${APT_URL:-https://gustavoduia.github.io/duiaos-fontes-abertas/apt}"
 

@@ -115,6 +115,45 @@ class TesteCentralDeAtualizacoes(unittest.TestCase):
         self.assertEqual(at.maior_reinicio(pendentes), "computador")
         self.assertEqual(at.fichas_pendentes(publicado, instalado, []), [])
 
+    def test_nivel_de_atualizacao(self):
+        instalado = [{"codigo": "DUIA-2026-0003", "titulo": "Antiga", "data": "2026-11-10", "publicada": "20261110120000"},
+                     {"codigo": "DUIA-2026-0007", "titulo": "Nova", "data": "2026-11-20", "publicada": "20261120120000"}]
+        nivel = at.nivel_de_atualizacao(instalado, "0.3.1+git20261121083000.abc1234")
+        self.assertEqual(nivel["codigo"], "DUIA-2026-0007")
+        self.assertEqual(nivel["data"], "20/11/2026")
+        self.assertIn("Atualizado até DUIA-2026-0007 (20/11/2026)", nivel["texto"])
+        self.assertIn("compilação 0.3.1+git20261121083000.abc1234 de 21/11/2026", nivel["texto"])
+        # Versão lançada (sem data na versão) e sistema sem histórico
+        self.assertEqual(at.nivel_de_atualizacao([], "0.3.1")["texto"], "compilação 0.3.1")
+        self.assertIn("desconhecido", at.nivel_de_atualizacao([], "")["texto"])
+
+
+class TesteRepositorioApt(unittest.TestCase):
+    """Fluxo único de atualizações (ADR 074): nenhuma ISO fica presa num canal que não recebe as atualizações."""
+
+    RAIZ = Path(__file__).resolve().parents[2]
+
+    def test_todas_as_versoes_gravam_o_mesmo_canal(self):
+        import os
+        import subprocess
+        for ambiente in ({"GITHUB_REF_TYPE": "tag", "GITHUB_REF_NAME": "v9.9.9"}, {"GITHUB_REF_TYPE": "branch"}):
+            saida = subprocess.run(["bash", str(self.RAIZ / "pacotes/versao.sh")], capture_output=True, text=True,
+                                   env={**os.environ, **ambiente}, check=True).stdout
+            valores = dict(linha.split("=", 1) for linha in saida.split())
+            self.assertEqual(valores["SUITE"], "estavel")
+            self.assertEqual(valores["LANCAMENTO"], "sim" if ambiente["GITHUB_REF_TYPE"] == "tag" else "nao")
+
+    def test_publicar_gera_os_dois_canais_da_mesma_pasta(self):
+        texto = (self.RAIZ / "pacotes/publicar.sh").read_text(encoding="utf-8")
+        self.assertIn('CANAIS="estavel teste"', texto)
+        self.assertIn("packages pool/main", texto)
+
+    def test_ora_e_mail_box_sao_dependencias_do_sistema(self):
+        controle = (self.RAIZ / "pacotes/duiaos-desktop/DEBIAN/control").read_text(encoding="utf-8")
+        depende = next(linha for linha in controle.splitlines() if linha.startswith("Depends:"))
+        for pacote in ("duiaos-ora", "duiaos-mailbox", "duiaos-motor-web"):
+            self.assertIn(pacote, depende)
+
 
 if __name__ == "__main__":
     unittest.main()

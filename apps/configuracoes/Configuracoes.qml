@@ -2180,6 +2180,16 @@ Window {
                               : (pa.a.etapa === "atualizando" ? "Você pode continuar usando o computador. Não desligue até terminar."
                               : (pa.a.mensagem || "O DuiaOS, o Wise e os aplicativos instalados recebem correções e novidades por aqui.")) }
 
+            // ------------------------------------------------ nível de atualização (ADR 074)
+            Grupo {
+                titulo: "Este computador"
+                Linha {
+                    icone: "info"; titulo: "Nível de atualização"
+                    descricao: ajustes.nivelAtualizacao.texto + ". Uma atualização acumulada traz tudo o que foi publicado depois, de uma vez."
+                    ultima: true
+                }
+            }
+
             // ------------------------------------------------ atualização automática (ADR 058)
             Grupo {
                 titulo: "Atualização automática"

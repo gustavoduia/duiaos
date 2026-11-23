@@ -1,9 +1,10 @@
 #!/bin/bash
 # =============================================================================
-# DuiaOS — lança uma versão: cria a tag vX.Y.Z no Wise e no DuiaOS e envia ao
-# GitHub, o que gera as duas ISOs (com o Wise instalado, ADR 042), publica o
-# Release no repositório público e os pacotes no canal "estavel" do
-# repositório apt (rode NO MAC). As notas da versão vêm de
+# DuiaOS — lança uma versão: cria a tag vX.Y.Z no Wise, no Ora, no Mail Box e no DuiaOS e envia ao
+# GitHub, o que gera as duas ISOs (com o Wise, o Ora e o Mail Box, que recebem a
+# mesma tag), publica o Release no repositório público e os pacotes no fluxo único
+# de atualizações (ADR 074; a tag precisa estar no commit mais novo da main)
+# (rode NO MAC). As notas da versão vêm de
 # notas-de-versao/X.Y.Z.md (as linhas "- ..." viram as Novidades do site).
 #
 #   bash ferramentas/lancar-versao.sh 0.1.0
@@ -31,25 +32,35 @@ if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
 fi
 [ -s "notas-de-versao/${VERSAO}.md" ] || { echo "Escreva antes notas-de-versao/${VERSAO}.md (novidades)." >&2; exit 1; }
 
-# O Wise vai junto (ADR 042): a mesma tag no repositório dele, na main atualizada
-WISE="${DUIAOS_WISE:-$(dirname "$(pwd)")/duiaos-wise}"
-[ -d "${WISE}/.git" ] || { echo "Não achei o Wise em ${WISE} (ou defina DUIAOS_WISE)." >&2; exit 1; }
-[ "$(git -C "${WISE}" branch --show-current)" = "main" ] || { echo "Wise: mude para a main (cd ${WISE} && git switch main)" >&2; exit 1; }
-[ -z "$(git -C "${WISE}" status --porcelain)" ] || { echo "Wise: há alterações não commitadas." >&2; exit 1; }
-git -C "${WISE}" fetch -q --tags origin
-[ "$(git -C "${WISE}" rev-parse HEAD)" = "$(git -C "${WISE}" rev-parse origin/main)" ] || { echo "Wise: rode git pull na main." >&2; exit 1; }
-WISE_TEM_TAG=0
-git -C "${WISE}" rev-parse -q --verify "refs/tags/${TAG}" >/dev/null && WISE_TEM_TAG=1
+# O Wise, o Ora e o Mail Box vão junto (ADR 042 e 073): a mesma tag em cada repositório, na main atualizada
+PAI="$(dirname "$(pwd)")"
+declare -A PASTAS=([Wise]="${DUIAOS_WISE:-${PAI}/duiaos-wise}" [Ora]="${DUIAOS_ORA:-${PAI}/duiaos-ora}"
+                   [Mail\ Box]="${DUIAOS_MAILBOX:-${PAI}/duiaos-mailbox}")
+declare -A TEM_TAG=()
+for NOME in Wise Ora "Mail Box"; do
+  PASTA="${PASTAS[${NOME}]}"
+  [ -d "${PASTA}/.git" ] || { echo "Não achei o ${NOME} em ${PASTA} (clone os repositórios lado a lado)." >&2; exit 1; }
+  [ "$(git -C "${PASTA}" branch --show-current)" = "main" ] || { echo "${NOME}: mude para a main (cd ${PASTA} && git switch main)" >&2; exit 1; }
+  [ -z "$(git -C "${PASTA}" status --porcelain)" ] || { echo "${NOME}: há alterações não commitadas." >&2; exit 1; }
+  git -C "${PASTA}" fetch -q --tags origin
+  [ "$(git -C "${PASTA}" rev-parse HEAD)" = "$(git -C "${PASTA}" rev-parse origin/main)" ] || { echo "${NOME}: rode git pull na main." >&2; exit 1; }
+  TEM_TAG[${NOME}]=0
+  git -C "${PASTA}" rev-parse -q --verify "refs/tags/${TAG}" >/dev/null && TEM_TAG[${NOME}]=1
+done
 
 echo "Lançando DuiaOS ${VERSAO} a partir de $(git log -1 --oneline)"
-echo "Wise: $(git -C "${WISE}" log -1 --oneline)$([ "${WISE_TEM_TAG}" = 1 ] && echo " (tag ${TAG} já existe e será usada)")"
+for NOME in Wise Ora "Mail Box"; do
+  echo "${NOME}: $(git -C "${PASTAS[${NOME}]}" log -1 --oneline)$([ "${TEM_TAG[${NOME}]}" = 1 ] && echo " (tag ${TAG} já existe e será usada)")"
+done
 read -r -p "Confirma? (s/N) " R
 [ "${R}" = "s" ] || [ "${R}" = "S" ] || { echo "Cancelado."; exit 1; }
 
-if [ "${WISE_TEM_TAG}" = 0 ]; then
-  git -C "${WISE}" tag -a "${TAG}" -m "Wise ${VERSAO} (DuiaOS ${VERSAO})"
-  git -C "${WISE}" push origin "${TAG}"
-fi
+for NOME in Wise Ora "Mail Box"; do
+  if [ "${TEM_TAG[${NOME}]}" = 0 ]; then
+    git -C "${PASTAS[${NOME}]}" tag -a "${TAG}" -m "${NOME} ${VERSAO} (DuiaOS ${VERSAO})"
+    git -C "${PASTAS[${NOME}]}" push origin "${TAG}"
+  fi
+done
 git tag -a "${TAG}" -m "DuiaOS ${VERSAO}"
 git push origin "${TAG}"
 
