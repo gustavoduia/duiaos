@@ -7,7 +7,8 @@
 Atualizado em: 23/11/2026 · por: Claude (conta do Gustavo) · sessão session_017QRdLhyPjUkMHPvLpngyfq
 **23/11 (20h): ADR 082, W26, ficha DUIA-2026-0038** — texto junto com a voz (como no modo voz do ChatGPT), fala da nuvem
 emendada (sem os silêncios de cada áudio) e o jeito de falar em Configurações › Wise › Voz (voz natural, estilo, velocidade).
-**Ainda pendente:** os patches do duiaos-voz (ADRs 079 e 081) no `duiaos-fontes-abertas` + REVISAO=4.
+O duiaos-voz das ADRs 079 e 081 foi enviado ao `duiaos-fontes-abertas` (`5bec041`, com autorização do Gustavo) e o pacote
+subiu para 1.13.8-duiaos4 (ficha DUIA-2026-0039); conferido num build local.
 **23/11 (17h30): ADR 081, W25, ficha DUIA-2026-0037** — fala entendida errado e escuta lenta: o microfone do Dell chega
 **estourado** (pico > 0 dB) e o ruído aumentado prende o detector de fala (9 s ouvidos para 2 s de fala). Feito: reconhecimento
 pela nuvem com o motor ligado (`gpt-transcribe`/Gemini; local de reserva), volume do microfone ajustado sozinho (`wpctl`), fim da
