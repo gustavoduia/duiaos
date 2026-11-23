@@ -10,16 +10,14 @@ o duiaos-voz antigo. Decisões do Gustavo: **voz natural pela nuvem** quando Ope
 reserva; só o texto falado sai) e **medir modelos** para trocar o padrão se houver um mais rápido. O 4B **já roda na Iris Xe**
 (Vulkan), mas lê ~70 pedaços/s, como no processador. Feito: `wise/voz_nuvem.py`, `duiaos-wise --medir-modelos [--baixar]`,
 "Voz natural pela nuvem" em Configurações › Wise › Voz. **Pendentes:** Gustavo rodar a medição no Dell; trocar o modelo padrão
-conforme o resultado; patch do duiaos-voz + REVISAO=3 (abaixo); `gpt-4o-mini-tts` sai em 06/01/2027 (Realtime API).
+conforme o resultado; `gpt-4o-mini-tts` sai em 06/01/2027 (Realtime API).
 **23/11 (fim da tarde): ADR 079, W23, ficha DUIA-2026-0035 — Wise em tempo real.** Causas nos relatórios do Dell: com o
 **9B** ativo o aquecimento do boot desistia (o modelo não fica sempre na memória) e a 1ª pergunta levou 2 min 52 s; o Wise não
 reaquecia quando o modelo voltava para a memória; 1ª fala em 11–12 s (Kokoro int8 quase em tempo real, disputando o
 processador). Feito: aquecimento sempre pronto (boot, volta à memória, ao abrir a janela/clicar no microfone), resposta falada
 de conversa, trechos para a voz (1º em "Claro!"/1ª vírgula), **conversa por voz mãos livres** (Configurações › Wise › Voz),
 duiaos-voz com **Kokoro fp32** (2,3× mais rápido; botão "Atualizar" para quem tem o int8), tocador contínuo, pausas por
-pontuação, fim de turno em 0,8 s com espera se a pessoa parou em "e", "mas"… **Pendentes:** o código do duiaos-voz
-(`duiaos-fontes-abertas/voz/`) precisa ser enviado — o ambiente negou anexar esse repositório com escrita neste chat —
-e, **no mesmo envio**, `REVISAO=3` em `pacotes/duiaos-voz/VERSAO` (sem isso o pacote não muda); medir no Dell;
+pontuação, fim de turno em 0,8 s com espera se a pessoa parou em "e", "mas"… **Pendentes:** (o duiaos-voz novo e a REVISAO=3 foram enviados pelo Gustavo, `df27400`); medir no Dell;
 o Ollama não usa a Iris Xe (llama-server só com o processador); página da documentação no `duiaos-websites`.
 **23/11 (noite, 2ª rodada): ADR 077, ficha DUIA-2026-0034** — 8 pontos do Gustavo: Ora compacto e sem a barra do sistema
 (botões da janela à direita das abas, arrastar/redimensionar próprios, regra `serverDecoration="no"` no rc.xml), DevTools
