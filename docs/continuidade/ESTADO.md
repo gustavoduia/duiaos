@@ -5,6 +5,12 @@
 > site não têm mais arquivos de estado próprios.
 
 Atualizado em: 23/11/2026 · por: Claude (conta do Gustavo) · sessão session_017QRdLgczrqbghVfTpAkjAr
+**23/11 (tarde): ADR 075, ficha DUIA-2026-0032.** Gustavo confirmou: com o token criado, a VM 0.3.1 recebeu a atualização
+acumulada. Causa de o Ora e o Mail Box não abrirem na VM (ARM): a roda aarch64 do Qt WebEngine precisa de libsnappy, libwebp,
+libopus, liblcms2 e libminizip do sistema (reproduzido num Debian 13 arm64 emulado; motor 6.12.0-duiaos3 com as dependências
+e `conferir-dependencias.sh` no `pacotes.yml`, amd64 e arm64). Tab nos campos (`Campo.qml`, Escrever) e botões pelo teclado;
+Ora e Mail Box vêm para a frente pelo `wlrctl`. Ora repaginado (trilho de abas lateral, ilha, cartão; `MarcaOra.qml`) e
+apresentação da primeira abertura nos dois (Mail Box importa contas do Thunderbird). **Sem teste no Dell nem na VM.**
 **23/11: ADR 074, ficha DUIA-2026-0031 — fluxo único de atualizações.** Causa de a VM 0.3.1 não receber nada: ISOs lançadas
 gravavam o canal `estavel`, que só mudava em tags; e os envios de 18/11 (bbc557b, 7b2e3fb, 7af88ae) nem publicaram (motor web
 de 141 MB > limite de 100 MB do GitHub; depois, 403 no `duiaos-ora` sem o `DUIAOS_TOKEN_APPS`). Agora: canais `estavel` e

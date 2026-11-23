@@ -35,6 +35,7 @@ Rectangle {
         color: Tema.texto
         selectionColor: Tema.azulDuia
         clip: true
+        activeFocusOnTab: true          // Tab passa para o próximo campo (o TextInput do Qt não faz isso sozinho)
         echoMode: raiz.senha ? TextInput.Password : TextInput.Normal
         onAccepted: raiz.confirmado()
         Text {

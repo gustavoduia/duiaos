@@ -37,7 +37,7 @@ jobs:
   pacotes:
     name: Gerar e publicar os pacotes
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 45
     steps:
       - name: Baixar o código
         uses: actions/checkout@v4
@@ -112,6 +112,22 @@ jobs:
           bash pacotes/trazer-wise.sh saida
           # Ora e Mail Box (ADR 073): aplicativos padrão, dos repositórios privados duiaos-ora e duiaos-mailbox
           bash pacotes/trazer-apps.sh saida
+
+      - name: Emulação de ARM (para conferir o motor web arm64)
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Motor web instala e abre num Debian 13 limpo (ADR 075)
+        # Sem isto, uma biblioteca do sistema que falte só numa arquitetura (como o libsnappy no ARM) deixa o
+        # Ora e o Mail Box sem abrir nos computadores, e ninguém percebe antes de publicar.
+        run: |
+          for ARQ in amd64 arm64; do
+            mkdir -p "conferir-${ARQ}"
+            cp saida/duiaos-motor-web*_"${ARQ}".deb "conferir-${ARQ}/"
+            docker run --rm --platform "linux/${ARQ}" -v "${PWD}:/w" -w /w debian:trixie \
+              bash pacotes/duiaos-motor-web/conferir-dependencias.sh "conferir-${ARQ}"
+          done
 
       - name: Guardar os pacotes no GitHub (30 dias)
         uses: actions/upload-artifact@v4

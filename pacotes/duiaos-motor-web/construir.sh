@@ -141,7 +141,9 @@ done
 fechar() {
   local P="$1" NOME
   NOME="$(basename "${P}")"
-  sed -i -e "s|@VERSAO_DEB@|${VERSAO_DEB}|g" -e "s|@ARQUITETURA@|${ARQ}|g" "${P}/DEBIAN/control"
+  local EXTRA=""
+  [ "${ARQ}" = "arm64" ] && EXTRA=", ${DEPENDENCIAS_ARM64}"
+  sed -i -e "s|@VERSAO_DEB@|${VERSAO_DEB}|g" -e "s|@ARQUITETURA@|${ARQ}|g" -e "s|@DEPENDENCIAS_ARQ@|${EXTRA}|g" "${P}/DEBIAN/control"
   find "${P}" -name '__pycache__' -prune -exec rm -rf {} +
   find "${P}" -type d -exec chmod 0755 {} +
   find "${P}" -type f ! -perm -u+x -exec chmod 0644 {} +

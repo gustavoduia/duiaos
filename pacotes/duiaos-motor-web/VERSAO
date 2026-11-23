@@ -7,7 +7,7 @@
 # rodas do PyPI) e aumente a REVISAO. O Ora mostra a versão do Chromium em Configurações › Sobre o Ora.
 PYSIDE=6.12.0
 WEBENGINE=6.12.0.140
-REVISAO=2
+REVISAO=3
 PLATAFORMA_AMD64=manylinux_2_34_x86_64
 PLATAFORMA_ARM64=manylinux_2_39_aarch64
 SHA256_AMD64_pyside6_essentials=16f4b5e41daf49235ae048458243da9efe5f3d8040f9cc5aa454ce69893d3bd9
@@ -20,3 +20,6 @@ SHA256_ARM64_pyside6_addons=48cd0b639c06c9f79685f340ccae4319614b66d6efcdf06c2ce3
 SHA256_ARM64_shiboken6=ff72a72b3277b418902d562b987b33a6f6818bed9fe40a49d634d09bc67f620e
 SHA256_ARM64_pyside6_webengine=66a842ccb7f06fa7e357f6d4d63bc2739e3cbc1f93583f314e38c43024fe5f74
 SHA256_ARM64_pyside6_pdf=2b63ee1f8ce3d3b2b648be2ebda483dd0fbca8d44c92a6c6f924033ac7fbde8c
+# A roda de ARM (aarch64) usa bibliotecas do sistema que a de Intel/AMD traz dentro (snappy, webp, opus, lcms2,
+# minizip): sem elas o Ora e o Mail Box não abrem no ARM (ADR 075). Conferidas por conferir-dependencias.sh.
+DEPENDENCIAS_ARM64="libsnappy1v5, libminizip1t64, libwebp7, libwebpdemux2, libwebpmux3, liblcms2-2, libopus0"

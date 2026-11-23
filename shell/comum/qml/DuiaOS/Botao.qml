@@ -71,6 +71,18 @@ Item {
         cursorShape: Qt.PointingHandCursor
         onClicked: raiz.clicado()
     }
+    // Teclado: Tab chega ao botão (anel de foco) e Enter ou Espaço o acionam
+    activeFocusOnTab: ativo && visible
+    Keys.onReturnPressed: if (ativo) raiz.clicado()
+    Keys.onEnterPressed: if (ativo) raiz.clicado()
+    Keys.onSpacePressed: if (ativo) raiz.clicado()
+    Rectangle {
+        visible: raiz.activeFocus          // só o teclado dá foco ao botão (o clique não)
+        anchors { fill: parent; margins: -3 }
+        radius: raiz.raioBotao + 3
+        color: "transparent"
+        border { width: 2; color: Tema.azulDuia }
+    }
     Accessible.role: Accessible.Button
     Accessible.name: texto
 }
