@@ -18,6 +18,13 @@ on:
   push:
     branches: [main]
     tags: ["v*"]
+    # Só documentação, memórias e decisões não chegam aos computadores: não viram uma "atualização" de 9 pacotes
+    # sem descrição (relato do Gustavo, 23/11, ADR 081). As tags não passam por este filtro.
+    paths-ignore:
+      - "docs/**"
+      - "*.md"
+      - "notas-de-versao/**"
+      - ".github/ISSUE_TEMPLATE/**"
   workflow_dispatch:
 
 permissions:

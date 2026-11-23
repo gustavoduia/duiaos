@@ -2978,6 +2978,16 @@ Window {
                                                               : "Desligada: o Wise fala sempre com a voz do computador.")
                     Interruptor { ligado: pw.voz.voz_na_nuvem !== false; onAlternado: (v) => ia.definirWise("voz_na_nuvem", v ? "sim" : "nao") }
                 }
+                // ADR 081: entender a fala pela nuvem (o áudio da fala sai do computador; a pessoa escolhe)
+                Linha {
+                    visible: !!pw.voz.disponivel
+                    icone: "microfone"; titulo: "Entender a fala pela nuvem"
+                    descricao: pw.voz.motor_do_ouvido === "openai" ? "A gravação do que você fala vai para a OpenAI virar texto, com muito mais precisão, e é apagada daqui em seguida. Sem internet, o computador entende sozinho."
+                             : pw.voz.motor_do_ouvido === "gemini" ? "A gravação do que você fala vai para o Google Gemini virar texto, com muito mais precisão, e é apagada daqui em seguida. Sem internet, o computador entende sozinho."
+                             : (pw.voz.ouvir_na_nuvem !== false ? "Ligue a OpenAI ou o Gemini em Inteligência Artificial para o Wise entender sua fala com mais precisão."
+                                                                : "Desligado: a sua fala nunca sai do computador.")
+                    Interruptor { ligado: pw.voz.ouvir_na_nuvem !== false; onAlternado: (v) => ia.definirWise("ouvir_na_nuvem", v ? "sim" : "nao") }
+                }
                 // Kokoro int8 baixado antes da ADR 079: a versão rápida tira o "picotado" da fala
                 Linha {
                     readonly property var k: (pw.voz.pacotes || {})["kokoro"] || ({})

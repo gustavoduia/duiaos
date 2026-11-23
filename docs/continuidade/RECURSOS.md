@@ -133,6 +133,8 @@ Regras:
 | Pacote duiaos-voz (script GPL do duiaos-fontes-abertas + sherpa-onnx; um .deb por arquitetura) | `pacotes/duiaos-voz/` | `pacotes/duiaos-voz/construir.sh::sherpa`, `pacotes/duiaos-voz/DEBIAN/control::Package: duiaos-voz` | ADR 063 | main |
 | Configurações › Wise › Voz: "Conversa por voz" e "Voz mais rápida e fluida" (troca o Kokoro int8 pelo rápido) | `apps/configuracoes/` | `apps/configuracoes/Configuracoes.qml::ia.definirWise("conversa_continua"`, `apps/configuracoes/Configuracoes.qml::Voz mais rápida e fluida` | ADR 079 | main |
 | Configurações › Wise › Voz: "Voz natural pela nuvem" (mostra o motor em uso e o que sai do computador) | `apps/configuracoes/` | `apps/configuracoes/Configuracoes.qml::ia.definirWise("voz_na_nuvem"` | ADR 080 | main |
+| Configurações › Wise › Voz: "Entender a fala pela nuvem" | `apps/configuracoes/` | `apps/configuracoes/Configuracoes.qml::ia.definirWise("ouvir_na_nuvem"` | ADR 081 | main |
+| Pacotes não são republicados por envios só de documentação | `.github/workflows/pacotes.yml` | `.github/workflows/pacotes.yml::paths-ignore:` | ADR 081 | main |
 | Termos: motor (Ollama) × modelo | `ia/`, `apps/central-de-ia/` | `ia/catalogo.json::qwen3.5:4b` | PR #8 | main |
 | Medição de motores (Ollama × llama-server × MTP × OpenVINO) | `ferramentas/medir-motores.py` | `ferramentas/medir-motores.py::--placa` | 12/10 | main |
 

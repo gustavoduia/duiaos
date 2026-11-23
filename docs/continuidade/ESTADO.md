@@ -5,6 +5,11 @@
 > site não têm mais arquivos de estado próprios.
 
 Atualizado em: 23/11/2026 · por: Claude (conta do Gustavo) · sessão session_017QRdLhyPjUkMHPvLpngyfq
+**23/11 (17h30): ADR 081, W25, ficha DUIA-2026-0037** — fala entendida errado e escuta lenta: o microfone do Dell chega
+**estourado** (pico > 0 dB) e o ruído aumentado prende o detector de fala (9 s ouvidos para 2 s de fala). Feito: reconhecimento
+pela nuvem com o motor ligado (`gpt-transcribe`/Gemini; local de reserva), volume do microfone ajustado sozinho (`wpctl`), fim da
+fala também pela energia (duiaos-voz, patch 2), `pacotes.yml` sem publicar envios só de documentação (as "9 atualizações" sem
+descrição). **Pendente do Gustavo:** aplicar `duiaos-voz-patches.patch` (2 commits) no `duiaos-fontes-abertas` e REVISAO=4.
 **23/11 (17h): ADR 080, W24, ficha DUIA-2026-0036** — o teste do Gustavo às 16:44 rodou `07deaff` (antes da ADR 079) e
 o duiaos-voz antigo. Decisões do Gustavo: **voz natural pela nuvem** quando OpenAI ou Gemini estiver ligado (voz local de
 reserva; só o texto falado sai) e **medir modelos** para trocar o padrão se houver um mais rápido. O 4B **já roda na Iris Xe**

@@ -290,7 +290,7 @@ def exemplo():
                          "modelos": [{"id": "qwen3.5:4b", "nome": "Qwen3.5 4B"}, {"id": "gemma4:e4b", "nome": "Gemma 4 E4B"}]},
                         {"id": "gemini", "titulo": "Google Gemini", "nuvem": True, "pronto": True, "motivo": "",
                          "modelo": "gemini-3.8-flash", "modelos": [{"id": "gemini-3.8-flash", "nome": "gemini-3.8-flash"}]}],
-            "voz": {"disponivel": True, "falar_respostas": True, "conversa_continua": True, "voz_na_nuvem": True, "motor_da_voz": "gemini",
+            "voz": {"disponivel": True, "falar_respostas": True, "conversa_continua": True, "voz_na_nuvem": True, "motor_da_voz": "gemini", "ouvir_na_nuvem": True, "motor_do_ouvido": "gemini",
                     "voz": "dora", "velocidade": 1.0,
                     "ouvir": True,
                     "baixando": {"faber": 0.37}, "mensagem": "",
