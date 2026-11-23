@@ -5,6 +5,12 @@
 > site não têm mais arquivos de estado próprios.
 
 Atualizado em: 23/11/2026 · por: Claude (conta do Gustavo) · sessão session_017QRdLgczrqbghVfTpAkjAr
+**23/11 (noite): ADR 076, ficha DUIA-2026-0033** — 18 pontos do Gustavo: Mail Box envia pelo Gmail (login pulado no SMTP_SSL),
+Configurações completas (contas/servidores/senhas/teste, assinaturas texto e HTML com modelos, pastas), botão direito, janela
+da mensagem, lista sem pular, lida na hora, wizard fecha; Ora com abas em 4 posições, menus em português, favorito com pasta,
+mais visitados, última aba, chave de segurança USB; dicas em todos os botões de ícone. **Pendente: H.264/AAC no Ora**
+(rodas do Qt sem codecs proprietários; decisão do Gustavo entre compilar o Qt WebEngine ou usar o do Debian). **Sem teste no
+Dell nem na VM.**
 **23/11 (tarde): ADR 075, ficha DUIA-2026-0032.** Gustavo confirmou: com o token criado, a VM 0.3.1 recebeu a atualização
 acumulada. Causa de o Ora e o Mail Box não abrirem na VM (ARM): a roda aarch64 do Qt WebEngine precisa de libsnappy, libwebp,
 libopus, liblcms2 e libminizip do sistema (reproduzido num Debian 13 arm64 emulado; motor 6.12.0-duiaos3 com as dependências
