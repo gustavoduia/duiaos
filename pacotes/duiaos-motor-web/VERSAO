@@ -23,3 +23,11 @@ SHA256_ARM64_pyside6_pdf=2b63ee1f8ce3d3b2b648be2ebda483dd0fbca8d44c92a6c6f924033
 # A roda de ARM (aarch64) usa bibliotecas do sistema que a de Intel/AMD traz dentro (snappy, webp, opus, lcms2,
 # minizip): sem elas o Ora e o Mail Box não abrem no ARM (ADR 075). Conferidas por conferir-dependencias.sh.
 DEPENDENCIAS_ARM64="libsnappy1v5, libminizip1t64, libwebp7, libwebpdemux2, libwebpmux3, liblcms2-2, libopus0"
+# Codecs H.264, AAC e MP3 (ADR 078): o Qt WebEngine das rodas vem sem eles. O duiaos-fontes-abertas o
+# compila do código-fonte oficial com a opção webengine_proprietary_codecs (modificacoes/qtwebengine-codecs,
+# workflow "Motor web com codecs") e publica numa Release; o construir.sh troca as peças do Qt WebEngine das
+# rodas pelas de lá, conferidas pelo sha256. Vazio = motor das rodas, sem os codecs.
+CODECS_TAG=
+CODECS_NOME=qtwebengine-codecs-6.140.0-qt6.12.0
+CODECS_SHA256_AMD64=
+CODECS_SHA256_ARM64=

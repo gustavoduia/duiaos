@@ -11,7 +11,8 @@
 # Mail Box põem essa pasta na frente do PySide6 do Debian (main.py); os outros programas não a veem.
 #
 # Versão do pacote: PYSIDE-duiaosREVISAO (ex.: 6.12.0-duiaos1); só muda quando VERSAO muda.
-# Precisa de: bash, python3 com pip, unzip, sha256sum, dpkg-deb, find, md5sum, du, sed.
+# Com CODECS_TAG em VERSAO, troca o Qt WebEngine pelo compilado com H.264/AAC/MP3 (ADR 078).
+# Precisa de: bash, python3 com pip, unzip, sha256sum, dpkg-deb, find, md5sum, du, sed, curl, tar, xz.
 # =============================================================================
 set -euo pipefail
 
@@ -82,6 +83,23 @@ rm -rf "${QT}"/qml/{Qt3D,QtQuick3D,QtGraphs,QtCharts,QtDataVisualization,QtScxml
 # Traduções: português e inglês (o Chromium tem uma por idioma, ~60 MB no total)
 find "${QT}/translations" -type f ! -name '*pt_BR*' ! -name '*pt-BR*' ! -name '*pt_PT*' ! -name '*pt-PT*' \
   ! -name '*_en.qm' ! -name 'en-US*' ! -name 'en-GB*' -delete
+# Codecs H.264, AAC e MP3 (ADR 078): troca o Qt WebEngine das rodas pelo compilado com os codecs
+if [ -n "${CODECS_TAG:-}" ]; then
+  case "${ARQ}" in amd64) SOMA_CODECS="${CODECS_SHA256_AMD64}" ;; arm64) SOMA_CODECS="${CODECS_SHA256_ARM64}" ;; esac
+  PACOTE_CODECS="${CACHE}/${ARQ}/${CODECS_NOME}-${ARQ}-${CODECS_TAG}.tar.xz"
+  if ! echo "${SOMA_CODECS}  ${PACOTE_CODECS}" | sha256sum -c --status 2>/dev/null; then
+    curl -fsSL --retry 5 -o "${PACOTE_CODECS}" \
+      "https://github.com/gustavoduia/duiaos-fontes-abertas/releases/download/${CODECS_TAG}/${CODECS_NOME}-${ARQ}.tar.xz"
+  fi
+  echo "${SOMA_CODECS}  ${PACOTE_CODECS}" | sha256sum -c --status \
+    || { echo "O Qt WebEngine com codecs (${CODECS_TAG}, ${ARQ}) não confere com o sha256 de VERSAO." >&2; exit 1; }
+  mkdir -p "${TRABALHO}/codecs"
+  tar -xJf "${PACOTE_CODECS}" -C "${TRABALHO}/codecs"
+  rm -rf "${QT}"/lib/libQt6WebEngine*.so* "${QT}/qml/QtWebEngine" "${QT}/libexec/QtWebEngineProcess" "${QT}/resources" \
+         "${QT}/translations/qtwebengine_locales"
+  cp -a "${TRABALHO}/codecs/Qt/." "${QT}/"
+  echo "    Qt WebEngine com H.264/AAC/MP3: ${CODECS_TAG}"
+fi
 # O unzip não guarda o bit de execução das rodas: os executáveis do Qt (QtWebEngineProcess) precisam dele
 chmod 0755 "${DESTINO}"/PySide6/Qt/libexec/* 2>/dev/null || true
 [ -x "${DESTINO}/PySide6/Qt/libexec/QtWebEngineProcess" ] || { echo "Roda sem o QtWebEngineProcess: formato mudou?" >&2; exit 1; }
@@ -127,6 +145,12 @@ install -d "${DOC}"
   echo "Source: https://download.qt.io/official_releases/QtForPython/pyside6/ e https://code.qt.io/"
   echo "Comment: Rodas oficiais do PyPI, versão ${PYSIDE} (Qt WebEngine ${WEBENGINE}), sem modificações. Empacotado pelo DuiaOS"
   echo "  (pacotes/duiaos-motor-web). O código-fonte desta versão exata está nos endereços acima."
+  if [ -n "${CODECS_TAG:-}" ]; then
+    echo "  O Qt WebEngine (bibliotecas libQt6WebEngine*, QtWebEngineProcess, recursos) foi compilado pelo DuiaOS do"
+    echo "  código-fonte oficial ${CODECS_NOME%%-qt*}, sem alterações, com os codecs H.264, AAC e MP3"
+    echo "  (webengine_proprietary_codecs). Receita, opções e endereço do código-fonte:"
+    echo "  https://github.com/gustavoduia/duiaos-fontes-abertas/tree/main/modificacoes/qtwebengine-codecs"
+  fi
   echo ""
   echo "Files: usr/lib/duiaos/motor-web/*"
   echo "Copyright: The Qt Company Ltd. e colaboradores; Chromium: The Chromium Authors"
