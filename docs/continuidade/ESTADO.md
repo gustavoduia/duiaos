@@ -17,7 +17,8 @@ reaquecia quando o modelo voltava para a memória; 1ª fala em 11–12 s (Kokoro
 processador). Feito: aquecimento sempre pronto (boot, volta à memória, ao abrir a janela/clicar no microfone), resposta falada
 de conversa, trechos para a voz (1º em "Claro!"/1ª vírgula), **conversa por voz mãos livres** (Configurações › Wise › Voz),
 duiaos-voz com **Kokoro fp32** (2,3× mais rápido; botão "Atualizar" para quem tem o int8), tocador contínuo, pausas por
-pontuação, fim de turno em 0,8 s com espera se a pessoa parou em "e", "mas"… **Pendentes:** (o duiaos-voz novo e a REVISAO=3 foram enviados pelo Gustavo, `df27400`); medir no Dell;
+pontuação, fim de turno em 0,8 s com espera se a pessoa parou em "e", "mas"… **Pendentes:** o `duiaos-fontes-abertas` ainda não tem o duiaos-voz novo (a REVISAO=3 de `df27400` saiu antes dele e gera o
+programa antigo): enviar o patch e subir para **REVISAO=4** juntos; medir no Dell;
 o Ollama não usa a Iris Xe (llama-server só com o processador); página da documentação no `duiaos-websites`.
 **23/11 (noite, 2ª rodada): ADR 077, ficha DUIA-2026-0034** — 8 pontos do Gustavo: Ora compacto e sem a barra do sistema
 (botões da janela à direita das abas, arrastar/redimensionar próprios, regra `serverDecoration="no"` no rc.xml), DevTools
