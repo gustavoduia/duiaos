@@ -2,6 +2,14 @@
 
 Uma entrada por sessão, a mais nova em cima. Só acrescentar.
 
+## 23/11/2026 (16h) · Claude (conta do Gustavo) · W23 / ADR 079
+- Relatórios de 17 e 23/11: com o 9B ativo (30 min na memória) o aquecimento do boot desistia e a 1ª pergunta levou
+  2 min 52 s (4.092 pedaços a ~13–77/s); o 9B escreve a 3,8/s (o 4B a ~8,2/s); a 1ª fala saía em 11–12 s. Medido aqui:
+  Kokoro int8 RTF ~0,8, fp32 RTF ~0,34 com 2 linhas (2,3× mais rápido).
+- W23: aquecimento sempre pronto (boot, volta à memória, intenção), resposta falada de conversa, trechos para a voz,
+  conversa por voz mãos livres; duiaos-voz com Kokoro fp32, tocador contínuo, pausas por pontuação, fim de turno com
+  palavra de continuação. Simulação com a IA a 8 pedaços/s: 1º som em ~1,35 s do pedido.
+
 ## 12–13/10/2026 (noite) · Claude (conta do Gustavo) · PR #10
 - Relatórios de 12/10: 1º aquecimento = 1ª leitura de ~3.700 pedaços (ferramentas 83%); pedido de 37,7 s esperou
   o aquecimento e escreveu 77 pedaços antes de buscar. W20: aquecimento antes do login (serviço do sistema),

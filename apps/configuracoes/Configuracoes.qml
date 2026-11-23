@@ -2961,6 +2961,23 @@ Window {
                     descricao: "O Wise fala a resposta enquanto escreve. Tudo é feito neste computador."
                     Interruptor { ligado: pw.voz.falar_respostas === true; onAlternado: (v) => ia.definirWise("falar_respostas", v ? "sim" : "nao") }
                 }
+                // ADR 079: conversa mãos livres, como no modo voz do ChatGPT
+                Linha {
+                    visible: !!pw.voz.disponivel
+                    icone: "microfone"; titulo: "Conversa por voz"
+                    descricao: "Quando você fala com o Wise, ele responde falando e volta a ouvir. Fique em silêncio para encerrar."
+                    Interruptor { ligado: pw.voz.conversa_continua !== false; onAlternado: (v) => ia.definirWise("conversa_continua", v ? "sim" : "nao") }
+                }
+                // Kokoro int8 baixado antes da ADR 079: a versão rápida tira o "picotado" da fala
+                Linha {
+                    readonly property var k: (pw.voz.pacotes || {})["kokoro"] || ({})
+                    visible: !!pw.voz.disponivel && k.instalado === true && k.rapido === false
+                    icone: "som-2"; titulo: "Voz mais rápida e fluida"
+                    descricao: pw.baixando("kokoro") ? "Baixando… " + Math.round((pw.voz.baixando["kokoro"] || 0) * 100) + "%"
+                                                    : "A mesma voz, falando sem pausas entre as palavras (download de " + pw.mb(k.tamanho) + ")."
+                    Andamento { visible: pw.baixando("kokoro"); width: 120; anchors.verticalCenter: parent.verticalCenter; fracao: pw.voz.baixando["kokoro"] || 0 }
+                    Botao { visible: !pw.baixando("kokoro"); texto: "Atualizar"; tipo: "primario"; onClicado: ia.acaoWise("baixar_voz", { item: "kokoro" }) }
+                }
                 Repeater {
                     model: pw.voz.disponivel ? pw.voz.vozes : []
                     Linha {
