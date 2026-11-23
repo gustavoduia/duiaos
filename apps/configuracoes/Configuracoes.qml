@@ -3016,11 +3016,41 @@ Window {
                         Botao { visible: modelData.instalada && !escolhida; texto: "Usar"; onClicado: ia.definirWise("voz", modelData.id) }
                     }
                 }
+                // ADR 082: jeito de falar — voz da nuvem, estilo e velocidade, com "Ouvir" para testar
+                Linha {
+                    visible: !!pw.voz.disponivel && (pw.voz.vozes_nuvem || []).length > 0
+                    icone: "wise"; titulo: "Voz natural"
+                    descricao: "A voz da " + (pw.voz.motor_da_voz === "openai" ? "OpenAI" : "Google Gemini") + " que o Wise usa."
+                    Seletor { width: 250; valor: pw.voz.voz_nuvem || ""
+                              opcoes: (pw.voz.vozes_nuvem || []).map(function (v) { return { valor: v.id, rotulo: v.nome } })
+                              onEscolhido: (v) => ia.definirWise("voz_nuvem", v) }
+                }
+                Linha {
+                    id: linhaEstilo
+                    visible: !!pw.voz.disponivel && (pw.voz.vozes_nuvem || []).length > 0
+                    icone: "paleta"; titulo: "Estilo da fala"
+                    descricao: pw.voz.estilo === "personalizado" ? "Descreva abaixo como o Wise deve falar."
+                                                                 : "O tom da voz natural."
+                    Seletor { width: 250; valor: pw.voz.estilo || "natural"
+                              opcoes: (pw.voz.estilos || []).map(function (e) { return { valor: e.id, rotulo: e.nome } })
+                              onEscolhido: (v) => ia.definirWise("estilo_da_voz", v) }
+                }
+                Linha {
+                    visible: linhaEstilo.visible && pw.voz.estilo === "personalizado"
+                    icone: "documento"; titulo: "Do meu jeito"
+                    descricao: "Ex.: \u201cbem-humorado, como um amigo carioca\u201d. Enter para guardar."
+                    Campo { id: campoEstilo; width: 300; dica: "Como o Wise deve falar"; texto: pw.voz.estilo_livre || ""
+                            onConfirmado: ia.definirWise("estilo_livre", campoEstilo.texto) }
+                }
                 Linha {
                     visible: !!pw.voz.disponivel
                     icone: "relogio"; titulo: "Velocidade da fala"
-                    Segmentos { opcoes: [{ valor: "0.88", rotulo: "Devagar" }, { valor: "1.00", rotulo: "Normal" }, { valor: "1.15", rotulo: "Rápida" }]
-                                valor: (pw.voz.velocidade || 1) < 0.95 ? "0.88" : ((pw.voz.velocidade || 1) > 1.07 ? "1.15" : "1.00")
+                    descricao: "Vale para a voz natural e para a voz do computador."
+                    Segmentos { opcoes: [{ valor: "0.88", rotulo: "Devagar" }, { valor: "1.00", rotulo: "Normal" },
+                                         { valor: "1.10", rotulo: "Ágil" }, { valor: "1.20", rotulo: "Rápida" },
+                                         { valor: "1.35", rotulo: "Muito rápida" }]
+                                valor: { var v = pw.voz.velocidade || 1
+                                         return v < 0.95 ? "0.88" : v < 1.05 ? "1.00" : v < 1.15 ? "1.10" : v < 1.28 ? "1.20" : "1.35" }
                                 onEscolhido: (v) => ia.definirWise("velocidade_da_voz", v) }
                     Botao { texto: "Ouvir"; icone: "som-2"; onClicado: ia.acaoWise("testar_voz", {}) }
                 }
