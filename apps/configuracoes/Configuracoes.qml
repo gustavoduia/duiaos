@@ -2968,6 +2968,16 @@ Window {
                     descricao: "Quando você fala com o Wise, ele responde falando e volta a ouvir. Fique em silêncio para encerrar."
                     Interruptor { ligado: pw.voz.conversa_continua !== false; onAlternado: (v) => ia.definirWise("conversa_continua", v ? "sim" : "nao") }
                 }
+                // ADR 080: voz natural pela nuvem, só com o motor OpenAI ou Gemini ligado (o mesmo consentimento)
+                Linha {
+                    visible: !!pw.voz.disponivel
+                    icone: "globo"; titulo: "Voz natural pela nuvem"
+                    descricao: pw.voz.motor_da_voz === "openai" ? "Usando a voz da OpenAI. Só o texto que o Wise fala vai para a OpenAI; sem internet, ele usa a voz do computador."
+                             : pw.voz.motor_da_voz === "gemini" ? "Usando a voz do Google Gemini. Só o texto que o Wise fala vai para o Google; sem internet, ele usa a voz do computador."
+                             : (pw.voz.voz_na_nuvem !== false ? "Ligue a OpenAI ou o Gemini em Inteligência Artificial para o Wise falar com a voz deles, bem mais natural."
+                                                              : "Desligada: o Wise fala sempre com a voz do computador.")
+                    Interruptor { ligado: pw.voz.voz_na_nuvem !== false; onAlternado: (v) => ia.definirWise("voz_na_nuvem", v ? "sim" : "nao") }
+                }
                 // Kokoro int8 baixado antes da ADR 079: a versão rápida tira o "picotado" da fala
                 Linha {
                     readonly property var k: (pw.voz.pacotes || {})["kokoro"] || ({})

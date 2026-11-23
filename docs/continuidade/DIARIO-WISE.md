@@ -2,6 +2,11 @@
 
 Uma entrada por sessão, a mais nova em cima. Só acrescentar.
 
+## 23/11/2026 (17h) · Claude (conta do Gustavo) · W24 / ADR 080
+- Relatório de 16:44: o Dell testou `07deaff` (antes da W23) e o duiaos-voz antigo. O 4B já roda na Iris Xe, mas lê
+  ~70 pedaços/s (como no processador); o "oi" esperou o aquecimento do boot (37 s). Fala: 7,8 s para começar.
+- W24: voz natural pela nuvem (OpenAI/Gemini, com a voz local de reserva) e `--medir-modelos`.
+
 ## 23/11/2026 (16h) · Claude (conta do Gustavo) · W23 / ADR 079
 - Relatórios de 17 e 23/11: com o 9B ativo (30 min na memória) o aquecimento do boot desistia e a 1ª pergunta levou
   2 min 52 s (4.092 pedaços a ~13–77/s); o 9B escreve a 3,8/s (o 4B a ~8,2/s); a 1ª fala saía em 11–12 s. Medido aqui:

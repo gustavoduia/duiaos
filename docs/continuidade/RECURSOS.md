@@ -132,6 +132,7 @@ Regras:
 | Ícone do Wise entre os indicadores e menu do botão direito (Abrir, Configurações, Configurar IA, Desligar o Wise) | `shell/barra-de-recursos/` | `shell/barra-de-recursos/main.py::def abrirMenuDoWise`, `shell/barra-de-recursos/Barra.qml::clicadoDireito`, `shell/testes/test_menu_do_app.py::TesteMenuDoWise`, `shell/sessao/autostart::duiaos-wise-desligado` | ADR 063 | main |
 | Pacote duiaos-voz (script GPL do duiaos-fontes-abertas + sherpa-onnx; um .deb por arquitetura) | `pacotes/duiaos-voz/` | `pacotes/duiaos-voz/construir.sh::sherpa`, `pacotes/duiaos-voz/DEBIAN/control::Package: duiaos-voz` | ADR 063 | main |
 | Configurações › Wise › Voz: "Conversa por voz" e "Voz mais rápida e fluida" (troca o Kokoro int8 pelo rápido) | `apps/configuracoes/` | `apps/configuracoes/Configuracoes.qml::ia.definirWise("conversa_continua"`, `apps/configuracoes/Configuracoes.qml::Voz mais rápida e fluida` | ADR 079 | main |
+| Configurações › Wise › Voz: "Voz natural pela nuvem" (mostra o motor em uso e o que sai do computador) | `apps/configuracoes/` | `apps/configuracoes/Configuracoes.qml::ia.definirWise("voz_na_nuvem"` | ADR 080 | main |
 | Termos: motor (Ollama) × modelo | `ia/`, `apps/central-de-ia/` | `ia/catalogo.json::qwen3.5:4b` | PR #8 | main |
 | Medição de motores (Ollama × llama-server × MTP × OpenVINO) | `ferramentas/medir-motores.py` | `ferramentas/medir-motores.py::--placa` | 12/10 | main |
 

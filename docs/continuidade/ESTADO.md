@@ -5,6 +5,12 @@
 > site não têm mais arquivos de estado próprios.
 
 Atualizado em: 23/11/2026 · por: Claude (conta do Gustavo) · sessão session_017QRdLhyPjUkMHPvLpngyfq
+**23/11 (17h): ADR 080, W24, ficha DUIA-2026-0036** — o teste do Gustavo às 16:44 rodou `07deaff` (antes da ADR 079) e
+o duiaos-voz antigo. Decisões do Gustavo: **voz natural pela nuvem** quando OpenAI ou Gemini estiver ligado (voz local de
+reserva; só o texto falado sai) e **medir modelos** para trocar o padrão se houver um mais rápido. O 4B **já roda na Iris Xe**
+(Vulkan), mas lê ~70 pedaços/s, como no processador. Feito: `wise/voz_nuvem.py`, `duiaos-wise --medir-modelos [--baixar]`,
+"Voz natural pela nuvem" em Configurações › Wise › Voz. **Pendentes:** Gustavo rodar a medição no Dell; trocar o modelo padrão
+conforme o resultado; patch do duiaos-voz + REVISAO=3 (abaixo); `gpt-4o-mini-tts` sai em 06/01/2027 (Realtime API).
 **23/11 (fim da tarde): ADR 079, W23, ficha DUIA-2026-0035 — Wise em tempo real.** Causas nos relatórios do Dell: com o
 **9B** ativo o aquecimento do boot desistia (o modelo não fica sempre na memória) e a 1ª pergunta levou 2 min 52 s; o Wise não
 reaquecia quando o modelo voltava para a memória; 1ª fala em 11–12 s (Kokoro int8 quase em tempo real, disputando o
