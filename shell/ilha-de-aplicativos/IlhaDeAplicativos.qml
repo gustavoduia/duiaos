@@ -89,6 +89,9 @@ Window {
     // Central de Aplicativos (janela própria, aparece por cima de tudo)
     CentralDeAplicativos {}
 
+    // Alternador de aplicativos (Alt+Tab)
+    AlternadorDeJanelas {}
+
     // Pilha de Downloads e menu do botão direito (camada por cima da área de trabalho; clique fora fecha)
     Window {
         screen: janela.screen

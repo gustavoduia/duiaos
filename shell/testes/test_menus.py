@@ -163,6 +163,15 @@ class TesteLeitura(unittest.TestCase):
                          ["janela:minimizar", "janela:expandir", "janela:fechar", "janela:encerrar"])
         self.assertEqual(itens[-1]["rotulo"], "Encerrar Firefox")
 
+    def test_menu_do_aplicativo_junta_o_menu_de_mesmo_nome(self):
+        """O "Mail Box" do aplicativo e o "Mail Box" em negrito da Barra viram um menu só (sem "Fechar" repetido)."""
+        def item(ident, rotulo, tipo="item"):
+            return {"id": ident, "rotulo": rotulo, "tipo": tipo, "ativo": True, "marcado": False, "atalho": "", "itens": []}
+        proprios = [item("nova", "Nova mensagem"), item("contas", "Contas"), item(-1, "", "separador"), item("sair", "Fechar")]
+        itens = menus.menu_da_janela("Mail Box", proprios)
+        rotulos = [i["rotulo"] for i in itens if i["tipo"] != "separador"]
+        self.assertEqual(rotulos, ["Nova mensagem", "Contas", "Minimizar", "Expandir", "Fechar janela", "Encerrar Mail Box"])
+
 
 class TesteServico(unittest.TestCase):
     def test_sem_barramento_de_acessibilidade_sai_sem_derrubar_ninguem(self):

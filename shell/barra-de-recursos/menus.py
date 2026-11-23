@@ -319,14 +319,21 @@ CAMADAS_DO_DUIAOS = {"duiaos-barra-de-recursos", "duiaos-ilha-de-aplicativos", "
                      "duiaos-notificacoes", "duiaos-bloqueio", "duiaos-descanso", "duiaos-menu-de-energia"}
 
 
-def menu_da_janela(nome_do_aplicativo):
-    """O que todo aplicativo tem no menu com o nome dele, com ou sem barra de menus própria."""
+def menu_da_janela(nome_do_aplicativo, itens_do_aplicativo=()):
+    """O que todo aplicativo tem no menu com o nome dele, com ou sem barra de menus própria. itens_do_aplicativo:
+    os do menu do próprio aplicativo com o mesmo nome (vêm antes das ações da janela, num menu só)."""
     def item(acao, texto, atalho_texto=""):
         return {"id": "janela:" + acao, "rotulo": texto, "tipo": "item", "ativo": True, "marcado": False,
                 "atalho": atalho_texto, "itens": []}
     separador = {"id": -1, "rotulo": "", "tipo": "separador", "ativo": False, "marcado": False, "atalho": "", "itens": []}
-    return [item("minimizar", "Minimizar", "Super+M"), item("expandir", "Expandir"), separador,
-            item("fechar", "Fechar janela"), item("encerrar", f"Encerrar {nome_do_aplicativo or 'o aplicativo'}")]
+    proprios = list(itens_do_aplicativo)
+    # O "Fechar"/"Sair" do aplicativo e o "Encerrar" do DuiaOS fazem o mesmo: fica o do DuiaOS, no fim
+    proprios = [i for i in proprios if not (i.get("tipo") == "item" and str(i.get("rotulo", "")).strip() in ("Fechar", "Sair"))]
+    while proprios and proprios[-1].get("tipo") == "separador":
+        proprios.pop()
+    janela = [item("minimizar", "Minimizar", "Super+M"), item("expandir", "Expandir"), separador,
+              item("fechar", "Fechar janela"), item("encerrar", f"Encerrar {nome_do_aplicativo or 'o aplicativo'}", "Ctrl+Q")]
+    return proprios + ([separador] if proprios else []) + janela
 
 
 class LeitorDeMenus:

@@ -112,6 +112,39 @@ class TesteConfiguracaoDaIlha(unittest.TestCase):
     def tearDown(self):
         self.pasta.cleanup()
 
+    def test_pedido_do_alt_tab(self):
+        arquivo = Path(self.pasta.name) / "pedido"
+        self.assertEqual(self.ilha.ler_pedido(arquivo), "")           # sem pedido: o SIGUSR1 é da Central
+        arquivo.write_text("anterior\n")
+        self.assertEqual(self.ilha.ler_pedido(arquivo), "anterior")
+        self.assertFalse(arquivo.exists())                            # o pedido vale uma vez só
+        arquivo.write_text("qualquer coisa")
+        self.assertEqual(self.ilha.ler_pedido(arquivo), "")
+
+    def test_ordem_do_alternador_pelo_uso(self):
+        ordem = self.ilha.ordem_de_uso(["mailbox", "ora", "fechado", "foot"], ["foot", "ora", "mailbox", "novo"], "ora")
+        self.assertEqual(ordem, ["ora", "mailbox", "foot", "novo"])
+        self.assertEqual(self.ilha.ordem_de_uso([], ["a", "b"]), ["a", "b"])
+
+    def test_alternador_anda_e_fecha(self):
+        ilha = self.ilha.Ilha()
+        ilha._alternador = [{"appId": n, "nome": n} for n in ("a", "b", "c")]
+        ilha._alternador_visivel, ilha._alternador_indice = True, 1
+        ilha.alternadorMover(1); ilha.alternadorMover(1)
+        self.assertEqual(ilha._alternador_indice, 0)                  # dá a volta
+        ilha.alternadorMover(-1)
+        self.assertEqual(ilha._alternador_indice, 2)
+        ilha.alternadorConfirmar()
+        self.assertFalse(ilha._alternador_visivel)
+
+    def test_contador_no_icone(self):
+        ilha = self.ilha.Ilha()
+        ilha._itens = [{"id": "duiaos-mailbox.desktop", "nome": "Mail Box"}, {"id": "foot.desktop", "nome": "Terminal"}]
+        ilha._ao_contador("duiaos-mailbox.desktop", 4)
+        self.assertEqual([i["contador"] for i in ilha._itens], [4, 0])
+        ilha._ao_contador("duiaos-mailbox.desktop", 0)
+        self.assertEqual(ilha._itens[0]["contador"], 0)
+
     def test_recentes_sobrevivem_a_mudanca_dos_fixados(self):
         self.ilha.gravar_fixados(["a.desktop"])
         self.ilha.gravar_recentes(["x.desktop", "y.desktop", "z.desktop", "w.desktop"])
@@ -262,3 +295,14 @@ class TesteAmpliacao(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TesteContador(unittest.TestCase):
+    def test_sinal_do_contador(self):
+        sys.path.insert(0, str(RAIZ / "shell" / "comum"))
+        import contador
+        self.assertEqual(contador.uri_do("duiaos-mailbox"), "application://duiaos-mailbox.desktop")
+        self.assertEqual(contador.ler_sinal("application://duiaos-mailbox.desktop", {"count": 7, "count-visible": True}),
+                         ("duiaos-mailbox.desktop", 7))
+        self.assertEqual(contador.ler_sinal("application://x.desktop", {"count": 7, "count-visible": False}), ("x.desktop", 0))
+        self.assertEqual(contador.ler_sinal("application://x.desktop", {"count": "?", "count-visible": True}), ("x.desktop", 0))

@@ -3,4 +3,6 @@
 # Envia o sinal SIGUSR1 só para o processo da Ilha de Aplicativos.
 ARQUIVO_PID="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/duiaos-ilha-de-aplicativos.pid"
 [ -f "${ARQUIVO_PID}" ] || exit 1
+# Sem pedido deixado pelo Alt+Tab (alternar-janelas.sh), o SIGUSR1 abre ou fecha a Central
+rm -f "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/duiaos-ilha-pedido"
 kill -USR1 "$(cat "${ARQUIVO_PID}")"

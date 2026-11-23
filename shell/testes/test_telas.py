@@ -76,7 +76,7 @@ class TesteTelas(unittest.TestCase):
             preferencias.unlink()
 
     def test_ilha_de_aplicativos(self):
-        for modo in ("", "--central", "--downloads", "--menu"):
+        for modo in ("", "--central", "--downloads", "--menu", "--alternador", "--contador"):
             with self.subTest(modo=modo):
                 self.abrir("ilha" + modo, ["shell/ilha-de-aplicativos/main.py", "--demonstracao", *([modo] if modo else [])])
 

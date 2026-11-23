@@ -1,5 +1,5 @@
 // DuiaOS — Ilha de Aplicativos numa janela comum, com dados de exemplo
-// (main.py --demonstracao [--central|--downloads|--menu|--menu-ilha|--ampliada|--genio]
+// (main.py --demonstracao [--central|--alternador|--contador|--downloads|--menu|--menu-ilha|--ampliada|--genio]
 //  [--posicao base|esquerda|direita] [--recentes] [--captura ARQUIVO]).
 import QtQuick
 import QtQuick.Window
@@ -29,6 +29,7 @@ Window {
         MenuDaIlha { anchors.fill: parent; visible: ilha.menu.tipo !== undefined }
     }
     ConteudoCentral { anchors.fill: parent; visible: ilha.centralVisivel }
+    ConteudoAlternador { anchors.fill: parent; visible: ilha.alternadorVisivel }
     EfeitoDeJanela {
         id: efeito
         anchors.fill: parent

@@ -386,6 +386,20 @@ Item {
                         anchors.fill: parent
                         icone: delegado.modelData.icone; nome: delegado.modelData.nome; tamanho: parent.width; resolucao: ilhaFundo.maximo; base: ilhaFundo.base
                     }
+                    // Contador do aplicativo (ex.: e-mails não lidos no Mail Box; comum/contador.py)
+                    Rectangle {
+                        readonly property int numero: delegado.modelData.contador || 0
+                        visible: numero > 0
+                        z: 2
+                        anchors { right: parent.right; top: parent.top; rightMargin: -parent.width * 0.08; topMargin: -parent.width * 0.08 }
+                        height: Math.max(16, Math.round(parent.width * 0.36)); radius: height / 2
+                        width: Math.max(height, textoContador.implicitWidth + height * 0.55)
+                        color: "#EF4444"
+                        border { width: 1.5; color: Qt.rgba(1, 1, 1, 0.9) }
+                        Text { id: textoContador; anchors.centerIn: parent; color: "white"
+                               text: parent.numero > 99 ? "99+" : String(parent.numero)
+                               font { family: Tema.fonteTexto; pixelSize: Math.max(9, Math.round(parent.height * 0.6)); weight: Font.Bold } }
+                    }
                 }
             }
         }

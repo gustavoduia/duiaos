@@ -5,6 +5,13 @@
 > site não têm mais arquivos de estado próprios.
 
 Atualizado em: 23/11/2026 · por: Claude (conta do Gustavo) · sessão session_017QRdLgczrqbghVfTpAkjAr
+**23/11 (noite, 2ª rodada): ADR 077, ficha DUIA-2026-0034** — 8 pontos do Gustavo: Ora compacto e sem a barra do sistema
+(botões da janela à direita das abas, arrastar/redimensionar próprios, regra `serverDecoration="no"` no rc.xml), DevTools
+encaixado à direita com botão de destacar; Alt+Tab da Ilha com ícones e balão do nome (rc.xml → `alternar-janelas.sh`);
+Mail Box com editor formatado (imagens embutidas por cid, anexos separados), IMAP IDLE (aviso na hora, notificação que abre
+a mensagem), contador vermelho no ícone (LauncherEntry, `shell/comum/contador.py`); tela preta ao voltar: redesenho de 1 px
+ao ativar (não reproduzido aqui); Barra junta o menu de mesmo nome do app. **Conferir no Dell:** Alt+Tab, tela preta, barra do
+Ora no labwc, IDLE no Gmail. **Pendente: H.264/AAC** (mesma decisão abaixo).
 **23/11 (noite): ADR 076, ficha DUIA-2026-0033** — 18 pontos do Gustavo: Mail Box envia pelo Gmail (login pulado no SMTP_SSL),
 Configurações completas (contas/servidores/senhas/teste, assinaturas texto e HTML com modelos, pastas), botão direito, janela
 da mensagem, lista sem pular, lida na hora, wizard fecha; Ora com abas em 4 posições, menus em português, favorito com pasta,

@@ -24,10 +24,15 @@ Ilha pelo sinal SIGUSR2 (minimizar.sh).
 
 Uso:
   main.py                                inicia a Ilha
-  main.py --demonstracao [--central|--downloads|--menu|--menu-ilha|--genio|--ampliada]
+  main.py --demonstracao [--central|--alternador|--contador|--downloads|--menu|--menu-ilha|--genio|--ampliada]
                          [--posicao base|esquerda|direita] [--captura ARQUIVO]
                                          janela comum com dados de exemplo
 Janelas abertas: comando wlrctl (protocolo wlr-foreign-toplevel do labwc).
+
+Alternador (Alt+Tab, ADR 077): o labwc roda alternar-janelas.sh, que deixa o pedido em
+$XDG_RUNTIME_DIR/duiaos-ilha-pedido e manda o SIGUSR1; a Ilha mostra os aplicativos abertos (o último
+usado primeiro) com o nome num balão e traz para a frente o escolhido quando o Alt é solto.
+Contador (balão vermelho de não lidas): comum/contador.py.
 """
 import configparser
 import fcntl
@@ -75,6 +80,7 @@ from PySide6.QtGui import QGuiApplication, QImage, QPainter, QRegion, QWindow  #
 import PySide6.QtQuick  # noqa: E402,F401  (as janelas do QML chegam ao Python como QQuickWindow)
 from PySide6.QtQml import QQmlApplicationEngine  # noqa: E402
 
+import contador  # noqa: E402
 import efeitos  # noqa: E402
 import interface  # noqa: E402
 import pastas  # noqa: E402
@@ -163,6 +169,23 @@ def gravar_fixados(fixados):
         arquivo.write(f"[ilha]\nversao = {VERSAO_CONFIG}\nfixados = " + ";".join(fixados) + "\n")
         if recentes:
             arquivo.write("recentes = " + ";".join(recentes) + "\n")
+
+
+def ler_pedido(arquivo=None):
+    """Pedido deixado por um atalho (alternar-janelas.sh) antes do SIGUSR1; "" = abrir/fechar a Central."""
+    arquivo = Path(arquivo or Path(os.environ.get("XDG_RUNTIME_DIR", "/tmp")) / "duiaos-ilha-pedido")
+    try:
+        pedido = arquivo.read_text(encoding="utf-8").strip()
+        arquivo.unlink()
+    except OSError:
+        return ""
+    return pedido if pedido in ("proximo", "anterior") else ""
+
+
+def ordem_de_uso(mru, abertos, ativo=""):
+    """Aplicativos abertos, do usado por último ao mais antigo (o da frente primeiro)."""
+    ordem = ([ativo] if ativo in abertos else []) + [a for a in mru if a in abertos and a != ativo]
+    return ordem + [a for a in abertos if a not in ordem]
 
 
 def janelas_abertas():
@@ -269,6 +292,8 @@ class Ilha(QObject):
     efeitoCancelar = Signal()
     _congelar = Signal(str, float)
     _cancelar_efeito = Signal()
+    alternadorMudou = Signal()
+    _contador = Signal(str, int)
 
     def __init__(self):
         super().__init__()
@@ -284,6 +309,10 @@ class Ilha(QObject):
         self._etapas = {"congelada": threading.Event()}
         self._imagens = IMAGENS_DO_EFEITO
         self._recentes = []
+        self._contadores = {}               # desktop_id → não lidas (balão vermelho)
+        self._mru = []                      # app_id do usado por último ao mais antigo
+        self._alternador, self._alternador_indice, self._alternador_visivel = [], 0, False
+        self._contador.connect(self._ao_contador)
         if DEMONSTRACAO:
             self._preparar_demonstracao()
             return
@@ -317,6 +346,10 @@ class Ilha(QObject):
         signal.signal(signal.SIGUSR2, self._sinal_minimizar)
         self._timer_sinal = QTimer(self, interval=150, timeout=self._verificar_sinal)
         self._timer_sinal.start()
+        self._pedido_janelas = ""
+        # Alternador: confere quando o Alt foi solto (o compositor não manda o atalho de soltar)
+        self._timer_alt = QTimer(self, interval=40, timeout=self._conferir_alt)
+        contador.ouvir(lambda desktop_id, numero: self._contador.emit(desktop_id, numero))
 
         # Lixeira cheia ou vazia (ícone da Ilha): na hora, pelo vigia da pasta (o Explorador, as Configurações
         # e outros programas usam a mesma Lixeira); o relógio de 4 s fica de reserva (pasta recriada etc.)
@@ -370,6 +403,14 @@ class Ilha(QObject):
             self._itens.append({"id": "exemplo-gimp.desktop", "nome": "GIMP", "icone": "", "exec": "", "classe": "",
                                 "terminal": False, "descricao": "", "busca": "gimp", "fixado": False, "aberto": False,
                                 "appId": "", "recente": True})
+        if "--contador" in sys.argv:
+            self._contadores = {"duiaos-mailbox.desktop": 3}
+            for item in self._itens:
+                item["contador"] = self._contadores.get(item["id"], 0)
+        if "--alternador" in sys.argv:
+            self._alternador = [self._entrada_alternador(i) for i in
+                                (self._itens[4], self._itens[5], self._itens[1], self._itens[6], self._itens[7])]
+            self._alternador_indice, self._alternador_visivel = 1, True
         if "--menu" in sys.argv:
             self.abrirMenu("app", 3, -120.0)
         if "--menu-ilha" in sys.argv:
@@ -508,6 +549,8 @@ class Ilha(QObject):
 
     def atualizar_abertos(self):
         abertos = janelas_abertas()
+        if not self._alternador_visivel:
+            self._registrar_ativo(janela_ativa())
         if abertos != self._abertos:
             # Aplicativo não fixado que fechou vira "recente" (até 3)
             fechados = [a for a in self._abertos if a not in abertos]
@@ -542,6 +585,8 @@ class Ilha(QObject):
                 "id": "", "nome": app_id, "icone": app_id, "exec": "", "classe": "",
                 "terminal": False, "descricao": "", "busca": ""}
             itens.append({**app, "fixado": False, "aberto": True, "appId": app_id})
+        for item in itens:
+            item["contador"] = self._contadores.get(item.get("id", ""), 0)
         # Recentes (opção): usados há pouco, nem fixados nem abertos
         if self._opcoes.get("recentes"):
             presentes = {i.get("id") for i in itens}
@@ -736,6 +781,96 @@ class Ilha(QObject):
         """Nome da saída (ex.: eDP-1) onde a Ilha está, para capturar a tela certa."""
         self._tela = nome
 
+    # ----- Contador (balão vermelho)
+    def _ao_contador(self, desktop_id, numero):
+        if self._contadores.get(desktop_id, 0) == numero:
+            return
+        if numero:
+            self._contadores[desktop_id] = numero
+        else:
+            self._contadores.pop(desktop_id, None)
+        for item in self._itens:
+            item["contador"] = self._contadores.get(item.get("id", ""), 0)
+        self.mudou.emit()
+
+    # ----- Alternador de aplicativos (Alt+Tab)
+    def _registrar_ativo(self, app_id):
+        if app_id and (not self._mru or self._mru[0] != app_id):
+            self._mru = [app_id] + [a for a in self._mru if a != app_id][:30]
+
+    def _entrada_alternador(self, item):
+        return {"appId": item.get("appId", ""), "nome": item.get("nome", ""), "icone": item.get("icone", ""),
+                "iconeDuia": item.get("iconeDuia", ""), "contador": item.get("contador", 0)}
+
+    def alternarJanelas(self, passo):
+        """Alt+Tab (passo 1) ou Alt+Shift+Tab (-1): abre o alternador ou anda nele."""
+        if self._alternador_visivel:
+            self.alternadorMover(passo)
+            return
+        abertos = janelas_abertas()
+        ordem = ordem_de_uso(self._mru, abertos, janela_ativa())
+        if not ordem:
+            return
+        por_app = {i["appId"]: i for i in self._itens if i.get("appId")}
+        self._alternador = []
+        for app_id in ordem:
+            item = por_app.get(app_id) or {**(ler_desktop(app_id + ".desktop") or {"nome": app_id, "icone": app_id}),
+                                            "appId": app_id}
+            self._alternador.append(self._entrada_alternador({**item, "appId": app_id}))
+        self._alternador_indice = (1 if passo > 0 else -1) % len(self._alternador)
+        self._alternador_visivel = True
+        self._inicio_alternador = time.monotonic()
+        self._timer_alt.start()
+        self.alternadorMudou.emit()
+
+    def _conferir_alt(self):
+        """Soltou o Alt: troca. Antes de a camada receber o teclado, o estado das teclas não vale; se ela
+        não o recebe logo (Alt+Tab rápido), troca para o anterior, como no Windows."""
+        if not self._alternador_visivel:
+            self._timer_alt.stop()
+            return
+        focada = QGuiApplication.focusWindow()
+        decorrido = time.monotonic() - getattr(self, "_inicio_alternador", 0)
+        if focada is not None and focada.title() == "Alternador de aplicativos":
+            if not QGuiApplication.queryKeyboardModifiers() & Qt.AltModifier:
+                self.alternadorConfirmar()
+        elif decorrido > 0.45:
+            self.alternadorConfirmar()
+
+    @Slot(int)
+    def alternadorMover(self, passo):
+        if self._alternador:
+            self._alternador_indice = (self._alternador_indice + passo) % len(self._alternador)
+            self.alternadorMudou.emit()
+
+    @Slot(int)
+    def alternadorEscolher(self, indice):
+        if 0 <= indice < len(self._alternador):
+            self._alternador_indice = indice
+            self.alternadorConfirmar()
+
+    @Slot()
+    def alternadorConfirmar(self):
+        if not self._alternador_visivel:
+            return
+        escolhido = self._alternador[self._alternador_indice] if self._alternador else None
+        self.alternadorCancelar()
+        if not escolhido or not escolhido["appId"] or DEMONSTRACAO:
+            return
+        app_id = escolhido["appId"]
+        self._registrar_ativo(app_id)
+        if app_id in self._capturas and tem_janela("app_id:" + app_id, "state:minimized"):
+            self.restaurar(app_id)
+        else:
+            iniciar(["wlrctl", "toplevel", "focus", "app_id:" + app_id])
+
+    @Slot()
+    def alternadorCancelar(self):
+        self._timer_alt.stop() if hasattr(self, "_timer_alt") else None
+        if self._alternador_visivel:
+            self._alternador_visivel = False
+            self.alternadorMudou.emit()
+
     # ----- Central de Aplicativos
     def _sinal_alternar(self, _numero, _quadro):
         self._pedido_alternar = True
@@ -743,8 +878,12 @@ class Ilha(QObject):
     def _verificar_sinal(self):
         if self._pedido_alternar:
             self._pedido_alternar = False
-            self._por_atalho = True
-            self.alternarCentral()
+            pedido = ler_pedido()
+            if pedido:
+                self.alternarJanelas(1 if pedido == "proximo" else -1)
+            else:
+                self._por_atalho = True
+                self.alternarCentral()
         if getattr(self, "_pedido_minimizar", False):
             self._pedido_minimizar = False
             self.minimizar()
@@ -806,6 +945,9 @@ class Ilha(QObject):
     centralVisivel = Property(bool, lambda self: self._central_visivel, notify=centralMudou)
     opcoes = Property("QVariantMap", lambda self: self._opcoes, notify=opcoesMudou)
     demonstracao = Property(bool, lambda self: DEMONSTRACAO, constant=True)
+    alternador = Property("QVariantList", lambda self: self._alternador, notify=alternadorMudou)
+    alternadorIndice = Property(int, lambda self: self._alternador_indice, notify=alternadorMudou)
+    alternadorVisivel = Property(bool, lambda self: self._alternador_visivel, notify=alternadorMudou)
 
 
 MISTURA_DO_EFEITO = 0.75          # opacidade da tela congelada enquanto a janela some por baixo

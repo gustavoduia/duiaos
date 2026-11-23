@@ -457,6 +457,7 @@ class Sistema(QObject):
         else:
             if self._fonte_duiaos[0]:
                 self._fonte_duiaos = ("", [])
+                self._menu_proprio = []
             if self._leitor:
                 self._leitor.foco(app_id, titulo)
 
@@ -496,7 +497,14 @@ class Sistema(QObject):
     def _ao_menus_duiaos(self, app_id, nome, menus):
         if self._painel.startswith("appmenu") or self._janela[0] != app_id:
             return
-        self._fonte_duiaos = (nome, list(menus))
+        # Um menu só com o nome do aplicativo: se o primeiro menu dele tem o mesmo nome (o "Ora" do Ora), os itens
+        # dele vão para o menu em negrito, antes das ações da janela, e ele some da lista
+        menus = list(menus)
+        self._menu_proprio = []
+        if menus and self._app and menus[0].get("rotulo", "").casefold() == self._app.casefold():
+            self._menu_proprio = list(menus[0].get("itens", []))
+            menus = menus[1:]
+        self._fonte_duiaos = (nome, menus)
         titulos = [m["rotulo"] for m in menus]
         if titulos != self._titulos_menu:
             self._titulos_menu = titulos
@@ -532,7 +540,7 @@ class Sistema(QObject):
             return
         self._menu_aberto = indice
         if indice < 0:
-            self._itens_menu = menus.menu_da_janela(self._app)
+            self._itens_menu = menus.menu_da_janela(self._app, getattr(self, "_menu_proprio", []))
         elif DEMONSTRACAO:
             self._itens_menu = MENUS_DE_EXEMPLO[indice][1] if indice < len(MENUS_DE_EXEMPLO) else []
         elif self._fonte_duiaos[0]:

@@ -63,6 +63,13 @@
     <keybind key="W-m">
       <action name="Execute" command="sh -c &quot;$DUIAOS_SHELL/ilha-de-aplicativos/minimizar.sh&quot;" />
     </keybind>
+    <!-- Alt + Tab / Alt + Shift + Tab: alternador de aplicativos da Ilha, com ícones e nomes (ADR 077) -->
+    <keybind key="A-Tab">
+      <action name="Execute" command="sh -c &quot;$DUIAOS_SHELL/ilha-de-aplicativos/alternar-janelas.sh proximo&quot;" />
+    </keybind>
+    <keybind key="A-S-Tab">
+      <action name="Execute" command="sh -c &quot;$DUIAOS_SHELL/ilha-de-aplicativos/alternar-janelas.sh anterior&quot;" />
+    </keybind>
     <!-- Ctrl + Alt + Delete: Menu de Energia -->
     <keybind key="C-A-Delete">
       <action name="Execute" command="sh -c &quot;python3 $DUIAOS_SHELL/menu-de-energia/main.py&quot;" />
@@ -76,5 +83,8 @@
     <windowRule identifier="calamares" type="normal">
       <action name="ToggleFullscreen"/>
     </windowRule>
+    <!-- Ora (ADR 077): a janela desenha a própria barra, com as abas e os botões de fechar, minimizar e
+         maximizar, como o Chrome; sem a barra de título do sistema -->
+    <windowRule identifier="duiaos-ora" serverDecoration="no"/>
   </windowRules>
 </labwc_config>
