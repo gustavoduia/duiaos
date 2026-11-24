@@ -29,6 +29,11 @@ duiaos-voz com **Kokoro fp32** (2,3× mais rápido; botão "Atualizar" para quem
 pontuação, fim de turno em 0,8 s com espera se a pessoa parou em "e", "mas"… **Pendentes:** o `duiaos-fontes-abertas` ainda não tem o duiaos-voz novo (a REVISAO=3 de `df27400` saiu antes dele e gera o
 programa antigo): enviar o patch e subir para **REVISAO=4** juntos; medir no Dell;
 o Ollama não usa a Iris Xe (llama-server só com o processador); página da documentação no `duiaos-websites`.
+**24/11: ADR 078, ficha DUIA-2026-0040** — motor web com H.264/AAC/MP3: Qt WebEngine 6.140.0 compilado no
+`duiaos-fontes-abertas` (workflow "Motor web com codecs", Release `motor-web-codecs-6.140.0-qt6.12.0-r1`, 3ª tentativa: as
+duas primeiras caíram por memória e por faltar libxcb-dri3-dev); `duiaos-motor-web` 6.12.0-duiaos4 troca as peças do Qt
+WebEngine. Conferido aqui num Debian 13 limpo (amd64): H.264+AAC decodificando, MP3 ok, dependências ok. **Conferir no Dell e na
+VM ARM.**
 **23/11 (noite, 2ª rodada): ADR 077, ficha DUIA-2026-0034** — 8 pontos do Gustavo: Ora compacto e sem a barra do sistema
 (botões da janela à direita das abas, arrastar/redimensionar próprios, regra `serverDecoration="no"` no rc.xml), DevTools
 encaixado à direita com botão de destacar; Alt+Tab da Ilha com ícones e balão do nome (rc.xml → `alternar-janelas.sh`);

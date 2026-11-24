@@ -7,7 +7,7 @@
 # rodas do PyPI) e aumente a REVISAO. O Ora mostra a versão do Chromium em Configurações › Sobre o Ora.
 PYSIDE=6.12.0
 WEBENGINE=6.12.0.140
-REVISAO=3
+REVISAO=4
 PLATAFORMA_AMD64=manylinux_2_34_x86_64
 PLATAFORMA_ARM64=manylinux_2_39_aarch64
 SHA256_AMD64_pyside6_essentials=16f4b5e41daf49235ae048458243da9efe5f3d8040f9cc5aa454ce69893d3bd9
@@ -27,7 +27,7 @@ DEPENDENCIAS_ARM64="libsnappy1v5, libminizip1t64, libwebp7, libwebpdemux2, libwe
 # compila do código-fonte oficial com a opção webengine_proprietary_codecs (modificacoes/qtwebengine-codecs,
 # workflow "Motor web com codecs") e publica numa Release; o construir.sh troca as peças do Qt WebEngine das
 # rodas pelas de lá, conferidas pelo sha256. Vazio = motor das rodas, sem os codecs.
-CODECS_TAG=
+CODECS_TAG=motor-web-codecs-6.140.0-qt6.12.0-r1
 CODECS_NOME=qtwebengine-codecs-6.140.0-qt6.12.0
-CODECS_SHA256_AMD64=
-CODECS_SHA256_ARM64=
+CODECS_SHA256_AMD64=c7fc73cc5afae5f768f805cf8a9a876af136239bee29cccde2c88f48029b4c41
+CODECS_SHA256_ARM64=febebd0160d8cbefdabcc5ec3d30cde6294bf2a3b6d9402f7165c47b466f1b47

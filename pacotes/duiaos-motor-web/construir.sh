@@ -97,6 +97,9 @@ if [ -n "${CODECS_TAG:-}" ]; then
   tar -xJf "${PACOTE_CODECS}" -C "${TRABALHO}/codecs"
   rm -rf "${QT}"/lib/libQt6WebEngine*.so* "${QT}/qml/QtWebEngine" "${QT}/libexec/QtWebEngineProcess" "${QT}/resources" \
          "${QT}/translations/qtwebengine_locales"
+  # Só o processo auxiliar vai para o sistema (sem webenginedriver, gn, conversor de dicionários e .debug)
+  find "${TRABALHO}/codecs/Qt/libexec" -mindepth 1 ! -name QtWebEngineProcess -exec rm -rf {} +
+  find "${TRABALHO}/codecs/Qt" -name '*.debug' -delete
   cp -a "${TRABALHO}/codecs/Qt/." "${QT}/"
   echo "    Qt WebEngine com H.264/AAC/MP3: ${CODECS_TAG}"
 fi
